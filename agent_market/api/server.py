@@ -175,10 +175,8 @@ async def get_leaderboard():
 
     return {
         "mode": "standalone",
-        "agents": [
-            {"agent_id": "agent-001", "score": 0.95, "tasks_completed": 142},
-            {"agent_id": "agent-002", "score": 0.87, "tasks_completed": 98},
-        ],
+        "agents": [],
+        "note": "No miners connected. Run ./scripts/demo.sh to start the multi-miner network.",
     }
 
 
