@@ -1,201 +1,68 @@
-# Build Plan — Agent Verification Network
+# Build Log — Agent Verification Network
 
-> What needs to be built, in what order, using what technology.
-
----
-
-## Status: What Works Right Now
-
-```bash
-# Install + run tests
-pip3 install pydantic fastapi uvicorn pytest pytest-asyncio httpx
-python3 -m pytest tests/ -v        # 14/14 passing
-
-# Run API server
-python3 -m uvicorn agent_market.api.server:app --port 8000
-
-# Test it
-curl -X POST http://localhost:8000/verify \
-  -H "Content-Type: application/json" \
-  -d '{"code": "def add(a, b):\n    return a - b", "intent": "Add two numbers"}'
-```
-
-The full analysis pipeline works in standalone mode: submit code → analyze → return report.
+> Architecture decisions and implementation record for The Synthesis hackathon.
 
 ---
 
-## What Needs to Be Built
+## Build Phases — All Complete
 
-### Phase 1: On-Chain Identity (ERC-8004 on Base)
+### Phase 1: On-Chain Identity (ERC-8004 on Base) — COMPLETE
 
-**Goal:** Register miner and validator agents with on-chain identity.
+Registered via Synthesis API. ERC-8004 identity on Base Mainnet.
+- Registration tx: [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751)
+- Self-custody transferred to `0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501`
+- `agent.json` populated with identity, participantId, teamId
 
-**Technology:** ERC-8004 standard on Base Mainnet. The Synthesis hackathon creates an ERC-8004 identity at registration (`POST https://synthesis.devfolio.co/register`).
+### Phase 2: AgentScorer Smart Contract (Solidity on Base) — COMPLETE
 
-**What to build:**
-- Register the project via Synthesis API (returns API key + ERC-8004 identity)
-- Link agent identity to agent.json manifest
-- Populate `agent.json.identity.registration` with the on-chain address
+Deployed to Base Sepolia via Foundry + web3.py.
+- Contract: [`0x11BCd7097f1835b3D19A05fd06905Bd332ED2452`](https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452)
+- Functions: `recordScore(agentId, taskId, score, round)`, `getScoreAt(index)`, `getScoreCount()`
+- Events: `ScoreRecorded(agentId, taskId, score, round, timestamp)`
+- Access control: only deployer (validator) can write scores
+- 6 real score transactions recorded from multi-miner demo
 
-**Protocol Labs requirement:** Both "Let the Agent Cook" and "Agents With Receipts" require ERC-8004 integration with real on-chain transactions.
+### Phase 3: Locus USDC Payments — DESCOPED
 
----
+Intentionally descoped. The payment layer is additive — it doesn't change the verification logic or scoring. The architecture supports it but implementation was deprioritized in favor of on-chain scoring and multi-miner competition.
 
-### Phase 2: AgentScorer Smart Contract (Solidity on Base)
+### Phase 4: Agent Entry Points — COMPLETE
 
-**Goal:** Record miner verification scores on-chain so reputation is portable and verifiable.
+- `agents/miner_agent.py` — standalone FastAPI server with `/verify` and `/health`. Logs all activity to `agent_log.json`.
+- `agents/validator_agent.py` — connects to miners, runs honeypot rounds, scores responses, writes to chain with `--chain` flag. Logs everything including tx hashes.
+- `agent_market/chain.py` — web3.py integration for AgentScorer.sol. Gracefully disabled when no chain is configured.
+- `agent_market/logger.py` — structured event logger.
 
-**What the contract does:**
-```
-AgentScorer.sol
-├── registerAgent(agentId, endpoint)     — register a miner agent
-├── recordScore(agentId, taskId, score)  — validator writes a score after each round
-├── getScore(agentId) → uint256          — get an agent's cumulative score
-├── getLeaderboard() → Agent[]           — top agents by score
-└── Events: AgentRegistered, ScoreRecorded
-```
+### Phase 5: Demo + Submission — COMPLETE
 
-**Technology:**
-- Solidity ^0.8.20
-- Deploy to Base Sepolia (testnet) or Base Mainnet
-- Use Foundry or Hardhat for deployment
-- Call from Python validator via web3.py
-
-**Key design:**
-- Only the validator address can call `recordScore()` (access control)
-- Scores are cumulative — each round adds to the agent's reputation
-- All score writes emit events for indexing
+- `scripts/demo.sh` — starts 3 competing miners, validator with 8 honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring.
+- `agent_log.json` — 78 events including 6 on-chain tx hashes with block numbers.
+- Submitted to 3 tracks: Let the Agent Cook, Agents With Receipts, Agent Services on Base.
+- Published on Moltbook.
 
 ---
 
-### Phase 3: Locus USDC Payment Integration
+## Submission Checklist — All Done
 
-**Goal:** Task creators pay for verification in USDC. Miner agents earn USDC for quality work.
-
-**Technology:** Locus payment API on Base (`https://beta-api.paywithlocus.com/api`)
-
-**Flow:**
-```
-1. Register with Locus API → get wallet + API key
-   POST /api/register
-
-2. Fund wallet with USDC on Base (or request hackathon credits)
-   POST /api/gift-code-requests
-
-3. Task creator submits code + pays:
-   POST /verify  →  deducts USDC from task creator's Locus wallet
-
-4. Validator scores miners, best miner earns:
-   POST /api/pay/send  →  sends USDC to winning miner's wallet
-
-5. All transactions on-chain and auditable:
-   GET /api/pay/transactions
-```
-
-**What to build:**
-- Locus client wrapper in Python (register, check balance, send, receive)
-- Payment deduction on task submission
-- Payment distribution to winning miner after scoring
-- Transaction logging to `agent_log.json`
-
-**Locus bounty requirement:** "Working Locus integration, Locus must be core to product, Base chain, USDC only."
-
----
-
-### Phase 4: Agent Entry Points
-
-**Goal:** Standalone scripts that run miner and validator agents autonomously.
-
-**`agents/miner_agent.py`:**
-```
-1. Load ERC-8004 identity
-2. Start FastAPI server on configured port
-3. Listen for verification requests from validators
-4. Run analysis pipeline on each request
-5. Return structured audit reports
-6. Log all actions to agent_log.json
-```
-
-**`agents/validator_agent.py`:**
-```
-1. Load ERC-8004 identity
-2. Register on AgentScorer contract
-3. Start validation loop:
-   a. Generate honeypot (30% of rounds) or pull real task from queue
-   b. Send to all registered miners via HTTP
-   c. Score responses
-   d. Write scores to AgentScorer contract on Base
-   e. If real task: return best result to task creator
-   f. If Locus enabled: send USDC to winning miner
-4. Log all actions (including tx hashes) to agent_log.json
-```
-
----
-
-### Phase 5: Demo + Submission
-
-**Goal:** End-to-end demo that an agent judge can verify.
-
-**`scripts/demo.sh`:**
-```bash
-# 1. Start miner agent
-python3 agents/miner_agent.py &
-
-# 2. Start validator agent
-python3 agents/validator_agent.py &
-
-# 3. Submit clean code — should pass
-curl -X POST http://localhost:8000/verify \
-  -d '{"code": "def factorial(n):\n    if n == 0: return 1\n    return n * factorial(n-1)", "intent": "Return factorial"}'
-
-# 4. Submit buggy code — should catch the bug
-curl -X POST http://localhost:8000/verify \
-  -d '{"code": "def add(a, b):\n    return a - b", "intent": "Add two numbers"}'
-
-# 5. Show leaderboard (miner scores)
-curl http://localhost:8000/leaderboard
-
-# 6. Show on-chain score (Base)
-# cast call $AGENT_SCORER "getScore(address)" $MINER_ADDRESS --rpc-url $BASE_RPC
-
-# 7. Show agent_log.json with tx hashes
-cat agent_log.json | python3 -m json.tool
-```
-
-**Submission checklist:**
-- [ ] `agent.json` manifest with ERC-8004 registration populated
-- [ ] `agent_log.json` with real tx hashes from Base
-- [ ] `conversationLog.md` documenting the full build journey
-- [ ] All code open-source on GitHub
-- [ ] README maps to bounty criteria
-- [ ] Tests passing
-- [ ] Working demo (API callable, scores on-chain)
-
----
-
-## Build Order
-
-```
-Phase 1: ERC-8004 Identity          ← Do first (unlocks Protocol Labs bounties)
-    ↓
-Phase 2: AgentScorer Contract       ← On-chain scoring (the core differentiator)
-    ↓
-Phase 3: Locus Payments             ← Unlocks Locus bounty, adds economic layer
-    ↓
-Phase 4: Agent Entry Points         ← Wire everything together
-    ↓
-Phase 5: Demo + Submission          ← Polish, test, submit
-```
+- [x] `agent.json` manifest with ERC-8004 registration populated
+- [x] `agent_log.json` with real tx hashes from Base Sepolia
+- [x] `conversationLog.md` documenting the full build journey
+- [x] All code open-source on GitHub
+- [x] README maps to bounty criteria
+- [x] 14/14 tests passing
+- [x] Working demo (3 miners competing, scores on-chain)
+- [x] AgentScorer.sol deployed with real transactions
+- [x] Moltbook post published
+- [x] Self-custody transfer complete
 
 ---
 
 ## Key Dependencies
 
-| What | Where | Notes |
-|------|-------|-------|
-| ERC-8004 registration | Synthesis API | `curl -s https://synthesis.md/skill.md` |
-| Base RPC | Alchemy / Infura / public | For contract deployment + reads |
-| Locus API | `https://beta-api.paywithlocus.com/api` | Register → get wallet + API key |
-| Solidity tooling | Foundry (`forge`) or Hardhat | For AgentScorer deployment |
-| web3.py | pip install | For Python → Base chain interaction |
-| USDC on Base | Locus hackathon credits | `POST /api/gift-code-requests` |
+| What | Where | Status |
+|------|-------|--------|
+| ERC-8004 registration | Synthesis API | Done |
+| Base RPC | `https://sepolia.base.org` | Working |
+| Solidity tooling | Foundry (`forge` v1.5.1) | Installed |
+| web3.py | pip install web3 | Installed |
+| AgentScorer contract | Base Sepolia | Deployed |
