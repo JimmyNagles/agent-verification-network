@@ -64,6 +64,51 @@
       "description": "Check the status of a submitted verification task."
     },
     {
+      "name": "register-miner",
+      "type": "REST",
+      "endpoint": "/register-miner",
+      "method": "POST",
+      "input": {
+        "agent_id": "string — unique identifier for the miner agent",
+        "endpoint": "string — base URL of the miner (must expose /health)",
+        "strategy": "string (optional) — analysis strategy description"
+      },
+      "output": {
+        "registered": "boolean",
+        "agent_id": "string",
+        "total_miners": "int"
+      },
+      "description": "Register a miner agent to join the verification network. The miner endpoint must have a reachable /health route."
+    },
+    {
+      "name": "register-validator",
+      "type": "REST",
+      "endpoint": "/register-validator",
+      "method": "POST",
+      "input": {
+        "validator_id": "string — unique identifier for the validator agent",
+        "endpoint": "string — base URL of the validator"
+      },
+      "output": {
+        "registered": "boolean",
+        "validator_id": "string"
+      },
+      "description": "Register a validator agent in the network registry."
+    },
+    {
+      "name": "network",
+      "type": "REST",
+      "endpoint": "/network",
+      "method": "GET",
+      "output": {
+        "validators": "array of registered validators",
+        "miners": "array of registered miners",
+        "total_verifications": "int",
+        "mode": "string — standalone or connected"
+      },
+      "description": "View the current state of the verification network — all registered miners, validators, and verification count."
+    },
+    {
       "name": "health",
       "type": "REST",
       "endpoint": "/health",
