@@ -559,6 +559,580 @@
           "miner-003": 0.3028
         }
       }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:15Z",
+      "type": "agent_started",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "capabilities": [
+          "ast_parsing",
+          "pattern_detection",
+          "security_analysis"
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "miner_registered",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miner_id": "miner-001",
+        "endpoint": "http://localhost:8001"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "miner_registered",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miner_id": "miner-002",
+        "endpoint": "http://localhost:8002"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "miner_registered",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miner_id": "miner-003",
+        "endpoint": "http://localhost:8003"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "agent_started",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miners_registered": 3,
+        "rounds_planned": 8,
+        "mode": "connected"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "da139d3c-446d-4616-a239-380455361371",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "da139d3c-446d-4616-a239-380455361371",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:21Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "da139d3c-446d-4616-a239-380455361371",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:22Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 1,
+        "task_id": "da139d3c-446d-4616-a239-380455361371",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.6975,
+        "leaderboard": {
+          "miner-001": 0.0698,
+          "miner-002": 0.0698,
+          "miner-003": 0.0698
+        },
+        "on_chain": {
+          "tx_hash": "91fae2c931176e4df3afee26b65fdb35d6978c6b7f2bda9910a0b255f47679f6",
+          "block_number": 39109038,
+          "chain": "base-sepolia",
+          "contract": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+          "gas_used": 254388
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:24Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "379b4e03-476e-4d5f-bf2a-9b9f16525069",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:24Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "379b4e03-476e-4d5f-bf2a-9b9f16525069",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:24Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "379b4e03-476e-4d5f-bf2a-9b9f16525069",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:24Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 2,
+        "task_id": "379b4e03-476e-4d5f-bf2a-9b9f16525069",
+        "is_honeypot": false,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.275,
+        "leaderboard": {
+          "miner-001": 0.0903,
+          "miner-002": 0.0903,
+          "miner-003": 0.0903
+        },
+        "on_chain": {
+          "tx_hash": "2020cf062a3f9aace055509b6521fc9a5bb1dce789f492c4e3aad5a01e3e5848",
+          "block_number": 39109039,
+          "chain": "base-sepolia",
+          "contract": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+          "gas_used": 199839
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:26Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "99f1945e-5278-4d59-8bf4-1c0a1c99e2a3",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:26Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "99f1945e-5278-4d59-8bf4-1c0a1c99e2a3",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:26Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "99f1945e-5278-4d59-8bf4-1c0a1c99e2a3",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:27Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 3,
+        "task_id": "99f1945e-5278-4d59-8bf4-1c0a1c99e2a3",
+        "is_honeypot": false,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.28,
+        "leaderboard": {
+          "miner-001": 0.1092,
+          "miner-002": 0.1092,
+          "miner-003": 0.1092
+        },
+        "on_chain": {
+          "tx_hash": "16e90e32a87ae080ab244d73f83bd84736c29f9475d705491fabc70989b4fac9",
+          "block_number": 39109040,
+          "chain": "base-sepolia",
+          "contract": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+          "gas_used": 199839
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:29Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "4adef381-9f58-43f7-95d1-23362a7afa0d",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:29Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "4adef381-9f58-43f7-95d1-23362a7afa0d",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:29Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "4adef381-9f58-43f7-95d1-23362a7afa0d",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:30Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 4,
+        "task_id": "4adef381-9f58-43f7-95d1-23362a7afa0d",
+        "is_honeypot": false,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.2875,
+        "leaderboard": {
+          "miner-001": 0.1271,
+          "miner-002": 0.1271,
+          "miner-003": 0.1271
+        },
+        "on_chain": {
+          "tx_hash": "0a89f313c63ed9492755978b26b56387425bf284db69051b3fdd4d7fb84b9226",
+          "block_number": 39109042,
+          "chain": "base-sepolia",
+          "contract": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+          "gas_used": 199839
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:32Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "b4c326af-6069-4aa2-93b8-016f56916bc8",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:32Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "b4c326af-6069-4aa2-93b8-016f56916bc8",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:32Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "b4c326af-6069-4aa2-93b8-016f56916bc8",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:33Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 5,
+        "task_id": "b4c326af-6069-4aa2-93b8-016f56916bc8",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.78,
+        "leaderboard": {
+          "miner-001": 0.1924,
+          "miner-002": 0.1924,
+          "miner-003": 0.1924
+        },
+        "on_chain": {
+          "tx_hash": "6e362a4e2c201a8e8fa9cd16a403a1d9523e7ccff5723919f5bc60e5b9f556a1",
+          "block_number": 39109043,
+          "chain": "base-sepolia",
+          "contract": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+          "gas_used": 203088
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:35Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "5e8998e7-faeb-47f2-ab2e-4c43a39588c4",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:35Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "5e8998e7-faeb-47f2-ab2e-4c43a39588c4",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:35Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "5e8998e7-faeb-47f2-ab2e-4c43a39588c4",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:35Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 6,
+        "task_id": "5e8998e7-faeb-47f2-ab2e-4c43a39588c4",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.685,
+        "leaderboard": {
+          "miner-001": 0.2416,
+          "miner-002": 0.2416,
+          "miner-003": 0.2416
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:37Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "42e72230-00cc-4361-9157-795b55f2830a",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:37Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "42e72230-00cc-4361-9157-795b55f2830a",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:37Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "42e72230-00cc-4361-9157-795b55f2830a",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:38Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 7,
+        "task_id": "42e72230-00cc-4361-9157-795b55f2830a",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.685,
+        "leaderboard": {
+          "miner-001": 0.286,
+          "miner-002": 0.286,
+          "miner-003": 0.286
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:40Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "89041bb5-c53f-4881-b57c-318566a60686",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:40Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "89041bb5-c53f-4881-b57c-318566a60686",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:40Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "89041bb5-c53f-4881-b57c-318566a60686",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:41Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 8,
+        "task_id": "89041bb5-c53f-4881-b57c-318566a60686",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.8,
+        "leaderboard": {
+          "miner-001": 0.3374,
+          "miner-002": 0.3374,
+          "miner-003": 0.3374
+        },
+        "on_chain": {
+          "tx_hash": "fd34fa4f5ed2489ade5c8c99ba8422b774e6b764a2a84e5fa6b9f030b38edd64",
+          "block_number": 39109047,
+          "chain": "base-sepolia",
+          "contract": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+          "gas_used": 203088
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:59:41Z",
+      "type": "validation_complete",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "rounds_completed": 8,
+        "final_scores": {
+          "miner-001": 0.3374,
+          "miner-002": 0.3374,
+          "miner-003": 0.3374
+        }
+      }
     }
   ]
 }

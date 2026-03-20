@@ -11,6 +11,13 @@
     "participantId": "bff5bccc8bfe4be3a4bfcb28e0eb99d5",
     "teamId": "79d8c15becbc47129691bff4b9c739cb"
   },
+  "contracts": {
+    "AgentScorer": {
+      "address": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
+      "chain": "base-sepolia",
+      "explorer": "https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452"
+    }
+  },
   "capabilities": [
     "code_verification",
     "bug_detection",
