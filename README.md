@@ -274,22 +274,22 @@ The architecture supports USDC payment flows via Locus wallets on Base, where pa
 
 ## Target Bounties
 
-### Primary: Protocol Labs ($16,000)
+### Primary: Protocol Labs ($8,000 total)
 
-**"Let the Agent Cook" ($8,000)** — Fully autonomous agents that discover, plan, execute, and verify.
+**"Let the Agent Cook"** — Fully autonomous agents that discover, plan, execute, and verify.
 - Miner agents: receive task → analyze code → return report. No human in the loop.
 - Validator agents: generate honeypots → query miners → score → write to chain. Fully autonomous.
 - ERC-8004 identity, `agent.json` manifest, `agent_log.json` execution log.
 - Safety guardrails: agents analyze code, never execute it; scoring is deterministic.
 
-**"Agents With Receipts — ERC-8004" ($8,004)** — Trusted agent systems with on-chain identity and reputation.
+**"Agents With Receipts — ERC-8004"** — Trusted agent systems with on-chain identity and reputation.
 - ERC-8004 identity registered on Base Mainnet.
 - AgentScorer.sol deployed on Base Sepolia with real score transactions.
 - `agent.json` + `agent_log.json` with on-chain tx hashes and block numbers.
 
-### Secondary: Agent Services on Base
+### Secondary: OpenServ — Ship Something Real ($4,500)
 
-Deployed a scoring contract on Base and run agent services that interact with it.
+Multi-agent verification service deployed on OpenServ. Miner and validator agents registered as OpenServ capabilities, enabling other agents to discover and use the verification network through the OpenServ platform.
 
 ---
 
