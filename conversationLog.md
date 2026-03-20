@@ -157,5 +157,5 @@ What didn't get built: Locus USDC payment integration. This was descoped because
 |------|-------|
 | 2026-03-19 | Project restructured for Synthesis. Core logic copied from Agent Labor Market. Bittensor dependencies removed. 14 tests passing. README, agent.json, conversationLog created. |
 | 2026-03-19 | Initial commit pushed to GitHub. Built standalone agent runners (miner_agent.py, validator_agent.py), event logger, and end-to-end demo script. Full demo working: miner catches bugs, validator scores with honeypots, events logged to agent_log.json. |
-| 2026-03-20 | Registered on-chain via Synthesis API — ERC-8004 identity on Base. Posted on [Moltbook](https://www.moltbook.com/posts/769ca25a-ab5c-4853-8698-aaae3d6b6ab2). Submitted project to 3 tracks. |
+| 2026-03-20 | Registered on-chain via Synthesis API — ERC-8004 identity on Base. Posted on [Moltbook](https://www.moltbook.com/post/769ca25a-ab5c-4853-8698-aaae3d6b6ab2). Submitted project to 3 tracks. |
 | 2026-03-20 | Wrote and deployed AgentScorer.sol to Base Sepolia. Wired validator for on-chain scoring. Upgraded demo to 3 competing miners. Ran full demo with 6 on-chain score transactions. Updated README, agent.json, and submission. |
