@@ -12,10 +12,16 @@ Usage:
 """
 
 import asyncio
+import logging
+import urllib.request
 from typing import Optional
 from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+
+from agent_market.logger import log_event
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Agent Verification Network",
@@ -28,6 +34,11 @@ _validator = None
 
 # In-memory task storage
 results = {}
+
+# In-memory registries for open network registration
+_registered_miners: list[dict] = []
+_registered_validators: list[dict] = []
+_total_verifications: int = 0
 
 
 def attach_validator(validator):
@@ -64,6 +75,35 @@ class TaskStatus(BaseModel):
     task_id: str
     status: str  # "queued", "processing", "complete"
     result: Optional[VerifyResponse] = None
+
+
+class RegisterMinerRequest(BaseModel):
+    agent_id: str = Field(description="Unique identifier for the miner agent")
+    endpoint: str = Field(description="Base URL of the miner (must expose /health)")
+    strategy: Optional[str] = Field(default=None, description="Optional analysis strategy description")
+
+
+class RegisterMinerResponse(BaseModel):
+    registered: bool
+    agent_id: str
+    total_miners: int
+
+
+class RegisterValidatorRequest(BaseModel):
+    validator_id: str = Field(description="Unique identifier for the validator agent")
+    endpoint: str = Field(description="Base URL of the validator")
+
+
+class RegisterValidatorResponse(BaseModel):
+    registered: bool
+    validator_id: str
+
+
+class NetworkStatus(BaseModel):
+    validators: list
+    miners: list
+    total_verifications: int
+    mode: str
 
 
 # ── Endpoints ────────────────────────────────────────────────────
@@ -180,6 +220,106 @@ async def get_leaderboard():
     }
 
 
+@app.post("/register-miner", response_model=RegisterMinerResponse)
+async def register_miner(request: RegisterMinerRequest):
+    """
+    Register a miner agent to join the verification network.
+
+    The miner's endpoint must expose a /health route that returns HTTP 200.
+    If a validator is attached, the miner is also registered with it for
+    task distribution. Otherwise the miner is tracked in standalone mode.
+    """
+    # Validate that the miner endpoint is reachable
+    health_url = request.endpoint.rstrip("/") + "/health"
+    try:
+        req = urllib.request.Request(health_url, method="GET")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status != 200:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Miner health check returned status {resp.status}",
+                )
+    except urllib.error.URLError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot reach miner at {health_url}: {e}",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Health check failed for {health_url}: {e}",
+        )
+
+    # Register with the validator if one is attached
+    if _validator is not None:
+        _validator.register_miner(request.agent_id, request.endpoint)
+
+    # Always store in the in-memory registry
+    entry = {
+        "agent_id": request.agent_id,
+        "endpoint": request.endpoint,
+        "strategy": request.strategy,
+    }
+    _registered_miners.append(entry)
+
+    log_event(
+        event_type="miner_registered",
+        agent_role="miner",
+        agent_id=request.agent_id,
+        details={"endpoint": request.endpoint, "strategy": request.strategy},
+    )
+
+    logger.info(f"Registered miner {request.agent_id} at {request.endpoint}")
+
+    return RegisterMinerResponse(
+        registered=True,
+        agent_id=request.agent_id,
+        total_miners=len(_registered_miners),
+    )
+
+
+@app.post("/register-validator", response_model=RegisterValidatorResponse)
+async def register_validator(request: RegisterValidatorRequest):
+    """
+    Register a validator agent in the network registry.
+
+    Validators are tracked in an in-memory list so the /network endpoint
+    can report who is participating.
+    """
+    entry = {
+        "validator_id": request.validator_id,
+        "endpoint": request.endpoint,
+    }
+    _registered_validators.append(entry)
+
+    log_event(
+        event_type="validator_registered",
+        agent_role="validator",
+        agent_id=request.validator_id,
+        details={"endpoint": request.endpoint},
+    )
+
+    logger.info(f"Registered validator {request.validator_id} at {request.endpoint}")
+
+    return RegisterValidatorResponse(
+        registered=True,
+        validator_id=request.validator_id,
+    )
+
+
+@app.get("/network", response_model=NetworkStatus)
+async def get_network():
+    """Return the current state of the verification network."""
+    return NetworkStatus(
+        validators=list(_registered_validators),
+        miners=list(_registered_miners),
+        total_verifications=len(results),
+        mode=get_mode(),
+    )
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -203,6 +343,9 @@ async def root():
             "/verify": "POST — Submit code for verification",
             "/status/{task_id}": "GET — Check task status",
             "/leaderboard": "GET — Top performing agents",
+            "/register-miner": "POST — Register a miner agent",
+            "/register-validator": "POST — Register a validator agent",
+            "/network": "GET — View network state",
             "/health": "GET — Health check",
         },
     }
