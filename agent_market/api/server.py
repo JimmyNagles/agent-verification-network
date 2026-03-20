@@ -14,8 +14,10 @@ Usage:
 import asyncio
 from typing import Optional
 from uuid import uuid4
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from agent_market.x402 import check_x402_payment, get_pricing_info
 
 app = FastAPI(
     title="Agent Verification Network",
@@ -69,13 +71,21 @@ class TaskStatus(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────
 
 @app.post("/verify", response_model=VerifyResponse)
-async def verify_code(request: VerifyRequest):
+async def verify_code(request: VerifyRequest, raw_request: Request = None):
     """
     Submit code for verification by the agent network.
 
     In connected mode, the task is routed through the validator to
     competing miner agents. In standalone mode, analysis runs locally.
+
+    When x402 is enabled (X402_ENABLED=true), a valid PAYMENT-SIGNATURE
+    header is required. Without it, returns 402 Payment Required.
     """
+    # x402 payment gate
+    if raw_request is not None:
+        payment_response = await check_x402_payment(raw_request)
+        if payment_response is not None:
+            return payment_response
     if _validator is not None:
         task_id = _validator.add_task(
             code=request.code,
@@ -193,6 +203,12 @@ async def health_check():
     }
 
 
+@app.get("/pricing")
+async def pricing():
+    """Return current verification pricing and x402 configuration."""
+    return get_pricing_info()
+
+
 @app.get("/")
 async def root():
     return {
@@ -203,6 +219,7 @@ async def root():
             "/verify": "POST — Submit code for verification",
             "/status/{task_id}": "GET — Check task status",
             "/leaderboard": "GET — Top performing agents",
+            "/pricing": "GET — Verification pricing and x402 config",
             "/health": "GET — Health check",
         },
     }
