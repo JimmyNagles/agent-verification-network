@@ -113,14 +113,28 @@ After analyzing the full bounty list ($105,650 total across 20+ sponsors), the b
 
 ---
 
-## Chapter 7: What's Left to Build
+## Chapter 7: What Was Left to Build (Now Complete)
 
-1. **AgentScorer.sol** — Solidity contract on Base for on-chain score recording
-2. **ERC-8004 registration** — register miner + validator agents on Base mainnet
-3. **Locus integration** — USDC payment flow for task submission and miner rewards
-4. **Agent entry points** — standalone miner_agent.py and validator_agent.py with identity registration and execution logging
-5. **Demo script** — end-to-end demo showing the full loop with on-chain receipts
-6. **agent_log.json population** — real tx hashes from Base
+1. ~~**AgentScorer.sol**~~ — Deployed to Base Sepolia at `0x11BCd7097f1835b3D19A05fd06905Bd332ED2452`
+2. ~~**ERC-8004 registration**~~ — Registered on Base Mainnet via Synthesis API
+3. **Locus integration** — Not built (descoped — payment infrastructure is additive, not required for the verification loop)
+4. ~~**Agent entry points**~~ — Built `miner_agent.py` and `validator_agent.py` with full event logging
+5. ~~**Demo script**~~ — Multi-miner demo with 3 competing agents, honeypot scoring, SQL injection detection
+6. ~~**agent_log.json population**~~ — 78 events including 6 on-chain tx hashes from Base Sepolia
+
+---
+
+## Chapter 8: Closing the Loop
+
+With the core verification logic already solid, the focus shifted to proving the system works end-to-end with real on-chain artifacts.
+
+**AgentScorer.sol** was written and deployed to Base Sepolia. The contract records miner scores with `ScoreRecorded` events — each transaction is verifiable on Basescan. The validator agent was wired to call the contract after each scoring round via a new `--chain` flag, keeping standalone mode working without any chain dependency.
+
+**The multi-miner demo** was upgraded from 1 miner to 3 competing miners. The validator connects to all three, distributes honeypot tasks, scores each miner independently, and records the best score on-chain. The demo also tests three types of code: buggy (wrong operator), clean (correct), and vulnerable (SQL injection). All three are correctly identified.
+
+**The result:** 78 structured events in `agent_log.json`, 6 of which contain real Base Sepolia tx hashes and block numbers. An agent judge can parse the log, extract any tx hash, and verify it on-chain.
+
+What didn't get built: Locus USDC payment integration. This was descoped because the payment flow is additive — it doesn't change the verification logic or the scoring. The economic incentive layer is designed but not implemented.
 
 ---
 
@@ -144,3 +158,4 @@ After analyzing the full bounty list ($105,650 total across 20+ sponsors), the b
 | 2026-03-19 | Project restructured for Synthesis. Core logic copied from Agent Labor Market. Bittensor dependencies removed. 14 tests passing. README, agent.json, conversationLog created. |
 | 2026-03-19 | Initial commit pushed to GitHub. Built standalone agent runners (miner_agent.py, validator_agent.py), event logger, and end-to-end demo script. Full demo working: miner catches bugs, validator scores with honeypots, events logged to agent_log.json. |
 | 2026-03-20 | Registered on-chain via Synthesis API — ERC-8004 identity on Base. Posted on Moltbook. Submitted project for hackathon. |
+| 2026-03-20 | Wrote and deployed AgentScorer.sol to Base Sepolia. Wired validator for on-chain scoring. Upgraded demo to 3 competing miners. Ran full demo with 6 on-chain score transactions. Updated README, agent.json, and submission. |
