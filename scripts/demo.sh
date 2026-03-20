@@ -3,14 +3,15 @@
 # Agent Verification Network — End-to-End Demo
 #
 # Demonstrates the full verification pipeline:
-#   1. Starts a miner agent
-#   2. Starts a validator agent connected to the miner
+#   1. Starts 3 competing miner agents
+#   2. Starts a validator agent connected to all miners
 #   3. Runs validation rounds (honeypot + real tasks)
 #   4. Submits code for verification via the API
-#   5. Shows the leaderboard
+#   5. Shows the leaderboard with ranked miners
 #
 # Usage:
-#   ./scripts/demo.sh
+#   ./scripts/demo.sh              # Standalone mode (no chain)
+#   ./scripts/demo.sh --chain      # With on-chain scoring (needs PRIVATE_KEY)
 # ──────────────────────────────────────────────────────────────
 
 set -e
@@ -18,10 +19,18 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-MINER_PORT=8001
 VALIDATOR_PORT=8000
-MINER_PID=""
-VALIDATOR_PID=""
+CHAIN_FLAG=""
+PIDS=()
+
+# Parse args
+if [ "$1" = "--chain" ]; then
+    CHAIN_FLAG="--chain"
+    if [ -z "$PRIVATE_KEY" ]; then
+        echo "ERROR: --chain requires PRIVATE_KEY env var"
+        exit 1
+    fi
+fi
 
 # Colors
 GREEN='\033[0;32m'
@@ -33,69 +42,85 @@ NC='\033[0m'
 cleanup() {
     echo ""
     echo -e "${YELLOW}Shutting down agents...${NC}"
-    [ -n "$MINER_PID" ] && kill "$MINER_PID" 2>/dev/null && echo "  Miner stopped"
-    [ -n "$VALIDATOR_PID" ] && kill "$VALIDATOR_PID" 2>/dev/null && echo "  Validator stopped"
+    for pid in "${PIDS[@]}"; do
+        kill "$pid" 2>/dev/null && echo "  Stopped PID $pid"
+    done
     wait 2>/dev/null
     echo -e "${GREEN}Done.${NC}"
 }
 trap cleanup EXIT
 
-echo -e "${CYAN}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║     Agent Verification Network — Live Demo          ║${NC}"
-echo -e "${CYAN}╚══════════════════════════════════════════════════════╝${NC}"
+echo -e "${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║   Agent Verification Network — Multi-Miner Live Demo   ║${NC}"
+echo -e "${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
 # ── Step 0: Check dependencies ─────────────────────────────
-echo -e "${YELLOW}[0/6] Checking dependencies...${NC}"
+echo -e "${YELLOW}[0/7] Checking dependencies...${NC}"
 python3 -c "import fastapi, pydantic, uvicorn" 2>/dev/null || {
-    echo -e "${RED}Missing dependencies. Install with: pip install -e '.[dev]'${NC}"
+    echo -e "${RED}Missing dependencies. Install with: pip install fastapi uvicorn pydantic${NC}"
     exit 1
 }
 echo "  All dependencies found."
 echo ""
 
 # ── Step 1: Run tests ──────────────────────────────────────
-echo -e "${YELLOW}[1/6] Running test suite...${NC}"
+echo -e "${YELLOW}[1/7] Running test suite...${NC}"
 python3 -m pytest tests/ -v --tb=short 2>&1 | tail -20
 echo ""
 
-# ── Step 2: Start miner agent ──────────────────────────────
-echo -e "${YELLOW}[2/6] Starting miner agent on port ${MINER_PORT}...${NC}"
-python3 -m agents.miner_agent --port "$MINER_PORT" --agent-id "demo-miner-001" &
-MINER_PID=$!
-sleep 2
+# ── Step 2: Start 3 competing miner agents ─────────────────
+echo -e "${YELLOW}[2/7] Starting 3 competing miner agents...${NC}"
 
-# Check miner is up
-if curl -s "http://localhost:${MINER_PORT}/health" > /dev/null 2>&1; then
-    echo -e "  ${GREEN}Miner agent is running.${NC}"
-else
-    echo -e "  ${RED}Miner failed to start.${NC}"
-    exit 1
-fi
+for i in 1 2 3; do
+    PORT=$((8000 + i))
+    python3 -m agents.miner_agent --port "$PORT" --agent-id "miner-00${i}" &
+    PIDS+=($!)
+    echo "  Miner miner-00${i} starting on port ${PORT}..."
+done
+sleep 3
+
+# Verify all miners are up
+ALL_UP=true
+for i in 1 2 3; do
+    PORT=$((8000 + i))
+    if curl -s "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+        echo -e "  ${GREEN}miner-00${i} (port ${PORT}) — running${NC}"
+    else
+        echo -e "  ${RED}miner-00${i} (port ${PORT}) — FAILED${NC}"
+        ALL_UP=false
+    fi
+done
+if [ "$ALL_UP" = false ]; then exit 1; fi
 echo ""
 
-# ── Step 3: Start validator with miner connected ───────────
-echo -e "${YELLOW}[3/6] Starting validator agent on port ${VALIDATOR_PORT}...${NC}"
-echo "  Connecting to miner at http://localhost:${MINER_PORT}"
+# ── Step 3: Start validator connected to all miners ────────
+echo -e "${YELLOW}[3/7] Starting validator agent on port ${VALIDATOR_PORT}...${NC}"
+echo "  Connecting to 3 miners for competitive scoring"
+
 python3 -m agents.validator_agent \
     --port "$VALIDATOR_PORT" \
     --agent-id "demo-validator-001" \
-    --rounds 5 \
+    --rounds 8 \
     --interval 2 \
-    --miners "http://localhost:${MINER_PORT}" &
-VALIDATOR_PID=$!
+    --miners "http://localhost:8001" "http://localhost:8002" "http://localhost:8003" \
+    $CHAIN_FLAG &
+PIDS+=($!)
 sleep 3
 
 if curl -s "http://localhost:${VALIDATOR_PORT}/health" > /dev/null 2>&1; then
     echo -e "  ${GREEN}Validator agent is running.${NC}"
+    if [ -n "$CHAIN_FLAG" ]; then
+        echo -e "  ${CYAN}On-chain scoring ENABLED (Base Sepolia)${NC}"
+    fi
 else
     echo -e "  ${RED}Validator failed to start.${NC}"
     exit 1
 fi
 echo ""
 
-# ── Step 4: Submit code for verification ───────────────────
-echo -e "${YELLOW}[4/6] Submitting buggy code for verification...${NC}"
+# ── Step 4: Submit buggy code for verification ─────────────
+echo -e "${YELLOW}[4/7] Submitting buggy code for verification...${NC}"
 echo ""
 echo "  Code: def add(a, b): return a - b"
 echo "  Intent: Add two numbers"
@@ -114,7 +139,7 @@ echo "$RESULT" | python3 -m json.tool 2>/dev/null || echo "$RESULT"
 echo ""
 
 # ── Step 5: Submit clean code ──────────────────────────────
-echo -e "${YELLOW}[5/6] Submitting clean code for verification...${NC}"
+echo -e "${YELLOW}[5/7] Submitting clean code for verification...${NC}"
 echo ""
 echo "  Code: def add(a, b): return a + b"
 echo "  Intent: Add two numbers"
@@ -132,32 +157,58 @@ echo -e "  ${GREEN}Verification result:${NC}"
 echo "$RESULT2" | python3 -m json.tool 2>/dev/null || echo "$RESULT2"
 echo ""
 
-# ── Step 6: Show results ──────────────────────────────────
-echo -e "${YELLOW}[6/6] Fetching leaderboard and agent log...${NC}"
+# ── Step 6: Submit SQL injection code ──────────────────────
+echo -e "${YELLOW}[6/7] Submitting SQL injection vulnerability...${NC}"
+echo ""
+echo '  Code: def get_user(name): query = f"SELECT * FROM users WHERE name={name}"'
+echo "  Intent: Safely query user by name"
+echo ""
+
+RESULT3=$(curl -s -X POST "http://localhost:${VALIDATOR_PORT}/verify" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "code": "def get_user(name):\n    query = f\"SELECT * FROM users WHERE name={name}\"\n    return db.execute(query)",
+        "intent": "Safely query a user from the database by name",
+        "language": "python"
+    }')
+
+echo -e "  ${GREEN}Verification result:${NC}"
+echo "$RESULT3" | python3 -m json.tool 2>/dev/null || echo "$RESULT3"
+echo ""
+
+# ── Step 7: Show results ──────────────────────────────────
+echo -e "${YELLOW}[7/7] Fetching leaderboard and agent log...${NC}"
 echo ""
 
 # Wait for validation rounds to complete
 echo "  Waiting for validation rounds to finish..."
-sleep 12
+sleep 16
 
-echo -e "  ${CYAN}Leaderboard:${NC}"
+echo -e "  ${CYAN}Leaderboard (3 competing miners):${NC}"
 curl -s "http://localhost:${VALIDATOR_PORT}/leaderboard" | python3 -m json.tool 2>/dev/null
 echo ""
 
-echo -e "  ${CYAN}Agent Log (last 5 events):${NC}"
+echo -e "  ${CYAN}Agent Log (last 8 events):${NC}"
 python3 -c "
 import json
 with open('agent_log.json') as f:
     log = json.load(f)
-events = log['events'][-5:]
+events = log['events'][-8:]
 for e in events:
-    print(f\"  {e['timestamp']} | {e['type']:25s} | {e['agent_role']:10s} | {e['agent_id']}\")
+    line = f\"  {e['timestamp']} | {e['type']:25s} | {e['agent_role']:10s} | {e['agent_id']}\"
+    print(line)
     if 'details' in e:
-        for k, v in e['details'].items():
-            print(f\"    {k}: {v}\")
+        d = e['details']
+        for k, v in d.items():
+            if k == 'on_chain':
+                print(f\"    {k}:\")
+                for ck, cv in v.items():
+                    print(f\"      {ck}: {cv}\")
+            else:
+                print(f\"    {k}: {v}\")
 "
 echo ""
 
-echo -e "${GREEN}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║     Demo complete! Agents verified each other.      ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
+echo -e "${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║   Demo complete! 3 miners competed, scores recorded.   ║${NC}"
+echo -e "${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"

@@ -32,40 +32,57 @@ logger = logging.getLogger("validator-agent")
 
 
 class LoggingValidator(ValidatorForward):
-    """Extends ValidatorForward with event logging to agent_log.json."""
+    """Extends ValidatorForward with event logging to agent_log.json and on-chain scoring."""
 
-    def __init__(self, agent_id: str):
+    def __init__(self, agent_id: str, use_chain: bool = False):
         super().__init__()
         self.agent_id = agent_id
+        self.chain_scorer = None
+        if use_chain:
+            from agent_market.chain import ChainScorer
+            self.chain_scorer = ChainScorer()
 
     async def run_round(self):
         result = await super().run_round()
+
+        details = {
+            "round": result["round"],
+            "task_id": result["task_id"],
+            "is_honeypot": result["is_honeypot"],
+            "responses": result["responses"],
+            "best_agent": result["best_agent"],
+            "best_score": round(result["best_score"], 4) if result["best_score"] else None,
+            "leaderboard": {
+                aid: round(s, 4) for aid, s in sorted(
+                    self.scores.items(), key=lambda x: x[1], reverse=True
+                )[:5]
+            },
+        }
+
+        # Write score on-chain if enabled
+        if self.chain_scorer and self.chain_scorer.enabled and result["best_agent"]:
+            chain_result = self.chain_scorer.record_score(
+                agent_id=result["best_agent"],
+                task_id=result["task_id"],
+                score=result["best_score"],
+                round_num=result["round"],
+            )
+            if chain_result:
+                details["on_chain"] = chain_result
 
         log_event(
             event_type="validation_round",
             agent_role="validator",
             agent_id=self.agent_id,
-            details={
-                "round": result["round"],
-                "task_id": result["task_id"],
-                "is_honeypot": result["is_honeypot"],
-                "responses": result["responses"],
-                "best_agent": result["best_agent"],
-                "best_score": round(result["best_score"], 4) if result["best_score"] else None,
-                "leaderboard": {
-                    aid: round(s, 4) for aid, s in sorted(
-                        self.scores.items(), key=lambda x: x[1], reverse=True
-                    )[:5]
-                },
-            },
+            details=details,
         )
 
         return result
 
 
-async def run_validator(agent_id: str, rounds: int, interval: int, miner_endpoints: list):
+async def run_validator(agent_id: str, rounds: int, interval: int, miner_endpoints: list, use_chain: bool = False):
     """Run the validator loop."""
-    validator = LoggingValidator(agent_id)
+    validator = LoggingValidator(agent_id, use_chain=use_chain)
 
     # Register miners
     for i, endpoint in enumerate(miner_endpoints):
@@ -137,13 +154,14 @@ def main():
     parser.add_argument("--miners", nargs="*", default=[], help="Miner endpoint URLs")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--no-server", action="store_true", help="Run validator loop without API server")
+    parser.add_argument("--chain", action="store_true", help="Enable on-chain score recording (requires PRIVATE_KEY env var and contracts/deployed.json)")
     args = parser.parse_args()
 
     logger.info(f"Starting validator agent: {args.agent_id}")
 
     if args.no_server:
         # Just run the validation loop
-        asyncio.run(run_validator(args.agent_id, args.rounds, args.interval, args.miners))
+        asyncio.run(run_validator(args.agent_id, args.rounds, args.interval, args.miners, use_chain=args.chain))
     else:
         # Run both API server and validator loop
         import threading
@@ -152,7 +170,7 @@ def main():
             # Give the server a moment to start
             import time
             time.sleep(2)
-            asyncio.run(run_validator(args.agent_id, args.rounds, args.interval, args.miners))
+            asyncio.run(run_validator(args.agent_id, args.rounds, args.interval, args.miners, use_chain=args.chain))
 
         thread = threading.Thread(target=start_validation, daemon=True)
         thread.start()

@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "events": [
     {
-      "timestamp": "2026-03-20T00:23:36Z",
+      "timestamp": "2026-03-20T05:52:40Z",
       "type": "agent_started",
       "agent_role": "miner",
-      "agent_id": "demo-miner-001",
+      "agent_id": "miner-001",
       "details": {
         "capabilities": [
           "ast_parsing",
@@ -16,23 +16,10 @@
       }
     },
     {
-      "timestamp": "2026-03-20T00:23:38Z",
-      "type": "verification_completed",
-      "agent_role": "miner",
-      "agent_id": "demo-miner-001",
-      "details": {
-        "task_id": "test-001",
-        "issues_found": 1,
-        "confidence": 0.85,
-        "passed": false,
-        "processing_time": 0.001
-      }
-    },
-    {
-      "timestamp": "2026-03-20T00:38:40Z",
+      "timestamp": "2026-03-20T05:52:40Z",
       "type": "agent_started",
       "agent_role": "miner",
-      "agent_id": "demo-miner-001",
+      "agent_id": "miner-002",
       "details": {
         "capabilities": [
           "ast_parsing",
@@ -42,7 +29,20 @@
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:44Z",
+      "timestamp": "2026-03-20T05:52:40Z",
+      "type": "agent_started",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "capabilities": [
+          "ast_parsing",
+          "pattern_detection",
+          "security_analysis"
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:45Z",
       "type": "miner_registered",
       "agent_role": "validator",
       "agent_id": "demo-validator-001",
@@ -52,83 +52,101 @@
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:44Z",
+      "timestamp": "2026-03-20T05:52:45Z",
+      "type": "miner_registered",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miner_id": "miner-002",
+        "endpoint": "http://localhost:8002"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:45Z",
+      "type": "miner_registered",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miner_id": "miner-003",
+        "endpoint": "http://localhost:8003"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:45Z",
       "type": "agent_started",
       "agent_role": "validator",
       "agent_id": "demo-validator-001",
       "details": {
-        "miners_registered": 1,
-        "rounds_planned": 5,
+        "miners_registered": 3,
+        "rounds_planned": 8,
         "mode": "connected"
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:44Z",
+      "timestamp": "2026-03-20T05:52:45Z",
       "type": "verification_completed",
       "agent_role": "miner",
-      "agent_id": "demo-miner-001",
+      "agent_id": "miner-001",
       "details": {
-        "task_id": "1f8b9db7-89eb-4888-b1c6-21de707ecdb1",
-        "issues_found": 0,
-        "confidence": 0.7,
-        "passed": true,
+        "task_id": "b5bb1e0a-e5cd-4880-ac0e-0410cc6692b9",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
         "processing_time": 0.001
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:44Z",
+      "timestamp": "2026-03-20T05:52:45Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "b5bb1e0a-e5cd-4880-ac0e-0410cc6692b9",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:45Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "b5bb1e0a-e5cd-4880-ac0e-0410cc6692b9",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:45Z",
       "type": "validation_round",
       "agent_role": "validator",
       "agent_id": "demo-validator-001",
       "details": {
         "round": 1,
-        "task_id": "1f8b9db7-89eb-4888-b1c6-21de707ecdb1",
+        "task_id": "b5bb1e0a-e5cd-4880-ac0e-0410cc6692b9",
         "is_honeypot": true,
-        "responses": 1,
+        "responses": 3,
         "best_agent": "miner-001",
-        "best_score": 0.78,
+        "best_score": 0.6633,
         "leaderboard": {
-          "miner-001": 0.078
+          "miner-001": 0.0663,
+          "miner-002": 0.0663,
+          "miner-003": 0.0663
         }
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:46Z",
+      "timestamp": "2026-03-20T05:52:47Z",
       "type": "verification_completed",
       "agent_role": "miner",
-      "agent_id": "demo-miner-001",
+      "agent_id": "miner-001",
       "details": {
-        "task_id": "d9391630-a651-4596-ba58-56d153325898",
-        "issues_found": 0,
-        "confidence": 0.7,
-        "passed": true,
-        "processing_time": 0.001
-      }
-    },
-    {
-      "timestamp": "2026-03-20T00:38:46Z",
-      "type": "validation_round",
-      "agent_role": "validator",
-      "agent_id": "demo-validator-001",
-      "details": {
-        "round": 2,
-        "task_id": "d9391630-a651-4596-ba58-56d153325898",
-        "is_honeypot": true,
-        "responses": 1,
-        "best_agent": "miner-001",
-        "best_score": 0.78,
-        "leaderboard": {
-          "miner-001": 0.1482
-        }
-      }
-    },
-    {
-      "timestamp": "2026-03-20T00:38:48Z",
-      "type": "verification_completed",
-      "agent_role": "miner",
-      "agent_id": "demo-miner-001",
-      "details": {
-        "task_id": "edb389a9-9fc3-4ed4-b8ee-10429667f15e",
+        "task_id": "c6e443d2-f421-43e1-a2b2-06696d6a390e",
         "issues_found": 1,
         "confidence": 0.85,
         "passed": false,
@@ -136,91 +154,409 @@
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:48Z",
-      "type": "validation_round",
-      "agent_role": "validator",
-      "agent_id": "demo-validator-001",
-      "details": {
-        "round": 3,
-        "task_id": "edb389a9-9fc3-4ed4-b8ee-10429667f15e",
-        "is_honeypot": false,
-        "responses": 1,
-        "best_agent": "miner-001",
-        "best_score": 0.275,
-        "leaderboard": {
-          "miner-001": 0.1609
-        }
-      }
-    },
-    {
-      "timestamp": "2026-03-20T00:38:50Z",
+      "timestamp": "2026-03-20T05:52:47Z",
       "type": "verification_completed",
       "agent_role": "miner",
-      "agent_id": "demo-miner-001",
+      "agent_id": "miner-002",
       "details": {
-        "task_id": "39ae0892-b191-46bf-847a-eafe624f0229",
-        "issues_found": 0,
-        "confidence": 0.7,
-        "passed": true,
-        "processing_time": 0.0
-      }
-    },
-    {
-      "timestamp": "2026-03-20T00:38:50Z",
-      "type": "validation_round",
-      "agent_role": "validator",
-      "agent_id": "demo-validator-001",
-      "details": {
-        "round": 4,
-        "task_id": "39ae0892-b191-46bf-847a-eafe624f0229",
-        "is_honeypot": false,
-        "responses": 1,
-        "best_agent": "miner-001",
-        "best_score": 0.28,
-        "leaderboard": {
-          "miner-001": 0.1728
-        }
-      }
-    },
-    {
-      "timestamp": "2026-03-20T00:38:52Z",
-      "type": "verification_completed",
-      "agent_role": "miner",
-      "agent_id": "demo-miner-001",
-      "details": {
-        "task_id": "d0360674-fafe-4c2b-8a44-0c4f20a61805",
+        "task_id": "c6e443d2-f421-43e1-a2b2-06696d6a390e",
         "issues_found": 1,
-        "confidence": 0.75,
+        "confidence": 0.85,
         "passed": false,
         "processing_time": 0.001
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:52Z",
+      "timestamp": "2026-03-20T05:52:47Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "c6e443d2-f421-43e1-a2b2-06696d6a390e",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:47Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 2,
+        "task_id": "c6e443d2-f421-43e1-a2b2-06696d6a390e",
+        "is_honeypot": false,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.275,
+        "leaderboard": {
+          "miner-001": 0.0872,
+          "miner-002": 0.0872,
+          "miner-003": 0.0872
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:49Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "aeab3a97-67dd-46f7-9fc3-c51094c28622",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:49Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "aeab3a97-67dd-46f7-9fc3-c51094c28622",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:49Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "aeab3a97-67dd-46f7-9fc3-c51094c28622",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:49Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 3,
+        "task_id": "aeab3a97-67dd-46f7-9fc3-c51094c28622",
+        "is_honeypot": false,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.28,
+        "leaderboard": {
+          "miner-001": 0.1065,
+          "miner-002": 0.1065,
+          "miner-003": 0.1065
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:51Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "d2cf59ac-00ff-4ec0-aee2-e2e911c1a7cc",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:51Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "d2cf59ac-00ff-4ec0-aee2-e2e911c1a7cc",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:51Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "d2cf59ac-00ff-4ec0-aee2-e2e911c1a7cc",
+        "issues_found": 2,
+        "confidence": 0.8999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:51Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 4,
+        "task_id": "d2cf59ac-00ff-4ec0-aee2-e2e911c1a7cc",
+        "is_honeypot": false,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.2875,
+        "leaderboard": {
+          "miner-001": 0.1246,
+          "miner-002": 0.1246,
+          "miner-003": 0.1246
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:53Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "ee478b72-9d91-4fad-950a-17c454305e59",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:53Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "ee478b72-9d91-4fad-950a-17c454305e59",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:53Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "ee478b72-9d91-4fad-950a-17c454305e59",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:53Z",
       "type": "validation_round",
       "agent_role": "validator",
       "agent_id": "demo-validator-001",
       "details": {
         "round": 5,
-        "task_id": "d0360674-fafe-4c2b-8a44-0c4f20a61805",
+        "task_id": "ee478b72-9d91-4fad-950a-17c454305e59",
         "is_honeypot": true,
-        "responses": 1,
+        "responses": 3,
         "best_agent": "miner-001",
-        "best_score": 0.8,
+        "best_score": 0.6633,
         "leaderboard": {
-          "miner-001": 0.2355
+          "miner-001": 0.1785,
+          "miner-002": 0.1785,
+          "miner-003": 0.1785
         }
       }
     },
     {
-      "timestamp": "2026-03-20T00:38:52Z",
+      "timestamp": "2026-03-20T05:52:55Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "6ace1e98-4879-4fce-88c7-071573696323",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:55Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "6ace1e98-4879-4fce-88c7-071573696323",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:55Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "6ace1e98-4879-4fce-88c7-071573696323",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:55Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 6,
+        "task_id": "6ace1e98-4879-4fce-88c7-071573696323",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.6975,
+        "leaderboard": {
+          "miner-001": 0.2304,
+          "miner-002": 0.2304,
+          "miner-003": 0.2304
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:57Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "a11e4537-6288-4b23-a6da-1d3a554382ec",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:57Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "a11e4537-6288-4b23-a6da-1d3a554382ec",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:57Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "a11e4537-6288-4b23-a6da-1d3a554382ec",
+        "issues_found": 3,
+        "confidence": 0.95,
+        "passed": false,
+        "processing_time": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:57Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 7,
+        "task_id": "a11e4537-6288-4b23-a6da-1d3a554382ec",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.6633,
+        "leaderboard": {
+          "miner-001": 0.2737,
+          "miner-002": 0.2737,
+          "miner-003": 0.2737
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:59Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-001",
+      "details": {
+        "task_id": "5f07aecd-428e-45dc-874d-c91dbe4c8549",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:59Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-002",
+      "details": {
+        "task_id": "5f07aecd-428e-45dc-874d-c91dbe4c8549",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:59Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "miner-003",
+      "details": {
+        "task_id": "5f07aecd-428e-45dc-874d-c91dbe4c8549",
+        "issues_found": 2,
+        "confidence": 0.7999999999999999,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:59Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 8,
+        "task_id": "5f07aecd-428e-45dc-874d-c91dbe4c8549",
+        "is_honeypot": true,
+        "responses": 3,
+        "best_agent": "miner-001",
+        "best_score": 0.565,
+        "leaderboard": {
+          "miner-001": 0.3028,
+          "miner-002": 0.3028,
+          "miner-003": 0.3028
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T05:52:59Z",
       "type": "validation_complete",
       "agent_role": "validator",
       "agent_id": "demo-validator-001",
       "details": {
-        "rounds_completed": 5,
+        "rounds_completed": 8,
         "final_scores": {
-          "miner-001": 0.2355
+          "miner-001": 0.3028,
+          "miner-002": 0.3028,
+          "miner-003": 0.3028
         }
       }
     }
