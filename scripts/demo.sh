@@ -69,14 +69,18 @@ echo -e "${YELLOW}[1/7] Running test suite...${NC}"
 python3 -m pytest tests/ -v --tb=short 2>&1 | tail -20
 echo ""
 
-# ── Step 2: Start 3 competing miner agents ─────────────────
-echo -e "${YELLOW}[2/7] Starting 3 competing miner agents...${NC}"
+# ── Step 2: Start 3 competing miner agents (different strategies) ──
+echo -e "${YELLOW}[2/7] Starting 3 competing miner agents with diverse strategies...${NC}"
+
+# Each miner uses a different analysis strategy so they produce different results
+STRATEGIES=("ast-heavy" "security-focused" "intent-focused")
 
 for i in 1 2 3; do
     PORT=$((8000 + i))
-    python3 -m agents.miner_agent --port "$PORT" --agent-id "miner-00${i}" &
+    STRAT="${STRATEGIES[$((i-1))]}"
+    python3 -m agents.miner_agent --port "$PORT" --agent-id "miner-00${i}" --strategy "$STRAT" &
     PIDS+=($!)
-    echo "  Miner miner-00${i} starting on port ${PORT}..."
+    echo "  Miner miner-00${i} starting on port ${PORT} (strategy: ${STRAT})..."
 done
 sleep 3
 

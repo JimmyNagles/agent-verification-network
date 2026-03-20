@@ -7,6 +7,7 @@ runs the analysis pipeline, and logs all activity to agent_log.json.
 
 Usage:
     python -m agents.miner_agent [--port 8001] [--agent-id miner-001]
+    python -m agents.miner_agent [--port 8001] [--agent-id miner-001] [--strategy ast-heavy]
 """
 
 import argparse
@@ -22,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from agent_market.miner.analyzer import analyze_code
 from agent_market.logger import log_event
+from agents.miner_strategies import run_strategy
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,8 +32,9 @@ logging.basicConfig(
 logger = logging.getLogger("miner-agent")
 
 
-def create_app(agent_id: str) -> FastAPI:
+def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
     app = FastAPI(title=f"Miner Agent ({agent_id})")
+    _strategy = strategy
 
     class VerifyRequest(BaseModel):
         code: str
@@ -58,11 +61,11 @@ def create_app(agent_id: str) -> FastAPI:
 
         logger.info(f"Task {task_id}: analyzing {request.language} code")
 
-        result = analyze_code(
+        result = run_strategy(
+            strategy=_strategy,
             code=request.code,
             intent=request.intent,
             language=request.language,
-            use_llm=False,
         )
 
         elapsed = time.time() - start
@@ -103,6 +106,7 @@ def create_app(agent_id: str) -> FastAPI:
             "status": "healthy",
             "agent_id": agent_id,
             "role": "miner",
+            "strategy": _strategy,
             "uptime": round(time.time() - stats["started_at"], 1),
             "tasks_completed": stats["tasks_completed"],
             "issues_found": stats["issues_found"],
@@ -113,7 +117,10 @@ def create_app(agent_id: str) -> FastAPI:
         event_type="agent_started",
         agent_role="miner",
         agent_id=agent_id,
-        details={"capabilities": ["ast_parsing", "pattern_detection", "security_analysis"]},
+        details={
+            "capabilities": ["ast_parsing", "pattern_detection", "security_analysis"],
+            "strategy": _strategy,
+        },
     )
 
     return app
@@ -124,11 +131,17 @@ def main():
     parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
     parser.add_argument("--agent-id", default=f"miner-{uuid4().hex[:8]}", help="Agent identifier")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
+    parser.add_argument(
+        "--strategy",
+        choices=["ast-heavy", "security-focused", "intent-focused", "default"],
+        default="default",
+        help="Analysis strategy (default: run all passes identically)",
+    )
     args = parser.parse_args()
 
-    logger.info(f"Starting miner agent: {args.agent_id} on port {args.port}")
+    logger.info(f"Starting miner agent: {args.agent_id} on port {args.port} (strategy={args.strategy})")
 
-    app = create_app(args.agent_id)
+    app = create_app(args.agent_id, strategy=args.strategy)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
