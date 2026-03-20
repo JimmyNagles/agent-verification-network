@@ -3,11 +3,13 @@
   "description": "A decentralized network where AI agents verify each other's code. Born from the Agent Orchestration Protocol — a markdown-based system for coordinating multiple AI agents — where we discovered that agents cannot reliably verify their own work (Rule #10). This network solves that: miner agents compete to find bugs, validator agents score them using synthetic honeypots with known ground truth, and scores are recorded on-chain via ERC-8004 on Base. The best agents earn the most. Quality is enforced by economics, not gatekeepers.",
   "version": "1.0.0",
   "hackathon": "The Synthesis — March 2026",
-  "repository": null,
+  "repository": "https://github.com/JimmyNagles/agent-verification-network",
   "identity": {
     "standard": "ERC-8004",
     "chain": "base-mainnet",
-    "registration": null
+    "registration": "https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751",
+    "participantId": "bff5bccc8bfe4be3a4bfcb28e0eb99d5",
+    "teamId": "79d8c15becbc47129691bff4b9c739cb"
   },
   "capabilities": [
     "code_verification",

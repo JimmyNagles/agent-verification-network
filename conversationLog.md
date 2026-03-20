@@ -142,4 +142,5 @@ After analyzing the full bounty list ($105,650 total across 20+ sponsors), the b
 | Date | Event |
 |------|-------|
 | 2026-03-19 | Project restructured for Synthesis. Core logic copied from Agent Labor Market. Bittensor dependencies removed. 14 tests passing. README, agent.json, conversationLog created. |
-| | _Continuing..._ |
+| 2026-03-19 | Initial commit pushed to GitHub. Built standalone agent runners (miner_agent.py, validator_agent.py), event logger, and end-to-end demo script. Full demo working: miner catches bugs, validator scores with honeypots, events logged to agent_log.json. |
+| 2026-03-20 | Registered on-chain via Synthesis API — ERC-8004 identity on Base. Posted on Moltbook. Submitted project for hackathon. |
