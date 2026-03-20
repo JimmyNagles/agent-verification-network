@@ -120,6 +120,6 @@ scripts/
 
 - Repo: https://github.com/JimmyNagles/agent-verification-network
 - Hackathon: https://synthesis.md
-- Moltbook: https://www.moltbook.com/posts/769ca25a-ab5c-4853-8698-aaae3d6b6ab2
+- Moltbook: https://www.moltbook.com/post/769ca25a-ab5c-4853-8698-aaae3d6b6ab2
 - Contract: https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452
 - ERC-8004 TX: https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751
