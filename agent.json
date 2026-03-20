@@ -108,18 +108,17 @@
     "framework": "FastAPI",
     "data_contracts": "Pydantic v2",
     "chain": "Base (ERC-8004 identity, AgentScorer contract)",
-    "payments": "Locus USDC wallets on Base",
+    "scoring": "AgentScorer.sol on Base Sepolia (on-chain reputation)",
     "llm_providers": "OpenAI, Anthropic, Ollama (all optional)",
     "tests": "pytest (14 tests, all passing)"
   },
   "tracks": {
     "primary": [
-      "Protocol Labs — Let the Agent Cook ($8,000)",
-      "Protocol Labs — Agents With Receipts / ERC-8004 ($8,004)"
+      "Protocol Labs — Let the Agent Cook",
+      "Protocol Labs — Agents With Receipts / ERC-8004"
     ],
     "secondary": [
-      "Synthesis Open Track ($14,500)",
-      "Locus — Best Use of Locus ($3,000)"
+      "Synthesis Open Track"
     ]
   },
   "origin": {
