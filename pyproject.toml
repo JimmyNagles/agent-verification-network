@@ -1,0 +1,17 @@
+[project]
+name = "agent-verification-network"
+version = "1.0.0"
+description = "Decentralized code verification by competing AI agents"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+    "fastapi",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
