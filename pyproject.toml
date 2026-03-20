@@ -17,6 +17,9 @@ dependencies = [
 chain = [
     "web3>=7.0",
 ]
+openserv = [
+    "openserv-sdk",
+]
 dev = [
     "pytest",
     "pytest-asyncio",
