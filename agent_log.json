@@ -1,5 +1,228 @@
 {
   "agent": "Agent Verification Network",
   "version": "1.0.0",
-  "events": []
+  "events": [
+    {
+      "timestamp": "2026-03-20T00:23:36Z",
+      "type": "agent_started",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "capabilities": [
+          "ast_parsing",
+          "pattern_detection",
+          "security_analysis"
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:23:38Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "task_id": "test-001",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:40Z",
+      "type": "agent_started",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "capabilities": [
+          "ast_parsing",
+          "pattern_detection",
+          "security_analysis"
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:44Z",
+      "type": "miner_registered",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miner_id": "miner-001",
+        "endpoint": "http://localhost:8001"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:44Z",
+      "type": "agent_started",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "miners_registered": 1,
+        "rounds_planned": 5,
+        "mode": "connected"
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:44Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "task_id": "1f8b9db7-89eb-4888-b1c6-21de707ecdb1",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:44Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 1,
+        "task_id": "1f8b9db7-89eb-4888-b1c6-21de707ecdb1",
+        "is_honeypot": true,
+        "responses": 1,
+        "best_agent": "miner-001",
+        "best_score": 0.78,
+        "leaderboard": {
+          "miner-001": 0.078
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:46Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "task_id": "d9391630-a651-4596-ba58-56d153325898",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:46Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 2,
+        "task_id": "d9391630-a651-4596-ba58-56d153325898",
+        "is_honeypot": true,
+        "responses": 1,
+        "best_agent": "miner-001",
+        "best_score": 0.78,
+        "leaderboard": {
+          "miner-001": 0.1482
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:48Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "task_id": "edb389a9-9fc3-4ed4-b8ee-10429667f15e",
+        "issues_found": 1,
+        "confidence": 0.85,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:48Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 3,
+        "task_id": "edb389a9-9fc3-4ed4-b8ee-10429667f15e",
+        "is_honeypot": false,
+        "responses": 1,
+        "best_agent": "miner-001",
+        "best_score": 0.275,
+        "leaderboard": {
+          "miner-001": 0.1609
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:50Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "task_id": "39ae0892-b191-46bf-847a-eafe624f0229",
+        "issues_found": 0,
+        "confidence": 0.7,
+        "passed": true,
+        "processing_time": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:50Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 4,
+        "task_id": "39ae0892-b191-46bf-847a-eafe624f0229",
+        "is_honeypot": false,
+        "responses": 1,
+        "best_agent": "miner-001",
+        "best_score": 0.28,
+        "leaderboard": {
+          "miner-001": 0.1728
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:52Z",
+      "type": "verification_completed",
+      "agent_role": "miner",
+      "agent_id": "demo-miner-001",
+      "details": {
+        "task_id": "d0360674-fafe-4c2b-8a44-0c4f20a61805",
+        "issues_found": 1,
+        "confidence": 0.75,
+        "passed": false,
+        "processing_time": 0.001
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:52Z",
+      "type": "validation_round",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "round": 5,
+        "task_id": "d0360674-fafe-4c2b-8a44-0c4f20a61805",
+        "is_honeypot": true,
+        "responses": 1,
+        "best_agent": "miner-001",
+        "best_score": 0.8,
+        "leaderboard": {
+          "miner-001": 0.2355
+        }
+      }
+    },
+    {
+      "timestamp": "2026-03-20T00:38:52Z",
+      "type": "validation_complete",
+      "agent_role": "validator",
+      "agent_id": "demo-validator-001",
+      "details": {
+        "rounds_completed": 5,
+        "final_scores": {
+          "miner-001": 0.2355
+        }
+      }
+    }
+  ]
 }
