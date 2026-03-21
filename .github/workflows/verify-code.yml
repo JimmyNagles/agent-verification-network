@@ -128,3 +128,7 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+
+            if (critical > 0) {
+              core.setFailed(`Verification failed: ${critical} critical issue(s) found`);
+            }
