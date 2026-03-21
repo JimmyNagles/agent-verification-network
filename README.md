@@ -3,7 +3,9 @@
 > Submission for [The Synthesis](https://synthesis.md) — March 2026
 > A decentralized network where AI agents verify each other's code, scored by objective ground truth, with reputation recorded on-chain via ERC-8004 on Base.
 
-**Live contract:** [`0x11BCd7097f1835b3D19A05fd06905Bd332ED2452`](https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452) on Base Sepolia
+**Live contracts on Base Mainnet:**
+- AgentScorer: [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A)
+- AgenticCommerce (ERC-8183): [`0xeE779106989Dd16287A114f9e5039C1EFC47A95E`](https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E)
 **ERC-8004 identity:** [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) on Base Mainnet
 
 ---
@@ -122,7 +124,7 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
                           ▼                       ▼
                    Best result             Scores written
                    → Task Creator          → AgentScorer.sol
-                                             on Base Sepolia
+                                             on Base Mainnet
 ```
 
 ### Two Operating Modes
@@ -130,6 +132,10 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 **Standalone mode** — The API server runs the analyzer locally. No miners, no validator loop, no chain. Good for testing.
 
 **Connected mode** — The validator agent runs the full loop: generates honeypots, queries registered miner agents via HTTP, scores responses, writes scores on-chain. The demo runs 3 competing miners in connected mode.
+
+### Open Protocol
+
+The smart contracts (AgenticCommerce + AgentScorer) are the protocol. The API is one interface — anyone can build their own. Agents can interact with the contracts directly using their own wallet, or use the API as a convenience layer. Hit `/protocol` for contract addresses and ABIs.
 
 ---
 
@@ -143,17 +149,18 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 | **Honeypot Generator** | `agent_market/validator/honeypot.py` | 278 | 12 code templates with known bugs + 2 clean-code templates (for testing false positive rates). Each template has multiple variants. Produces `(buggy_code, intent, known_bugs)` tuples. |
 | **Scorer** | `agent_market/validator/scorer.py` | 205 | Multi-signal scoring: honeypot detection rate, false positive penalty, consensus alignment, format compliance, speed bonus. Includes semantic type matching (e.g., "bug" and "logic_error" are treated as related). |
 | **Validator Forward** | `agent_market/validator/forward.py` | 165 | The validator loop. Generates honeypots, queries miners (locally or via HTTP), scores responses, maintains running averages. |
-| **API Server** | `agent_market/api/server.py` | 160 | FastAPI with `/verify`, `/status/{task_id}`, `/leaderboard`, `/health` endpoints. Works in standalone or connected mode. |
+| **API Server** | `agent_market/api/server.py` | 160 | FastAPI with `/verify`, `/status/{task_id}`, `/leaderboard`, `/health`, `/protocol`, and `/jobs` endpoints. Works in standalone or connected mode. |
 | **Miner Agent** | `agents/miner_agent.py` | 137 | Standalone miner runner with `/verify` and `/health` endpoints. Logs all activity to `agent_log.json`. |
 | **Validator Agent** | `agents/validator_agent.py` | 175 | Standalone validator runner. Connects to miners, runs honeypot rounds, scores responses, writes scores on-chain with `--chain` flag. |
-| **AgentScorer.sol** | `contracts/AgentScorer.sol` | 80 | Solidity contract on Base Sepolia. Records miner scores on-chain with `ScoreRecorded` events. Deployed at [`0x11BCd7097f1835b3D19A05fd06905Bd332ED2452`](https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452). |
+| **AgentScorer.sol** | `contracts/AgentScorer.sol` | 80 | Solidity contract on Base Mainnet. Records miner scores on-chain with `ScoreRecorded` events. Deployed at [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A). |
+| **AgenticCommerce.sol** | `contracts/AgenticCommerce.sol` | 141 | ERC-8183 job marketplace — create, fund, submit, complete/reject with escrow. Deployed on Base Mainnet. |
 | **Chain Scorer** | `agent_market/chain.py` | 95 | Web3.py integration for writing scores to AgentScorer.sol. Gracefully disabled when no private key or contract is configured. |
 | **Event Logger** | `agent_market/logger.py` | 50 | Structured event logger writing to `agent_log.json`. Every verification, scoring round, and on-chain write is logged with timestamps. |
 | **Deploy Script** | `scripts/deploy_contract.py` | 80 | Compiles and deploys AgentScorer.sol to Base Sepolia using Foundry + web3.py. |
 | **Demo Script** | `scripts/demo.sh` | 180 | End-to-end demo: starts 3 competing miners, validator with honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring. |
 | **Tests** | `tests/test_verification.py` | 165 | 14 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
 
-**Total: ~2,400 lines of Python + 80 lines Solidity. 14/14 tests passing. 6 on-chain transactions on Base Sepolia.**
+**Total: ~2,400 lines of Python + 221 lines Solidity. 14/14 tests passing. 6 on-chain transactions on Base.**
 
 ---
 
@@ -163,7 +170,8 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 |----------|-------|------|
 | ERC-8004 Identity | Base Mainnet | [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) |
 | Self-Custody Transfer | Base Mainnet | [`0x4f2a8885...`](https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da) |
-| AgentScorer Contract | Base Sepolia | [`0x11BCd709...`](https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452) |
+| AgentScorer Contract | Base Mainnet | [`0xc1679D1A...`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A) |
+| AgenticCommerce (ERC-8183) | Base Mainnet | [`0xeE779106...`](https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E) |
 | 6 Score Transactions | Base Sepolia | Viewable in `agent_log.json` — each with tx hash and block number |
 
 ---
@@ -268,7 +276,7 @@ Miner agents and task creators enter an implicit agreement: verify this code, ge
 
 > "Scoped spending permissions, auditable transaction history"
 
-The architecture supports USDC payment flows via Locus wallets on Base, where payments flow to the highest-scoring miner. Every transaction is on-chain and auditable.
+The AgenticCommerce contract (ERC-8183) on Base Mainnet implements a full job lifecycle with escrow — clients fund jobs, miners submit work, evaluators approve or reject. Funds flow automatically via the contract. The API also supports x402 payment headers for HTTP-native payment flows.
 
 ---
 

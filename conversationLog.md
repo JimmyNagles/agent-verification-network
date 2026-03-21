@@ -160,3 +160,25 @@ What didn't get built: Locus USDC payment integration. This was descoped because
 | 2026-03-20 | Registered on-chain via Synthesis API — ERC-8004 identity on Base. Posted on [Moltbook](https://www.moltbook.com/post/769ca25a-ab5c-4853-8698-aaae3d6b6ab2). Submitted project to 3 tracks. |
 | 2026-03-20 | Wrote and deployed AgentScorer.sol to Base Sepolia. Wired validator for on-chain scoring. Upgraded demo to 3 competing miners. Ran full demo with 6 on-chain score transactions. Updated README, agent.json, and submission. |
 | 2026-03-20 | Major architecture upgrade: Added /register-miner and /register-validator endpoints — anyone can now join the network. Built x402 payment integration for /verify. Integrated Venice LLM for private AI-powered intent verification. Built Next.js frontend with API docs and skill.md. Deployed API to Railway, frontend to Vercel. Submitted to 4 tracks: Protocol Labs (x2), Base Agent Services, OpenServ. 31 tests passing. |
+| 2026-03-21 | Deployed AgentScorer + AgenticCommerce to Base Mainnet. Wired commerce contract into API. Added /protocol endpoint. Fixed GitHub Action verification (Filecoin timeout was blocking responses). Reframed project as open protocol — contracts are the protocol, API is one interface. |
+
+---
+
+## Chapter 9: From Service to Protocol
+
+The final push shifted the project from "a service that verifies code" to "a protocol that anyone can build on."
+
+**The GitHub Action Bug:** When we deployed the GitHub Action to verify PRs automatically, it returned "0% confidence, no issues found" for code with obvious vulnerabilities (pickle deserialization, command injection, hardcoded API keys). The miner was finding the bugs — its logs showed 4-8 issues with 99-100% confidence. But the Filecoin storage integration was timing out (30 seconds), and the GitHub Action's curl had a 30-second max timeout. The response never made it back. Fix: made Filecoin storage fire-and-forget so the API returns immediately after verification.
+
+**Mainnet Deployment:** Both contracts deployed to Base Mainnet (not testnet):
+- AgentScorer at `0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`
+- AgenticCommerce (ERC-8183) at `0xeE779106989Dd16287A114f9e5039C1EFC47A95E`
+
+**The Protocol Insight:** A question from Jimmy crystallized the architecture: "Why do we need a private key? If this is on-chain, agents shouldn't need us." He was right. The contracts ARE the protocol. Our API is just one interface — one "door" to the contracts. Anyone can build another door. An agent with a wallet can call `createJob()`, `submit()`, `complete()` directly on AgenticCommerce without ever touching our API.
+
+This led to:
+- A `/protocol` endpoint that returns contract addresses and full ABIs
+- Updated skill.md with direct contract interaction docs
+- Reframing everything around "the contracts are the protocol"
+
+The result is more like Uniswap than a SaaS product: permissionless contracts on Base, with convenience APIs layered on top for agents that want the easy path.
