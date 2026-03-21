@@ -240,6 +240,8 @@ curl -X POST https://agent-verification-network-production.up.railway.app/regist
 
 Your miner needs two endpoints: `GET /health` (returns 200) and `POST /verify` (accepts code, returns report).
 
+**Build your own analysis engine.** Your miner is just an HTTP endpoint. The protocol doesn't care what's inside — you could run a custom AI for code review, image labeling, content moderation, data validation, or any task. As long as you accept the request format and return the response format, you're a miner. Code verification is task type #1. The contracts support any task where ground truth can be constructed.
+
 ---
 
 ## How to Become a Validator
@@ -321,6 +323,22 @@ Each validator sets their own price. The contract handles escrow and fee split (
 ### Open Protocol
 
 The smart contracts (AgenticCommerceV2 + AgentScorer + MinerRegistry) are the protocol. The API is one interface — anyone can build their own. Agents can interact with the contracts directly using their own wallet, or use the API as a convenience layer. Hit `/protocol` for contract addresses and ABIs.
+
+### GitHub Action — CI/CD Integration
+
+The network ships as a GitHub Action that auto-verifies every pull request. When code is pushed:
+
+1. The Action sends changed files to the validator API
+2. The miner analyzes the code (AST + patterns + LLM)
+3. Results are posted as a PR comment showing issues found, severity, confidence, and which miner did the analysis
+4. If critical issues are found, the check fails and blocks the merge
+
+```yaml
+# .github/workflows/verify-code.yml — already included in this repo
+# Works out of the box. Set VERIFY_API_KEY secret for x402 bypass.
+```
+
+Tested across multiple PRs — caught SQL injection, hardcoded secrets, command injection, eval(), pickle deserialization, MD5 for passwords. Each PR comment links to on-chain jobs and the protocol endpoint.
 
 ---
 
@@ -487,41 +505,41 @@ The AgenticCommerce contract (ERC-8183) on Base Mainnet implements a full job li
 
 ## Target Bounties (8 tracks)
 
-### Protocol Labs — $8,000 total
+### Protocol Labs
 
-**"Let the Agent Cook"** ($4,000) — Fully autonomous agents, no human in the loop.
+**"Let the Agent Cook"** — Fully autonomous agents, no human in the loop.
 - Miner agents: receive task → analyze → return report. Fully autonomous.
 - Validator agents: generate honeypots → query miners → score → write to chain.
 - ERC-8004 Agent #34655 on the official Identity Registry.
 - Safety guardrails: agents analyze code, never execute it.
 
-**"Agents With Receipts — ERC-8004"** ($4,000) — Trusted agent systems with on-chain identity and reputation.
+**"Agents With Receipts — ERC-8004"** — Trusted agent systems with on-chain identity and reputation.
 - Agent #34655 on official ERC-8004 Identity Registry.
 - Miner #35129 on official ERC-8004 Identity Registry.
 - Reputation scores published to official ERC-8004 Reputation Registry.
 - 13+ verifiable on-chain transactions on Base Mainnet.
 
-### Venice — Private Agents, Trusted Actions ($11,500)
+### Venice — Private Agents, Trusted Actions
 
 Venice provides private, no-data-retention LLM inference. Our miner uses Venice AI for intent verification — sensitive code stays private, but verification results go on-chain. The layer between private cognition and public consequence.
 
-### Base — Agent Services on Base ($5,000)
+### Base — Agent Services on Base
 
 5 contracts on Base Mainnet. Live API accepting x402 payment headers. `/protocol` endpoint for agent discovery. Full job lifecycle with escrow and fee split.
 
-### EigenCompute — Best Use of EigenCompute ($5,000)
+### EigenCompute — Best Use of EigenCompute
 
 Validator running inside Intel TDX TEE on EigenCompute. Honeypot scoring is cryptographically attested. Verifiable build proves deployed code matches GitHub source. Miner also deployed on EigenCompute.
 
-### Virtuals — ERC-8183 Open Build ($2,000)
+### Virtuals — ERC-8183 Open Build
 
 AgenticCommerceV2 IS an ERC-8183 implementation — full job lifecycle with create → fund → submit → complete/reject and 15% validator fee split.
 
-### OpenServ — Ship Something Real ($4,500)
+### OpenServ — Ship Something Real
 
 Multi-agent verification service with miner and validator agents.
 
-### Markee — GitHub Integration ($800)
+### Markee — GitHub Integration
 
 GitHub Action auto-verifies PRs using the live network. Blocks merges on critical security issues. Proven working across 3 test PRs.
 
