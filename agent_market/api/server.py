@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from agent_market.logger import log_event
 from agent_market.x402 import check_x402_payment, get_pricing_info
+from agent_market.storage import store_on_filecoin
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,8 @@ class VerifyResponse(BaseModel):
     agent_id: Optional[str] = None
     score: Optional[float] = None
     mode: Optional[str] = None
+    filecoin_cid: Optional[str] = None
+    filecoin_url: Optional[str] = None
 
 
 class TaskStatus(BaseModel):
@@ -172,23 +175,82 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         task_id = str(uuid4())
 
         import os
-        from agent_market.miner.analyzer import analyze_code
-        use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-        result = analyze_code(
-            code=request.code,
-            intent=request.intent,
-            language=request.language,
-            use_llm=use_llm,
-        )
+        import json as _json
+
+        best_result = None
+        best_agent = None
+        mode = "standalone"
+
+        # If miners are registered, route to them
+        if _registered_miners:
+            miner_responses = []
+            for miner in _registered_miners:
+                try:
+                    data = _json.dumps({
+                        "code": request.code,
+                        "intent": request.intent,
+                        "language": request.language,
+                        "task_id": task_id,
+                    }).encode("utf-8")
+                    req = urllib.request.Request(
+                        f"{miner['endpoint'].rstrip('/')}/verify",
+                        data=data,
+                        headers={
+                            "Content-Type": "application/json",
+                            "User-Agent": "AgentVerificationNetwork/1.0",
+                        },
+                        method="POST",
+                    )
+                    with urllib.request.urlopen(req, timeout=30) as resp:
+                        miner_result = _json.loads(resp.read().decode("utf-8"))
+                        miner_responses.append({
+                            "agent_id": miner["agent_id"],
+                            "result": miner_result,
+                        })
+                        logger.info(f"Miner {miner['agent_id']} responded: {len(miner_result.get('issues', []))} issues")
+                except Exception as e:
+                    logger.warning(f"Miner {miner['agent_id']} failed: {e}")
+
+            # Pick the best response (highest confidence)
+            if miner_responses:
+                best = max(miner_responses, key=lambda r: r["result"].get("confidence", 0))
+                best_result = best["result"]
+                best_agent = best["agent_id"]
+                mode = "network"
+                logger.info(f"Best response from {best_agent} (confidence: {best_result.get('confidence')})")
+
+        # Fallback to local analysis if no miners responded
+        if best_result is None:
+            from agent_market.miner.analyzer import analyze_code
+            use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
+            best_result = analyze_code(
+                code=request.code,
+                intent=request.intent,
+                language=request.language,
+                use_llm=use_llm,
+            )
 
         response = VerifyResponse(
             task_id=task_id,
-            passed=result["passed"],
-            confidence=result["confidence"],
-            issues=result["issues"],
-            suggestions=result["suggestions"],
-            mode="standalone",
+            passed=best_result.get("passed", best_result.get("passed", True)),
+            confidence=best_result.get("confidence", 0),
+            issues=best_result.get("issues", []),
+            suggestions=best_result.get("suggestions", []),
+            agent_id=best_agent,
+            mode=mode,
         )
+
+        # Store report on Filecoin (async, non-blocking)
+        try:
+            storage = await store_on_filecoin(
+                data=response.model_dump(),
+                filename=f"verification_{task_id}.json",
+            )
+            if storage:
+                response.filecoin_cid = storage["cid"]
+                response.filecoin_url = storage["url"]
+        except Exception:
+            pass  # Storage failure shouldn't break verification
 
         results[task_id] = response
         return response

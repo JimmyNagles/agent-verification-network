@@ -13,6 +13,7 @@ Usage:
 import argparse
 import asyncio
 import logging
+import os
 import sys
 import time
 from uuid import uuid4
@@ -126,6 +127,39 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
     return app
 
 
+def auto_register(validator_url: str, agent_id: str, my_url: str, strategy: str):
+    """Auto-register with the validator after startup."""
+    import urllib.request
+    import json as _json
+    import threading
+
+    def _register():
+        time.sleep(5)  # Wait for server to be ready
+        try:
+            data = _json.dumps({
+                "agent_id": agent_id,
+                "endpoint": my_url,
+                "strategy": strategy,
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                f"{validator_url.rstrip('/')}/register-miner",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "User-Agent": "AgentVerificationNetwork/1.0",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = _json.loads(resp.read().decode("utf-8"))
+                logger.info(f"Registered with validator: {result}")
+        except Exception as e:
+            logger.warning(f"Auto-registration failed: {e}")
+
+    thread = threading.Thread(target=_register, daemon=True)
+    thread.start()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run a miner agent")
     parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
@@ -139,9 +173,19 @@ def main():
     )
     args = parser.parse_args()
 
+    # Check for auto-registration env vars
+    validator_url = os.environ.get("VALIDATOR_URL", "")
+    my_url = os.environ.get("MINER_PUBLIC_URL", "")
+
     logger.info(f"Starting miner agent: {args.agent_id} on port {args.port} (strategy={args.strategy})")
 
     app = create_app(args.agent_id, strategy=args.strategy)
+
+    # Auto-register with validator if configured
+    if validator_url and my_url:
+        logger.info(f"Will auto-register with validator at {validator_url}")
+        auto_register(validator_url, args.agent_id, my_url, args.strategy)
+
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 

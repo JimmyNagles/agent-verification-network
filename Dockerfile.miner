@@ -7,10 +7,9 @@ RUN pip install --no-cache-dir pydantic fastapi uvicorn
 
 COPY agent_market/ agent_market/
 COPY agents/ agents/
-COPY scripts/start.py scripts/start.py
 COPY agent.json .
 COPY agent_log.json .
 
-EXPOSE 8000
+EXPOSE 8001
 
-CMD ["python", "scripts/start.py"]
+CMD ["python", "-m", "agents.miner_agent", "--port", "8001", "--agent-id", "miner-persistent-001", "--strategy", "intent-focused", "--host", "0.0.0.0"]
