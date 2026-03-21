@@ -17,6 +17,7 @@ import urllib.request
 from typing import Optional
 from uuid import uuid4
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from agent_market.logger import log_event
