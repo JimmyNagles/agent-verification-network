@@ -32,6 +32,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# CORS — allow frontends and agents to call the API from any origin
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Validator reference — None means standalone/demo mode
 _validator = None
 
