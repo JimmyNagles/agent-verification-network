@@ -558,6 +558,54 @@ async def get_activity():
     }
 
 
+@app.get("/agents")
+async def list_agents():
+    """All registered agents with on-chain data — miners from registry, their endpoints, strategies."""
+    agents = []
+
+    # On-chain miners from MinerRegistry
+    onchain_miners = _registry.get_active_miners() if _registry.enabled else []
+    for m in onchain_miners:
+        agents.append({
+            "agent_id": m["agent_id"],
+            "role": "miner",
+            "endpoint": m["endpoint"],
+            "strategy": m.get("strategy", ""),
+            "owner": m.get("owner", ""),
+            "registered_at": m.get("registered_at", 0),
+            "source": "on-chain (MinerRegistry)",
+        })
+
+    # In-memory miners not on-chain
+    known_ids = {a["agent_id"] for a in agents}
+    for m in _registered_miners:
+        if m["agent_id"] not in known_ids:
+            agents.append({
+                "agent_id": m["agent_id"],
+                "role": "miner",
+                "endpoint": m["endpoint"],
+                "strategy": m.get("strategy", ""),
+                "source": "in-memory",
+            })
+
+    # Validators
+    agents.append({
+        "agent_id": "railway-validator",
+        "role": "validator",
+        "endpoint": "https://agent-verification-network-production.up.railway.app",
+        "source": "infrastructure",
+    })
+    agents.append({
+        "agent_id": "eigen-validator",
+        "role": "validator",
+        "endpoint": "http://34.142.184.34:8000",
+        "tee": "Intel TDX",
+        "source": "EigenCompute TEE",
+    })
+
+    return {"agents": agents, "total": len(agents)}
+
+
 @app.get("/erc8004")
 async def erc8004_info():
     """Our ERC-8004 identity and reputation on the official registries."""

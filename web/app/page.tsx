@@ -52,25 +52,44 @@ interface ActivityData {
   total_miners: number;
 }
 
+interface AgentInfo {
+  agent_id: string;
+  role: string;
+  endpoint?: string;
+  strategy?: string;
+  owner?: string;
+  registered_at?: number;
+  source?: string;
+  tee?: string;
+}
+
+interface AgentsData {
+  agents: AgentInfo[];
+  total: number;
+}
+
 export default function Home() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [network, setNetwork] = useState<NetworkData | null>(null);
   const [jobs, setJobs] = useState<JobsData | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [activity, setActivity] = useState<ActivityData | null>(null);
+  const [agents, setAgents] = useState<AgentsData | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, n, j, s, a] = await Promise.all([
+      const [h, n, j, s, a, ag] = await Promise.all([
         fetch(`${API_BASE}/health`).then((r) => r.json()),
         fetch(`${API_BASE}/network`).then((r) => r.json()).catch(() => null),
         fetch(`${API_BASE}/jobs`).then((r) => r.json()).catch(() => null),
         fetch(`${API_BASE}/stats`).then((r) => r.json()).catch(() => null),
         fetch(`${API_BASE}/activity`).then((r) => r.json()).catch(() => null),
+        fetch(`${API_BASE}/agents`).then((r) => r.json()).catch(() => null),
       ]);
       setHealth(h);
       if (n) setNetwork(n);
       if (a) setActivity(a);
+      if (ag) setAgents(ag);
       if (j) setJobs(j);
       if (s) setStats(s);
     } catch {}
@@ -185,6 +204,44 @@ export default function Home() {
             </div>
           ) : (
             <p className="text-gray-500 text-sm">No activity yet. Submit a verification to see the feed.</p>
+          )}
+        </section>
+
+        {/* Agents */}
+        <section className="py-12 border-b border-gray-800">
+          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Network Participants</h3>
+          {agents?.agents && agents.agents.length > 0 ? (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {agents.agents.map((agent, i) => (
+                <div key={i} className="p-4 rounded border border-gray-800 bg-gray-950">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-bold text-sm">{agent.agent_id}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${agent.role === "validator" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"}`}>
+                      {agent.role}
+                    </span>
+                  </div>
+                  {agent.strategy && (
+                    <p className="text-xs text-gray-400 mb-1">Strategy: <span className="text-blue-400">{agent.strategy}</span></p>
+                  )}
+                  {agent.tee && (
+                    <p className="text-xs text-gray-400 mb-1">TEE: <span className="text-green-400">{agent.tee}</span></p>
+                  )}
+                  {agent.endpoint && (
+                    <p className="text-xs text-gray-500 truncate">{agent.endpoint}</p>
+                  )}
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-600">{agent.source}</span>
+                    {agent.owner && (
+                      <a href={`https://basescan.org/address/${agent.owner}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">
+                        {agent.owner.slice(0, 6)}...{agent.owner.slice(-4)}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Loading agents...</p>
           )}
         </section>
 
