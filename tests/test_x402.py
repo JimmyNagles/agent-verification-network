@@ -105,36 +105,38 @@ class TestX402EnabledNoPayment:
 
 class TestX402ValidPayment:
     @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT})
-    def test_valid_payment_proceeds(self):
+    def test_fake_payment_rejected(self):
+        """Fake payment signatures are rejected — must have real on-chain tx."""
         proof = _make_valid_proof()
         resp = client.post(
             "/verify",
             json=VERIFY_PAYLOAD,
             headers={"PAYMENT-SIGNATURE": proof},
         )
+        # Should be rejected — no real tx hash or verification fails
+        assert resp.status_code == 402
+
+    @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT, "VERIFY_API_KEY": "test-key"})
+    def test_api_key_bypass_works(self):
+        """API key bypass still works for authorized services."""
+        resp = client.post(
+            "/verify",
+            json=VERIFY_PAYLOAD,
+            headers={"X-API-Key": "test-key"},
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "task_id" in data
 
-    @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT})
-    def test_x_payment_header_also_works(self):
-        proof = _make_valid_proof()
+    @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT, "VERIFY_API_KEY": "test-key"})
+    def test_wrong_api_key_rejected(self):
+        """Wrong API key doesn't bypass payment."""
         resp = client.post(
             "/verify",
             json=VERIFY_PAYLOAD,
-            headers={"X-PAYMENT": proof},
+            headers={"X-API-Key": "wrong-key"},
         )
-        assert resp.status_code == 200
-
-    @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT})
-    def test_x_payment_proof_header_also_works(self):
-        proof = _make_valid_proof()
-        resp = client.post(
-            "/verify",
-            json=VERIFY_PAYLOAD,
-            headers={"X-Payment-Proof": proof},
-        )
-        assert resp.status_code == 200
+        assert resp.status_code == 402
 
 
 # ── Enabled — Invalid Payment ───────────────────────────────────

@@ -128,15 +128,11 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
     """
     Validate a payment proof from the PAYMENT-SIGNATURE header.
 
-    Checks:
-      - Required fields present (scheme, network, payload)
-      - Scheme is "exact"
-      - Network is "base"
-      - Payment targets the correct recipient
-      - Transaction signature exists
-
-    For full on-chain verification, a facilitator service would
-    confirm the transaction is settled on Base.
+    Verifies the transaction ON-CHAIN — no fake payments accepted.
+    The proof must contain a txHash that we verify on Base Mainnet:
+      - Transaction exists and is confirmed
+      - Payment was sent to the correct recipient
+      - Amount meets the minimum price
     """
     required_fields = ["scheme", "network", "payload"]
     for field in required_fields:
@@ -153,23 +149,46 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
     if not isinstance(payload, dict):
         return False, "Invalid payload format"
 
-    # Check that the payment targets the correct recipient
-    expected_recipient = _get_recipient().lower()
-    proof_recipient = payload.get("recipient", "").lower()
-    if proof_recipient and proof_recipient != expected_recipient:
-        return False, "Payment recipient mismatch"
+    # Must have a tx hash — we verify on-chain
+    tx_hash = payload.get("txHash") or payload.get("tx_hash")
+    if not tx_hash:
+        return False, "Missing txHash — submit a real transaction on Base and include the hash"
 
-    # Accept both ETH and USDC
-    token = _get_token()
-    proof_token = payload.get("token", "").lower()
-    if token == "usdc" and proof_token and proof_token != USDC_CONTRACT.lower():
-        return False, "Invalid token — USDC required"
+    # Verify the transaction on-chain
+    try:
+        from web3 import Web3
+        rpc_url = os.environ.get("BASE_RPC_URL", "https://base-mainnet.g.alchemy.com/v2/VkqT8RyCceRMz0G4PbTQYJjkG5KMFIQZ")
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
 
-    # Check signature or tx hash exists
-    if not payload.get("signature") and not payload.get("txHash"):
-        return False, "Missing transaction signature or tx hash"
+        # Get the transaction receipt
+        receipt = w3.eth.get_transaction_receipt(tx_hash)
+        if receipt is None:
+            return False, f"Transaction {tx_hash} not found on Base"
 
-    return True, "Payment accepted"
+        if receipt.status != 1:
+            return False, f"Transaction {tx_hash} failed (reverted)"
+
+        # Get the transaction details
+        tx = w3.eth.get_transaction(tx_hash)
+
+        # Verify recipient
+        expected_recipient = _get_recipient().lower()
+        tx_to = (tx.to or "").lower()
+        if tx_to != expected_recipient:
+            return False, f"Transaction sent to {tx_to}, expected {expected_recipient}"
+
+        # Verify minimum amount (for ETH payments)
+        token = _get_token()
+        if token == "eth":
+            min_price = float(_get_price())
+            min_wei = int(min_price * 1e18)
+            if tx.value < min_wei:
+                return False, f"Payment too low: sent {w3.from_wei(tx.value, 'ether')} ETH, minimum is {min_price} ETH"
+
+        return True, f"Payment verified on-chain: tx {tx_hash}"
+
+    except Exception as e:
+        return False, f"On-chain verification failed: {e}"
 
 
 def verify_onchain_job(job_id: int, commerce_client) -> tuple[bool, str]:
