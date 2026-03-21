@@ -1217,6 +1217,38 @@
         "chain": "base-mainnet",
         "note": "Miner registered on official ERC-8004 Identity Registry"
       }
+    },
+    {
+      "timestamp": "2026-03-21T05:37:41Z",
+      "type": "erc8004_reputation_published",
+      "agent_role": "validator",
+      "agent_id": "validator-001",
+      "details": {
+        "miner_erc8004_id": 35129,
+        "score": 0.95,
+        "registry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+        "tx_hash": "162fb783e5596d02b2fec46a2ab911423cb52969472c8365363c7d991c38f6bc",
+        "chain": "base-mainnet"
+      }
+    },
+    {
+      "timestamp": "2026-03-21T05:37:41Z",
+      "type": "job_completed_v2",
+      "agent_role": "validator",
+      "agent_id": "validator-001",
+      "details": {
+        "job_id": 0,
+        "contract": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+        "budget_wei": 100000000000000,
+        "miner_payout_wei": 85000000000000,
+        "validator_fee_wei": 15000000000000,
+        "fee_bps": 1500,
+        "create_tx": "084c84c5c6709249c303bb97be941f7cf2325c78cbf5b61603cea8773747ea88",
+        "fund_tx": "1c336edf9d77019ec2e89b21a68df2ce8d1dc89a5e3b88095c49de44426d9997",
+        "submit_tx": "6fd44dababee126949c86b603ff420f58053ad1173c78347dd7d239f58c3c735",
+        "complete_tx": "d6839f463b546b84a6ba36f7a19257d67a00511f531fda6ccf12817eb8502806",
+        "chain": "base-mainnet"
+      }
     }
   ]
 }
