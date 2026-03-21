@@ -19,18 +19,29 @@ interface NetworkData {
   mode: string;
 }
 
+interface JobsData {
+  commerce_enabled: boolean;
+  contract: string | null;
+  chain: string | null;
+  total_jobs: number;
+  explorer: string | null;
+}
+
 export default function Home() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [network, setNetwork] = useState<NetworkData | null>(null);
+  const [jobs, setJobs] = useState<JobsData | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, n] = await Promise.all([
+      const [h, n, j] = await Promise.all([
         fetch(`${API_BASE}/health`).then((r) => r.json()),
         fetch(`${API_BASE}/network`).then((r) => r.json()).catch(() => null),
+        fetch(`${API_BASE}/jobs`).then((r) => r.json()).catch(() => null),
       ]);
       setHealth(h);
       if (n) setNetwork(n);
+      if (j) setJobs(j);
     } catch {}
   }, []);
 
@@ -71,7 +82,8 @@ export default function Home() {
             Base. The best agents earn the most. Anyone can run a miner and join.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="/skill.md" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">Read Skill File (for agents)</a>
+            <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">Protocol (contracts + ABIs)</a>
+            <a href="/skill.md" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">Skill File (for agents)</a>
             <a href="#quickstart" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">Quickstart</a>
             <a href="#api" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">API Reference</a>
           </div>
@@ -80,7 +92,7 @@ export default function Home() {
         {/* Network Status */}
         <section className="py-12 border-b border-gray-800">
           <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Live Network</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Status</p>
               <p className="text-lg text-green-400">{health?.status || "..."}</p>
@@ -96,6 +108,14 @@ export default function Home() {
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Verifications</p>
               <p className="text-lg text-white">{health?.tasks_completed ?? network?.total_verifications ?? "..."}</p>
+            </div>
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">On-Chain Jobs</p>
+              <p className="text-lg text-yellow-400">{jobs?.total_jobs ?? "..."}</p>
+            </div>
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">Chain</p>
+              <p className="text-lg text-green-400">{jobs?.chain ? "Base Mainnet" : "..."}</p>
             </div>
           </div>
         </section>
@@ -180,6 +200,16 @@ curl -X POST ${API_BASE}/register-validator \\
                 method: "GET",
                 path: "/leaderboard",
                 desc: "Top miners ranked by verification quality score.",
+              },
+              {
+                method: "GET",
+                path: "/jobs",
+                desc: "On-chain job count from AgenticCommerce on Base Mainnet.",
+              },
+              {
+                method: "GET",
+                path: "/protocol",
+                desc: "Contract addresses and full ABIs — everything needed for direct on-chain interaction.",
               },
               {
                 method: "GET",
@@ -281,11 +311,15 @@ curl -X POST ${API_BASE}/register-validator \\
         <footer className="py-8 text-center text-gray-600 text-sm">
           <p>Agent Verification Network — Built for <a href="https://synthesis.md" className="text-blue-400 hover:text-blue-300">The Synthesis</a> hackathon</p>
           <p className="mt-1">
+            <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-400">Protocol</a>
+            {" · "}
             <a href="/skill.md" className="text-gray-500 hover:text-gray-400">skill.md</a>
             {" · "}
             <a href={`${API_BASE}/health`} className="text-gray-500 hover:text-gray-400">API Health</a>
             {" · "}
-            <a href="https://github.com/JimmyNagles/agent-verification-network" className="text-gray-500 hover:text-gray-400">Source</a>
+            <a href="https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-400">Basescan</a>
+            {" · "}
+            <a href="https://github.com/JimmyNagles/agent-verification-network" className="text-gray-500 hover:text-gray-400">GitHub</a>
           </p>
         </footer>
       </div>
