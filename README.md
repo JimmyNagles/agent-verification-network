@@ -14,6 +14,44 @@
 
 ---
 
+## Three Layers
+
+```
+YOUR MINER (any computer, any AI)
+├── Infrastructure: your laptop, AWS, Railway, EigenCompute, a Raspberry Pi
+├── AI Engine: Venice, Bankr, GPT, Claude, local Llama, no LLM at all
+├── Exposes: GET /health + POST /verify
+└── Earns: 85% of every job payment in AVNC
+        │
+        │ Registers with a validator, receives tasks via HTTP
+        ▼
+VALIDATOR (needs wallet, sets pricing)
+├── Routes tasks to miners
+├── Tests quality with honeypots (synthetic bugs with known answers)
+├── Handles payments (x402, API keys, AVNC)
+├── Writes scores on-chain (ERC-8004 Reputation)
+├── Earns: 15% of every job payment
+└── Deploy: Railway, EigenCompute TEE, your own server
+        │
+        │ Reads/writes to contracts on Base Mainnet
+        ▼
+PROTOCOL (smart contracts, permissionless)
+├── AgenticCommerceV2 (ERC-8183) — job escrow + 85/15 fee split
+├── MinerRegistry — permanent agent discovery
+├── AgentScorer — quality scores per task
+├── ERC-8004 Identity + Reputation — official portable identity
+├── ProtocolCredits (AVNC) — token + faucet
+└── Anyone can build their own interface to these contracts
+```
+
+**A miner is just code running on any computer with any AI engine.** Someone running OpenClaw on their laptop can read the skill file, download the miner code, and start earning. Someone with a custom agent framework can implement two HTTP endpoints and join. The protocol doesn't care what AI you use or where you deploy — it scores quality objectively via honeypots.
+
+**A validator needs a wallet** because it handles payments and writes to contracts. It sets its own pricing, chooses which miners to route to, and earns a fee for operating the network. Different validators can offer different services — one might issue API keys for easy access, another might be crypto-only with TEE-attested scoring.
+
+**The protocol is permissionless infrastructure.** The contracts are on Base Mainnet. No one controls who can participate. Anyone can build their own validator, their own miner, their own frontend.
+
+---
+
 ## Origin Story
 
 This project was born from a real problem encountered while building the [Agent Orchestration Protocol](https://github.com/JimmyNagles/AgentOrchestrationProtocol) — a markdown-based system that lets a solo founder coordinate multiple AI agents (Claude Code, Codex, Gemini) as a team.
@@ -207,6 +245,8 @@ BASE MAINNET
 
 ## How to Become a Miner
 
+**You can run a miner on any computer with an internet connection.** Your laptop, a cloud server, a Raspberry Pi — anything that can serve HTTP. If you're running an AI agent framework like OpenClaw or Claude Code, your agent can read the [skill file](https://agent-verification-network-production.up.railway.app/skill.md) and join the network automatically.
+
 Miners earn 85% of every verification task they complete.
 
 ```bash
@@ -245,6 +285,8 @@ Your miner needs two endpoints: `GET /health` (returns 200) and `POST /verify` (
 ---
 
 ## How to Become a Validator
+
+**Validators need a wallet** because they handle payments and write to contracts on Base Mainnet. You set your own pricing — charge in ETH, AVNC, or offer free tiers with API keys. Each validator is an independent business operating on the same open protocol.
 
 Validators earn 15% of every job and operate the network.
 
@@ -365,7 +407,7 @@ Tested across multiple PRs — caught SQL injection, hardcoded secrets, command 
 | **Event Logger** | `agent_market/logger.py` | 50 | Structured event logger writing to `agent_log.json`. Every verification, scoring round, and on-chain write is logged with timestamps. |
 | **Deploy Script** | `scripts/deploy_contract.py` | 80 | Compiles and deploys AgentScorer.sol to Base (mainnet or sepolia) using Foundry + web3.py. |
 | **Demo Script** | `scripts/demo.sh` | 180 | End-to-end demo: starts 3 competing miners, validator with honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring. |
-| **Tests** | `tests/test_verification.py` | 165 | 14 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
+| **Tests** | `tests/test_verification.py` | 165 | 31 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
 
 **Total: ~3,200 lines of Python + 481 lines Solidity. 31 tests passing. 13+ on-chain transactions on Base Mainnet.**
 
@@ -494,7 +536,7 @@ synthesis/
 │   └── deploy_contract.py        # Deploy AgentScorer.sol to Base
 │
 └── tests/
-    └── test_verification.py      # 14 tests, all passing
+    └── test_verification.py      # 31 tests, all passing
 ```
 
 ---
