@@ -163,6 +163,7 @@ What didn't get built: Locus USDC payment integration. This was descoped because
 | 2026-03-21 | Deployed AgentScorer + AgenticCommerce to Base Mainnet. Wired commerce contract into API. Added /protocol endpoint. Fixed GitHub Action verification (Filecoin timeout was blocking responses). Reframed project as open protocol — contracts are the protocol, API is one interface. |
 | 2026-03-21 | Deployed AgenticCommerceV2 (15% validator fee split) and MinerRegistry to Base Mainnet. Integrated official ERC-8004 Identity (agent #34655) and Reputation registries. Five contracts total on mainnet. Full economic model: client pays → escrow → miner 85% + validator 15%. |
 | 2026-03-21 | Deployed validator to EigenCompute TEE (Intel TDX). Verifiable build with provenance signature. Two validators now running — Railway and EigenCompute — both connected to Base Mainnet contracts. |
+| 2026-03-21 | x402 payments live on production. Two payment modes: x402 HTTP header and direct on-chain job funding. Tested end-to-end: 402 response without payment, successful verification with funded job_id. |
 
 ---
 

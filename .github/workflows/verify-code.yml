@@ -51,6 +51,7 @@ jobs:
 
             RESULT=$(curl -s -X POST "$API_URL/verify" \
               -H "Content-Type: application/json" \
+              -H "X-API-Key: ${{ secrets.VERIFY_API_KEY }}" \
               -d "{\"code\": $CODE_JSON, \"intent\": \"Production code in $FILE — check for bugs, security issues, and logic errors\", \"language\": \"python\"}" \
               --max-time 60 2>/dev/null || echo '{}')
 

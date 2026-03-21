@@ -212,6 +212,17 @@ async def check_x402_payment(request: Request) -> Optional[JSONResponse]:
     if not _is_enabled():
         return None
 
+    # API key bypass — allows internal services (GitHub Action, etc.) to skip payment
+    api_key = os.environ.get("VERIFY_API_KEY", "")
+    if api_key:
+        request_key = (
+            request.headers.get("X-API-Key")
+            or request.headers.get("x-api-key")
+            or request.headers.get("Authorization", "").replace("Bearer ", "")
+        )
+        if request_key == api_key:
+            return None  # Authorized, skip payment
+
     # Check for payment header (support both naming conventions)
     payment_header = (
         request.headers.get("PAYMENT-SIGNATURE")

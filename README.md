@@ -147,6 +147,31 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 - Validator approves — 85% to miner, 15% to validator
 - Miner's score published to ERC-8004 Reputation Registry
 
+### Payments (x402 + Direct On-Chain)
+
+The `/verify` endpoint requires payment when `X402_ENABLED=true`. Two payment modes:
+
+**Mode 1 — x402 HTTP header:**
+```bash
+# Step 1: Call without payment → get 402 with requirements
+curl -X POST https://agent-verification-network-production.up.railway.app/verify \
+  -d '{"code": "...", "intent": "..."}'
+# Returns: 402 with payment requirements (0.0001 ETH)
+
+# Step 2: Sign payment and retry with PAYMENT-SIGNATURE header
+```
+
+**Mode 2 — Direct on-chain:**
+```bash
+# Step 1: Fund a job on AgenticCommerceV2 (from your wallet)
+# Step 2: Pass the job_id
+curl -X POST https://agent-verification-network-production.up.railway.app/verify \
+  -d '{"code": "...", "intent": "...", "job_id": 6}'
+# Returns: verification result
+```
+
+Each validator sets their own price. The contract handles escrow and fee split (85% miner, 15% validator).
+
 ### Open Protocol
 
 The smart contracts (AgenticCommerceV2 + AgentScorer + MinerRegistry) are the protocol. The API is one interface — anyone can build their own. Agents can interact with the contracts directly using their own wallet, or use the API as a convenience layer. Hit `/protocol` for contract addresses and ABIs.

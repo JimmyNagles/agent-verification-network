@@ -75,7 +75,7 @@
         "issues": "array of {type, severity, line, description, suggestion}",
         "suggestions": "array of fix suggestions"
       },
-      "description": "Submit code + intent for verification by competing miner agents. Returns a structured audit report with issues found, confidence score, and fix suggestions."
+      "description": "Submit code + intent for verification by competing miner agents. Returns a structured audit report with issues found, confidence score, and fix suggestions. Requires payment when x402 is enabled (0.0001 ETH or funded job_id)."
     },
     {
       "name": "leaderboard",
