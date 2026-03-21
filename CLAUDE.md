@@ -13,7 +13,7 @@ A decentralized network where AI agents verify each other's code, built for **Th
 1. Task creator submits code + intent ("what should this code do?")
 2. Miner agents independently analyze the code (AST parsing + pattern detection + LLM intent matching)
 3. Validator agent scores miners using **honeypots** — synthetic code with known bugs mixed in with real tasks
-4. Scores recorded on-chain via **AgentScorer.sol** on **Base Sepolia**
+4. Scores recorded on-chain via **AgentScorer.sol** on **Base Mainnet**
 5. Best result returned to task creator
 
 ## Origin
@@ -44,8 +44,8 @@ The first version was a **Bittensor subnet** (~3,200 lines). The core verificati
 |----------|-------|------------|
 | ERC-8004 Identity | Base Mainnet | [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) |
 | Self-Custody Transfer | Base Mainnet | [`0x4f2a8885...`](https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da) |
-| AgentScorer Contract | Base Sepolia | [`0x11BCd7097f1835b3D19A05fd06905Bd332ED2452`](https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452) |
-| Score Transactions | Base Sepolia | 6 txs in `agent_log.json` |
+| AgentScorer Contract | Base Mainnet | [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A) |
+| Score Transactions | Base Mainnet | 6 txs in `agent_log.json` |
 | AgenticCommerceV2 | Base Mainnet | [`0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) — Job marketplace with 15% fee split |
 | MinerRegistry | Base Mainnet | [`0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) — On-chain agent discovery |
 | ERC-8004 Agent ID | Base Mainnet | #34655 on official Identity Registry ([`0x8004A169...`](https://basescan.org/address/0x8004A169)) |
@@ -79,7 +79,7 @@ agent_market/
     └── server.py            # FastAPI: /verify, /status/{task_id}, /leaderboard, /health
 
 contracts/
-├── AgentScorer.sol          # On-chain score recording (deployed on Base Sepolia)
+├── AgentScorer.sol          # On-chain score recording (deployed on Base Mainnet)
 ├── AgenticCommerceV2.sol    # Job marketplace with validator fee split
 ├── MinerRegistry.sol        # Permanent on-chain agent registry
 └── deployed.json            # Contract address + ABI
@@ -90,7 +90,7 @@ agents/
 
 scripts/
 ├── demo.sh                  # Multi-miner demo (3 miners, 8 rounds, --chain support)
-└── deploy_contract.py       # Deploy AgentScorer.sol to Base Sepolia
+└── deploy_contract.py       # Deploy AgentScorer.sol to Base Mainnet
 ```
 
 ### Key Files for Hackathon
@@ -110,9 +110,8 @@ scripts/
 - **Solidity 0.8.19** — AgentScorer contract
 - **Foundry** — Solidity compilation + deployment
 - **web3.py** — Python → Base chain interaction
-- **Base Sepolia** — contract deployment + score recording
-- **Base Mainnet** — ERC-8004 identity
-- **pytest** — tests (14 passing)
+- **Base Mainnet** — contract deployment, score recording, and ERC-8004 identity
+- **pytest** — tests (31 passing)
 - **LLM providers** (optional) — OpenAI, Anthropic, Ollama for intent verification
 
 ## Important Context
@@ -135,5 +134,5 @@ scripts/
 - Repo: https://github.com/JimmyNagles/agent-verification-network
 - Hackathon: https://synthesis.md
 - Moltbook: https://www.moltbook.com/post/769ca25a-ab5c-4853-8698-aaae3d6b6ab2
-- Contract: https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452
+- Contract: https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A
 - ERC-8004 TX: https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751
