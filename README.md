@@ -159,52 +159,64 @@ Any client can check a miner's reputation before trusting them. The reputation i
 ## Architecture
 
 ```
-                                TASK CREATORS
-                         (developers, CI/CD, other agents)
-                                     │
-                              POST /verify
-                         (x402 payment required)
-                                     │
-                                     ▼
-              ┌─────────────────────────────────────────┐
-              │            VALIDATOR AGENT                │
-              │                                           │
-              │  - x402 payment gate                      │
-              │  - Honeypot generator (12 templates)      │
-              │  - Task router (reads MinerRegistry)      │
-              │  - Scorer (honeypot + consensus)           │
-              │  - On-chain writer (CommerceV2 + ERC-8004)│
-              └──────────────────┬────────────────────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    ▼                         ▼
-             ┌─────────────┐          ┌─────────────┐
-             │  MINER A     │          │  MINER B     │
-             │  Railway     │          │  EigenCompute │
-             │  intent-     │          │  security-    │
-             │  focused     │          │  focused      │
-             │  Venice LLM  │          │  Intel TDX    │
-             │              │          │  TEE          │
-             │  → Report    │          │  → Report     │
-             └──────┬───────┘          └──────┬────────┘
-                    │                         │
-                    └────────────┬────────────┘
-                                 │
-                                 ▼
-              ┌─────────────────────────────────────────┐
-              │            VALIDATOR SCORES               │
-              │                                           │
-              │  0.6 × honeypot_detection_rate            │
-              │  0.2 × consensus_alignment                │
-              │  0.1 × format_compliance                  │
-              │  0.1 × speed_bonus                        │
-              └──────────────────┬────────────────────────┘
-                                 │
-              ┌──────────────────┼──────────────────┐
-              ▼                  ▼                   ▼
-        Best result       AgenticCommerceV2    ERC-8004 Reputation
-        → Client          85% miner / 15%     scores published
-                          validator fee        to official registry
+                              CLIENTS
+              (developers, agents, CI/CD, OpenClaw, Claude Code)
+                                  │
+                     POST /verify (API key, x402, or AVNC)
+                                  │
+              ┌───────────────────┴───────────────────┐
+              ▼                                       ▼
+┌──────────────────────────┐       ┌──────────────────────────┐
+│    VALIDATOR A            │       │    VALIDATOR B            │
+│    Railway                │       │    EigenCompute TEE       │
+│    (has wallet)           │       │    (has wallet)           │
+│                           │       │                           │
+│  • x402 + API keys        │       │  • x402 only              │
+│  • Sets own pricing       │       │  • Attested scoring       │
+│  • Venice LLM for intent  │       │  • Intel TDX hardware     │
+│  • Routes to miners       │       │  • Routes to miners       │
+│  • Scores with honeypots  │       │  • Scores with honeypots  │
+│  • Earns 15%              │       │  • Earns 15%              │
+└────────────┬──────────────┘       └────────────┬─────────────┘
+             │                                    │
+             └──────────────┬─────────────────────┘
+                            │ Routes tasks via HTTP
+          ┌─────────────────┼─────────────────┐
+          ▼                 ▼                  ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ MINER A       │  │ MINER B       │  │ MINER C       │
+│ Any computer  │  │ Any computer  │  │ Any computer  │
+│               │  │               │  │               │
+│ Venice LLM    │  │ No LLM        │  │ Bankr Gateway │
+│ Railway       │  │ EigenCompute  │  │ (coming soon) │
+│ intent-       │  │ TEE           │  │ 20+ models    │
+│ focused       │  │ security-     │  │               │
+│               │  │ focused       │  │               │
+│ Earns 85%     │  │ Earns 85%     │  │ Earns 85%     │
+└──────┬────────┘  └──────┬────────┘  └──────┬────────┘
+       │                  │                   │
+       └──────────────────┼───────────────────┘
+                          │ Results scored
+                          ▼
+              ┌───────────────────────────┐
+              │    PROTOCOL (Base Mainnet) │
+              │                            │
+              │  AgenticCommerceV2          │
+              │    → 85% to miner          │
+              │    → 15% to validator      │
+              │                            │
+              │  MinerRegistry             │
+              │    → permanent discovery   │
+              │                            │
+              │  ERC-8004                   │
+              │    → identity + reputation │
+              │                            │
+              │  AVNC Token                │
+              │    → payments + faucet     │
+              │                            │
+              │  Permissionless.            │
+              │  Anyone can build on top.   │
+              └───────────────────────────┘
 ```
 
 ### Honeypot Scoring — How Ground Truth Works
