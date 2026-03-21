@@ -76,6 +76,7 @@ class LLMClient:
         import urllib.error
 
         data = json.dumps(body).encode("utf-8")
+        headers["User-Agent"] = "AgentVerificationNetwork/1.0"
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
