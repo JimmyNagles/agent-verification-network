@@ -27,21 +27,31 @@ interface JobsData {
   explorer: string | null;
 }
 
+interface StatsData {
+  miners_onchain: number;
+  validators: number;
+  jobs_onchain: number;
+  chain: string;
+}
+
 export default function Home() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [network, setNetwork] = useState<NetworkData | null>(null);
   const [jobs, setJobs] = useState<JobsData | null>(null);
+  const [stats, setStats] = useState<StatsData | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, n, j] = await Promise.all([
+      const [h, n, j, s] = await Promise.all([
         fetch(`${API_BASE}/health`).then((r) => r.json()),
         fetch(`${API_BASE}/network`).then((r) => r.json()).catch(() => null),
         fetch(`${API_BASE}/jobs`).then((r) => r.json()).catch(() => null),
+        fetch(`${API_BASE}/stats`).then((r) => r.json()).catch(() => null),
       ]);
       setHealth(h);
       if (n) setNetwork(n);
       if (j) setJobs(j);
+      if (s) setStats(s);
     } catch {}
   }, []);
 
@@ -93,30 +103,22 @@ export default function Home() {
         {/* Network Status */}
         <section className="py-12 border-b border-gray-800">
           <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Live Network</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Status</p>
-              <p className="text-lg text-green-400">{health?.status || "..."}</p>
+              <p className="text-xs text-gray-500">Miners (on-chain)</p>
+              <p className="text-lg text-purple-400">{stats?.miners_onchain ?? network?.miners?.length ?? "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Mode</p>
-              <p className="text-lg text-blue-400">{health?.mode || "..."}</p>
-            </div>
-            <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Miners</p>
-              <p className="text-lg text-purple-400">{network?.miners?.length ?? "..."}</p>
-            </div>
-            <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Verifications</p>
-              <p className="text-lg text-white">{health?.tasks_completed ?? network?.total_verifications ?? "..."}</p>
+              <p className="text-xs text-gray-500">Validators</p>
+              <p className="text-lg text-yellow-400">{stats?.validators ?? "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">On-Chain Jobs</p>
-              <p className="text-lg text-yellow-400">{jobs?.total_jobs ?? "..."}</p>
+              <p className="text-lg text-green-400">{stats?.jobs_onchain ?? jobs?.total_jobs ?? "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Chain</p>
-              <p className="text-lg text-green-400">{jobs?.chain ? "Base Mainnet" : "..."}</p>
+              <p className="text-lg text-blue-400">{stats?.chain ?? "..."}</p>
             </div>
           </div>
         </section>

@@ -503,6 +503,19 @@ async def get_jobs():
     }
 
 
+@app.get("/stats")
+async def get_stats():
+    """On-chain stats from all contracts — the real numbers."""
+    return {
+        "miners_onchain": _registry.get_miner_count() if _registry.enabled else 0,
+        "validators": len(_registered_validators) + 2,  # Railway + EigenCompute + any registered
+        "jobs_onchain": _commerce.get_job_count() if _commerce.enabled else 0,
+        "chain": "base-mainnet",
+        "registry_enabled": _registry.enabled,
+        "commerce_enabled": _commerce.enabled,
+    }
+
+
 @app.get("/erc8004")
 async def erc8004_info():
     """Our ERC-8004 identity and reputation on the official registries."""
