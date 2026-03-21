@@ -35,7 +35,8 @@ class RegistryClient:
             with open(DEPLOYED_PATH) as f:
                 info = json.load(f)
 
-            self.w3 = Web3(Web3.HTTPProvider(info["rpc"]))
+            rpc_url = os.environ.get("BASE_RPC_URL", info["rpc"])
+            self.w3 = Web3(Web3.HTTPProvider(rpc_url))
             if not self.w3.is_connected():
                 logger.warning("Cannot connect to RPC — registry disabled")
                 return

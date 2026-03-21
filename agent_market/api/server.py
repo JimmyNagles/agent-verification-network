@@ -506,9 +506,14 @@ async def get_jobs():
 @app.get("/stats")
 async def get_stats():
     """On-chain stats from all contracts — the real numbers."""
+    # Count miners vs validators from on-chain registry
+    onchain = _registry.get_active_miners() if _registry.enabled else []
+    miners_count = len([a for a in onchain if "validator" not in a.get("strategy", "").lower()])
+    validators_count = len([a for a in onchain if "validator" in a.get("strategy", "").lower()])
+
     return {
-        "miners_onchain": _registry.get_miner_count() if _registry.enabled else 0,
-        "validators": len(_registered_validators) + 2,  # Railway + EigenCompute + any registered
+        "miners_onchain": miners_count,
+        "validators": validators_count,
         "jobs_onchain": _commerce.get_job_count() if _commerce.enabled else 0,
         "verifications": len(results),
         "chain": "base-mainnet",
@@ -563,16 +568,19 @@ async def list_agents():
     """All registered agents with on-chain data — miners from registry, their endpoints, strategies."""
     agents = []
 
-    # On-chain miners from MinerRegistry
-    onchain_miners = _registry.get_active_miners() if _registry.enabled else []
-    for m in onchain_miners:
+    # On-chain agents from MinerRegistry (miners + validators)
+    onchain_agents = _registry.get_active_miners() if _registry.enabled else []
+    for m in onchain_agents:
+        strategy = m.get("strategy", "")
+        is_validator = "validator" in strategy.lower()
         agents.append({
             "agent_id": m["agent_id"],
-            "role": "miner",
+            "role": "validator" if is_validator else "miner",
             "endpoint": m["endpoint"],
-            "strategy": m.get("strategy", ""),
+            "strategy": strategy,
             "owner": m.get("owner", ""),
             "registered_at": m.get("registered_at", 0),
+            "tee": "Intel TDX" if "tee" in strategy.lower() else None,
             "source": "on-chain (MinerRegistry)",
         })
 
@@ -587,23 +595,6 @@ async def list_agents():
                 "strategy": m.get("strategy", ""),
                 "source": "in-memory",
             })
-
-    # Validators
-    agents.append({
-        "agent_id": "railway-validator",
-        "role": "validator",
-        "endpoint": "https://agent-verification-network-production.up.railway.app",
-        "owner": "0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501",
-        "source": "infrastructure",
-    })
-    agents.append({
-        "agent_id": "eigen-validator",
-        "role": "validator",
-        "endpoint": "http://34.142.184.34:8000",
-        "owner": "0xd68D8C09a1067814De8b08Eca443B0595a2b48Ba",
-        "tee": "Intel TDX",
-        "source": "EigenCompute TEE",
-    })
 
     return {"agents": agents, "total": len(agents)}
 
