@@ -1188,6 +1188,22 @@
         "tx_hash": "f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
         "description": "On-chain agent registry \u2014 miners register once, discoverable forever"
       }
+    },
+    {
+      "timestamp": "2026-03-21T05:28:06Z",
+      "type": "contract_deployed",
+      "agent_role": "system",
+      "agent_id": "deployer",
+      "details": {
+        "contract": "AgenticCommerceV2",
+        "standard": "ERC-8183",
+        "address": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+        "chain": "base-mainnet",
+        "tx_hash": "33997472ed5a509fe3479c80ed6ab6b0a4ee615221ed6397544c9be007a89f6c",
+        "validator_fee": "15%",
+        "fee_recipient": "0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501",
+        "description": "Job marketplace with validator fee split"
+      }
     }
   ]
 }

@@ -14,7 +14,10 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-DEPLOYED_PATH = Path(__file__).parent.parent / "contracts" / "commerce_deployed.json"
+# Prefer V2 (with fee split), fall back to V1
+DEPLOYED_PATH_V2 = Path(__file__).parent.parent / "contracts" / "commerce_v2_deployed.json"
+DEPLOYED_PATH_V1 = Path(__file__).parent.parent / "contracts" / "commerce_deployed.json"
+DEPLOYED_PATH = DEPLOYED_PATH_V2 if DEPLOYED_PATH_V2.exists() else DEPLOYED_PATH_V1
 
 
 class CommerceClient:
