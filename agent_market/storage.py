@@ -56,7 +56,7 @@ async def store_on_filecoin(data: dict, filename: str = "report.json") -> Option
             method="POST",
         )
 
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             result = json.loads(resp.read().decode("utf-8"))
 
         cid = result.get("Hash", result.get("cid", ""))

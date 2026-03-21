@@ -43,6 +43,21 @@ _registered_validators: list[dict] = []
 _total_verifications: int = 0
 
 
+async def _store_filecoin_background(task_id: str, response):
+    """Fire-and-forget Filecoin storage so it doesn't block the API response."""
+    try:
+        storage = await store_on_filecoin(
+            data=response.model_dump(),
+            filename=f"verification_{task_id}.json",
+        )
+        if storage:
+            response.filecoin_cid = storage["cid"]
+            response.filecoin_url = storage["url"]
+            results[task_id] = response  # Update with CID
+    except Exception:
+        pass
+
+
 def attach_validator(validator):
     """Attach a validator instance to route tasks through the agent network."""
     global _validator
@@ -240,19 +255,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             mode=mode,
         )
 
-        # Store report on Filecoin (async, non-blocking)
-        try:
-            storage = await store_on_filecoin(
-                data=response.model_dump(),
-                filename=f"verification_{task_id}.json",
-            )
-            if storage:
-                response.filecoin_cid = storage["cid"]
-                response.filecoin_url = storage["url"]
-        except Exception:
-            pass  # Storage failure shouldn't break verification
-
         results[task_id] = response
+
+        # Store report on Filecoin in background (fire-and-forget)
+        asyncio.ensure_future(_store_filecoin_background(task_id, response))
+
         return response
 
 
