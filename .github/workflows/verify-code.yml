@@ -1,0 +1,130 @@
+name: Agent Verification Network — Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - '**.py'
+      - '**.js'
+      - '**.ts'
+      - '**.sol'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    name: AI Code Verification
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(py|js|ts|sol)$' | head -5)
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          echo "Changed files: $FILES"
+
+      - name: Verify code with Agent Verification Network
+        id: verify
+        run: |
+          API_URL="https://agent-verification-network-production.up.railway.app"
+          REPORT=""
+          TOTAL_ISSUES=0
+          CRITICAL=0
+
+          for FILE in ${{ steps.changed.files.outputs.files }}; do
+            if [ ! -f "$FILE" ]; then continue; fi
+
+            echo "Verifying: $FILE"
+            CODE=$(cat "$FILE" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))" 2>/dev/null | sed 's/^"//;s/"$//')
+
+            # Skip files that are too large (>10KB)
+            SIZE=$(wc -c < "$FILE")
+            if [ "$SIZE" -gt 10000 ]; then
+              REPORT="$REPORT\n### \`$FILE\`\n> Skipped (file too large for verification)\n"
+              continue
+            fi
+
+            RESULT=$(curl -s -X POST "$API_URL/verify" \
+              -H "Content-Type: application/json" \
+              -d "{\"code\": $( python3 -c "import sys,json; print(json.dumps(open('$FILE').read()))" ), \"intent\": \"Production code in $FILE\", \"language\": \"python\"}" \
+              --max-time 30 2>/dev/null)
+
+            if [ -z "$RESULT" ]; then
+              REPORT="$REPORT\n### \`$FILE\`\n> Verification timeout\n"
+              continue
+            fi
+
+            PASSED=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('passed', True))" 2>/dev/null)
+            CONFIDENCE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('confidence', 0))" 2>/dev/null)
+            ISSUES=$(echo "$RESULT" | python3 -c "
+          import sys,json
+          d = json.load(sys.stdin)
+          issues = d.get('issues', [])
+          for i in issues:
+              sev = i.get('severity', 'medium')
+              desc = i.get('description', '')
+              line = i.get('line', '?')
+              typ = i.get('type', 'issue')
+              icon = '🔴' if sev == 'critical' else '🟡' if sev in ('high','medium') else '🟢'
+              print(f'- {icon} **{typ}** (line {line}): {desc}')
+          print(f'\nConfidence: {d.get(\"confidence\", 0):.0%}')
+          " 2>/dev/null)
+
+            NUM_ISSUES=$(echo "$RESULT" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('issues', [])))" 2>/dev/null)
+            NUM_CRITICAL=$(echo "$RESULT" | python3 -c "import sys,json; print(len([i for i in json.load(sys.stdin).get('issues', []) if i.get('severity') == 'critical']))" 2>/dev/null)
+
+            TOTAL_ISSUES=$((TOTAL_ISSUES + NUM_ISSUES))
+            CRITICAL=$((CRITICAL + NUM_CRITICAL))
+
+            if [ "$PASSED" = "True" ]; then
+              REPORT="$REPORT\n### ✅ \`$FILE\`\nNo issues found.\n$ISSUES\n"
+            else
+              REPORT="$REPORT\n### ❌ \`$FILE\`\n$ISSUES\n"
+            fi
+          done
+
+          # Save report
+          echo "total_issues=$TOTAL_ISSUES" >> $GITHUB_OUTPUT
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+
+          {
+            echo "report<<EOF"
+            echo -e "$REPORT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const report = `${{ steps.verify.outputs.report }}`;
+            const totalIssues = ${{ steps.verify.outputs.total_issues || 0 }};
+            const critical = ${{ steps.verify.outputs.critical || 0 }};
+
+            const header = critical > 0
+              ? `## 🔴 Agent Verification Network — ${totalIssues} issue(s) found (${critical} critical)`
+              : totalIssues > 0
+              ? `## 🟡 Agent Verification Network — ${totalIssues} issue(s) found`
+              : `## ✅ Agent Verification Network — Code looks good`;
+
+            const body = `${header}
+
+            ${report}
+
+            ---
+            *Verified by [Agent Verification Network](https://agent-verification-network-production.up.railway.app) — AI-powered code review by competing miner agents.*
+            *[skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

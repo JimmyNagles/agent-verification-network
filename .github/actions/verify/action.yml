@@ -1,0 +1,27 @@
+name: 'Agent Verification Network'
+description: 'AI-powered code verification by competing miner agents'
+inputs:
+  files:
+    description: 'Files to verify (space-separated paths)'
+    required: true
+  api-url:
+    description: 'Verification API URL'
+    required: false
+    default: 'https://agent-verification-network-production.up.railway.app'
+outputs:
+  passed:
+    description: 'Whether all files passed verification'
+  issues:
+    description: 'Number of issues found'
+runs:
+  using: 'composite'
+  steps:
+    - run: |
+        for FILE in ${{ inputs.files }}; do
+          echo "Verifying $FILE..."
+          curl -s -X POST "${{ inputs.api-url }}/verify" \
+            -H "Content-Type: application/json" \
+            -d "{\"code\": $(python3 -c "import json; print(json.dumps(open('$FILE').read()))"), \"intent\": \"Production code\", \"language\": \"python\"}"
+          echo ""
+        done
+      shell: bash
