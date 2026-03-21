@@ -1249,6 +1249,26 @@
         "complete_tx": "d6839f463b546b84a6ba36f7a19257d67a00511f531fda6ccf12817eb8502806",
         "chain": "base-mainnet"
       }
+    },
+    {
+      "timestamp": "2026-03-21T06:34:57Z",
+      "type": "eigencompute_deployed",
+      "agent_role": "validator",
+      "agent_id": "eigen-validator-001",
+      "details": {
+        "app_id": "0x7Fc30484aCF81961bc766FE07281cf2684A33ffE",
+        "ip": "34.142.184.34",
+        "port": 8000,
+        "instance_type": "g1-standard-4t",
+        "tee": "Intel TDX",
+        "verifiable_build": true,
+        "build_provenance": "MEUCIeh7L45d8IAZJk54TORdirXfhlNaP2AyAivDZXCJKaTlAiEAjUZa3ZzCIDph+A3yzD2hDr0UXdfbO0IUq0HUkxB/DUs=",
+        "commit": "03ff42ee711af3b185cfd2adece4d7b823d4821a",
+        "dashboard": "https://verify-sepolia.eigencloud.xyz/app/0x7Fc30484aCF81961bc766FE07281cf2684A33ffE",
+        "health": "http://34.142.184.34:8000/health",
+        "chain": "base-mainnet",
+        "commerce_enabled": true
+      }
     }
   ]
 }
