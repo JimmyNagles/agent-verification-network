@@ -95,10 +95,19 @@ class RegistryClient:
             logger.error(f"On-chain miner registration failed: {e}")
             return None
 
+    _cached_miners: List[Dict] = []
+    _cache_time: float = 0
+
     def get_active_miners(self) -> List[Dict]:
-        """Read all active miners from the on-chain registry."""
+        """Read all active miners from the on-chain registry. Cached for 60s."""
+        import time
+
+        # Return cache if fresh (within 60 seconds)
+        if time.time() - self._cache_time < 60 and self._cached_miners:
+            return self._cached_miners
+
         if not self.enabled:
-            return []
+            return self._cached_miners  # Return last known state
 
         try:
             count = self.contract.functions.getMinerCount().call()
@@ -114,17 +123,24 @@ class RegistryClient:
                         "owner": owner,
                         "registered_at": registered_at,
                     })
+            # Update cache on success
+            self._cached_miners = miners
+            self._cache_time = time.time()
             return miners
 
         except Exception as e:
             logger.error(f"Failed to read on-chain registry: {e}")
-            return []
+            return self._cached_miners  # Return last known state, not empty
+
+    _cached_count: int = 0
 
     def get_miner_count(self) -> int:
-        """Get total registered miners from chain."""
+        """Get total registered miners from chain. Returns cached value on failure."""
         if not self.enabled:
-            return 0
+            return self._cached_count
         try:
-            return self.contract.functions.getActiveMinerCount().call()
+            count = self.contract.functions.getActiveMinerCount().call()
+            self._cached_count = count
+            return count
         except Exception:
-            return 0
+            return self._cached_count

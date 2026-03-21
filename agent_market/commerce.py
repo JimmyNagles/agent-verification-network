@@ -152,11 +152,15 @@ class CommerceClient:
             logger.error(f"On-chain job completion failed: {e}")
             return None
 
+    _cached_job_count: int = 0
+
     def get_job_count(self) -> int:
-        """Get total number of jobs created on-chain."""
+        """Get total number of jobs created on-chain. Returns cached value on failure."""
         if not self.enabled:
-            return 0
+            return self._cached_job_count
         try:
-            return self.contract.functions.getJobCount().call()
+            count = self.contract.functions.getJobCount().call()
+            self._cached_job_count = count
+            return count
         except Exception:
-            return 0
+            return self._cached_job_count
