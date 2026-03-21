@@ -27,6 +27,7 @@ from agent_market.commerce import CommerceClient
 from agent_market.registry import RegistryClient
 from agent_market.erc8004 import ERC8004Client, OUR_AGENT_ID
 from agent_market.token import TokenClient
+from agent_market.keys import KeyManager
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,9 @@ _erc8004 = ERC8004Client()
 
 # Protocol credits token (AVNC)
 _token = TokenClient()
+
+# API key manager
+_keys = KeyManager()
 
 # In-memory task storage
 results = {}
@@ -200,15 +204,36 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
     In connected mode, the task is routed through the validator to
     competing miner agents. In standalone mode, analysis runs locally.
     """
-    # Payment gate: x402 header OR pre-funded on-chain job
+    # Payment gate: API key → x402 → job_id → 402
     if raw_request:
-        # Check for direct on-chain payment (job_id in body)
-        if request.job_id is not None:
+        # Path 1: API key (registered clients + internal services)
+        request_key = (
+            raw_request.headers.get("X-API-Key")
+            or raw_request.headers.get("x-api-key")
+        )
+        if request_key:
+            key_info = _keys.validate_key(request_key)
+            if key_info and key_info.get("valid"):
+                if key_info.get("credits_remaining", 0) > 0:
+                    _keys.use_credit(request_key, "/verify")
+                    # Proceed with verification
+                else:
+                    return JSONResponse(status_code=402, content={
+                        "error": "Credits exhausted",
+                        "message": f"No credits remaining for {key_info.get('agent_name', 'this key')}. Pay with AVNC or x402 to continue.",
+                        "credits_remaining": 0,
+                    })
+            elif not key_info:
+                return JSONResponse(status_code=401, content={"error": "Invalid API key"})
+
+        # Path 2: Direct on-chain payment (job_id)
+        elif request.job_id is not None:
             valid, msg = verify_onchain_job(request.job_id, _commerce)
             if not valid:
                 return JSONResponse(status_code=402, content={"error": "Payment Required", "message": msg})
+
+        # Path 3: x402 payment header
         else:
-            # Check for x402 payment header
             payment_response = await check_x402_payment(raw_request)
             if payment_response is not None:
                 return payment_response
@@ -623,6 +648,62 @@ async def list_agents():
             })
 
     return {"agents": agents, "total": len(agents)}
+
+
+@app.post("/register")
+async def register_client(request: Request):
+    """
+    Register as a client and get an API key.
+
+    Send your agent name (unique) and optionally a wallet address.
+    You get 20 free verifications. After that, pay with AVNC or x402.
+    """
+    try:
+        body = await request.json()
+        agent_name = body.get("agent_name") or body.get("name")
+        wallet_address = body.get("wallet_address") or body.get("address")
+
+        if not agent_name:
+            return JSONResponse(status_code=400, content={
+                "error": "Missing agent_name",
+                "hint": "Send {\"agent_name\": \"my-agent\"} to register",
+            })
+
+        # Check if name is already taken
+        if _keys.is_name_taken(agent_name):
+            return JSONResponse(status_code=409, content={
+                "error": f"Agent name '{agent_name}' is already registered",
+                "hint": "Choose a different name",
+            })
+
+        result = _keys.create_key(agent_name=agent_name, wallet_address=wallet_address)
+        if result:
+            log_event(
+                event_type="client_registered",
+                agent_role="client",
+                agent_id=agent_name,
+                details={"key_prefix": result["key_prefix"], "credits": result["credits"]},
+            )
+            return {
+                "success": True,
+                **result,
+                "usage": "Include your key as: -H 'X-API-Key: your-key-here'",
+                "endpoints": {
+                    "/verify": "Submit code for verification (costs 1 credit per call)",
+                    "/token": "AVNC token info",
+                    "/faucet": "Claim free AVNC tokens (if you have a wallet)",
+                },
+            }
+        return JSONResponse(status_code=500, content={"error": "Registration failed"})
+
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+
+@app.get("/keys/stats")
+async def key_stats():
+    """API key usage statistics for this validator."""
+    return _keys.get_stats()
 
 
 @app.get("/token")

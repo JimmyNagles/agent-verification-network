@@ -130,13 +130,13 @@ class TestX402ValidPayment:
 
     @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT, "VERIFY_API_KEY": "test-key"})
     def test_wrong_api_key_rejected(self):
-        """Wrong API key doesn't bypass payment."""
+        """Wrong API key gets 401."""
         resp = client.post(
             "/verify",
             json=VERIFY_PAYLOAD,
             headers={"X-API-Key": "wrong-key"},
         )
-        assert resp.status_code == 402
+        assert resp.status_code == 401
 
 
 # ── Enabled — Invalid Payment ───────────────────────────────────
