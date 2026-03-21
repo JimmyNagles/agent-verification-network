@@ -81,14 +81,16 @@ jobs:
 
             NUM_ISSUES=$(echo "$RESULT" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('issues', [])))" 2>/dev/null || echo "0")
             NUM_CRITICAL=$(echo "$RESULT" | python3 -c "import sys,json; print(len([i for i in json.load(sys.stdin).get('issues', []) if i.get('severity') == 'critical']))" 2>/dev/null || echo "0")
+            AGENT_ID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('agent_id', 'local'))" 2>/dev/null || echo "local")
+            MODE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('mode', 'standalone'))" 2>/dev/null || echo "standalone")
 
             TOTAL_ISSUES=$((TOTAL_ISSUES + NUM_ISSUES))
             CRITICAL=$((CRITICAL + NUM_CRITICAL))
 
             if [ "$PASSED" = "False" ]; then
-              REPORT="${REPORT}### ❌ \`${FILE}\` — Failed (confidence: ${CONFIDENCE})\n${ISSUES_TEXT}\n\n"
+              REPORT="${REPORT}### ❌ \`${FILE}\` — Failed (confidence: ${CONFIDENCE})\n**Miner:** \`${AGENT_ID}\` | **Mode:** ${MODE}\n${ISSUES_TEXT}\n\n"
             else
-              REPORT="${REPORT}### ✅ \`${FILE}\` — Passed (confidence: ${CONFIDENCE})\n${ISSUES_TEXT}\n\n"
+              REPORT="${REPORT}### ✅ \`${FILE}\` — Passed (confidence: ${CONFIDENCE})\n**Miner:** \`${AGENT_ID}\` | **Mode:** ${MODE}\n${ISSUES_TEXT}\n\n"
             fi
 
           done < /tmp/changed_files.txt
@@ -120,7 +122,7 @@ jobs:
               ? `## 🟡 Agent Verification Network — ${totalIssues} issue(s) found`
               : `## ✅ Agent Verification Network — Code looks good`;
 
-            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Verification Network](https://agent-verification-network-production.up.railway.app) — AI-powered code review by competing miner agents.*\n*[skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
+            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Verification Network](https://agent-verification-network.vercel.app) — AI-powered code review by competing miner agents.*\n*[On-chain jobs](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) · [Protocol](https://agent-verification-network-production.up.railway.app/protocol) · [skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
