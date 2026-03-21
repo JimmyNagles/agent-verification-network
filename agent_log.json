@@ -1339,6 +1339,21 @@
         "symbol": "AVNC",
         "tx_hash": "36fb214b9278fd65acec157bfb4c2939bf0ca6435827ddfa53ab8ca790b954e3"
       }
+    },
+    {
+      "timestamp": "2026-03-21T18:14:14Z",
+      "type": "avnc_jobs_completed",
+      "agent_role": "system",
+      "agent_id": "test",
+      "details": {
+        "jobs_completed": 4,
+        "token": "AVNC",
+        "total_paid_avnc": 40,
+        "miner_earned_avnc": 34,
+        "validator_earned_avnc": 6,
+        "fee_split": "85/15",
+        "total_jobs_onchain": 18
+      }
     }
   ]
 }
