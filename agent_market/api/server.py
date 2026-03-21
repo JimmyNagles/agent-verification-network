@@ -24,6 +24,7 @@ from agent_market.x402 import check_x402_payment, get_pricing_info
 from agent_market.storage import store_on_filecoin
 from agent_market.commerce import CommerceClient
 from agent_market.registry import RegistryClient
+from agent_market.erc8004 import ERC8004Client, OUR_AGENT_ID
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,9 @@ _commerce = CommerceClient()
 
 # On-chain miner registry
 _registry = RegistryClient()
+
+# Official ERC-8004 reputation publishing
+_erc8004 = ERC8004Client()
 
 # In-memory task storage
 results = {}
@@ -496,6 +500,22 @@ async def get_jobs():
         "chain": "base-mainnet" if _commerce.enabled and _commerce.chain_id == 8453 else "base-sepolia" if _commerce.enabled else None,
         "total_jobs": job_count,
         "explorer": f"https://basescan.org/address/{_commerce.contract.address}" if _commerce.enabled else None,
+    }
+
+
+@app.get("/erc8004")
+async def erc8004_info():
+    """Our ERC-8004 identity and reputation on the official registries."""
+    identity = _erc8004.verify_agent_identity(OUR_AGENT_ID) if _erc8004.enabled else None
+    reputation = _erc8004.get_agent_reputation(OUR_AGENT_ID, "code-verification") if _erc8004.enabled else None
+    return {
+        "agent_id": OUR_AGENT_ID,
+        "identity_registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+        "reputation_registry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+        "chain": "base-mainnet",
+        "identity": identity,
+        "reputation": reputation,
+        "enabled": _erc8004.enabled,
     }
 
 

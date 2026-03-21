@@ -7,7 +7,10 @@
   "identity": {
     "standard": "ERC-8004",
     "chain": "base-mainnet",
-    "registration": "https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751",
+    "agent_id": 34655,
+    "identity_registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    "reputation_registry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+    "registration_tx": "https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751",
     "participantId": "bff5bccc8bfe4be3a4bfcb28e0eb99d5",
     "teamId": "79d8c15becbc47129691bff4b9c739cb"
   },
