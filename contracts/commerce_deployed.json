@@ -1,0 +1,352 @@
+{
+  "address": "0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
+  "chain": "base-sepolia",
+  "rpc": "https://sepolia.base.org",
+  "tx_hash": "3f82b6a984da5337b853a7456a0932de681a1daf0e3029fe8d29959c330861d2",
+  "block_number": 39149332,
+  "abi": [
+    {
+      "type": "function",
+      "name": "complete",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "createJob",
+      "inputs": [
+        {
+          "name": "evaluator",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "description",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "budget",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "fund",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "getJob",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "client",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "provider",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "evaluator",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "description",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "budget",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "state",
+          "type": "uint8",
+          "internalType": "enum AgenticCommerce.State"
+        },
+        {
+          "name": "deliverable",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getJobCount",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "jobs",
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "client",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "provider",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "evaluator",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "description",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "budget",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "state",
+          "type": "uint8",
+          "internalType": "enum AgenticCommerce.State"
+        },
+        {
+          "name": "deliverable",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "reject",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "submit",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "deliverable",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "JobCompleted",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "provider",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "payout",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "JobCreated",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "client",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "evaluator",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "budget",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "JobFunded",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "client",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "JobRejected",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "client",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "refund",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "JobSubmitted",
+      "inputs": [
+        {
+          "name": "jobId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "provider",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "deliverable",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        }
+      ],
+      "anonymous": false
+    }
+  ]
+}

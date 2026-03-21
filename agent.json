@@ -16,6 +16,13 @@
       "address": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
       "chain": "base-sepolia",
       "explorer": "https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452"
+    },
+    "AgenticCommerce": {
+      "address": "0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
+      "chain": "base-sepolia",
+      "standard": "ERC-8183",
+      "explorer": "https://sepolia.basescan.org/address/0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
+      "description": "Job marketplace — create, fund, submit, complete/reject verification jobs with escrow"
     }
   },
   "capabilities": [

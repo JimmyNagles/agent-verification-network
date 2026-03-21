@@ -1133,6 +1133,21 @@
           "miner-003": 0.3374
         }
       }
+    },
+    {
+      "timestamp": "2026-03-21T04:22:48Z",
+      "type": "contract_deployed",
+      "agent_role": "system",
+      "agent_id": "deployer",
+      "details": {
+        "contract": "AgenticCommerce",
+        "standard": "ERC-8183",
+        "address": "0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
+        "chain": "base-sepolia",
+        "tx_hash": "3f82b6a984da5337b853a7456a0932de681a1daf0e3029fe8d29959c330861d2",
+        "explorer": "https://sepolia.basescan.org/address/0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
+        "description": "Job marketplace contract \u2014 create, fund, submit, complete/reject jobs with escrow"
+      }
     }
   ]
 }
