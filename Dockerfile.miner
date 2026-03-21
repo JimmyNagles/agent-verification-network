@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY pyproject.toml .
+RUN pip install --no-cache-dir pydantic fastapi uvicorn
+
+COPY agent_market/ agent_market/
+COPY agents/ agents/
+COPY agent.json .
+COPY agent_log.json .
+
+EXPOSE 8001
+
+CMD ["python", "-m", "agents.miner_agent", "--port", "8001", "--agent-id", "miner-persistent-001", "--strategy", "intent-focused", "--host", "0.0.0.0"]
