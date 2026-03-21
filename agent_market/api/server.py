@@ -23,6 +23,7 @@ from agent_market.logger import log_event
 from agent_market.x402 import check_x402_payment, get_pricing_info
 from agent_market.storage import store_on_filecoin
 from agent_market.commerce import CommerceClient
+from agent_market.registry import RegistryClient
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,9 @@ _validator = None
 
 # Commerce client for on-chain job lifecycle
 _commerce = CommerceClient()
+
+# On-chain miner registry
+_registry = RegistryClient()
 
 # In-memory task storage
 results = {}
@@ -397,6 +401,20 @@ async def register_miner(request: RegisterMinerRequest):
     }
     _registered_miners.append(entry)
 
+    # Also register on-chain (fire-and-forget)
+    import threading
+    def _register_onchain():
+        result = _registry.register_miner(request.agent_id, request.endpoint, request.strategy or "")
+        if result and not result.get("already_registered"):
+            log_event(
+                event_type="miner_registered_onchain",
+                agent_role="miner",
+                agent_id=request.agent_id,
+                details={"tx_hash": result.get("tx_hash"), "chain": result.get("chain")},
+            )
+    if _registry.enabled:
+        threading.Thread(target=_register_onchain, daemon=True).start()
+
     log_event(
         event_type="miner_registered",
         agent_role="miner",
@@ -445,9 +463,18 @@ async def register_validator(request: RegisterValidatorRequest):
 @app.get("/network", response_model=NetworkStatus)
 async def get_network():
     """Return the current state of the verification network."""
+    # Merge in-memory miners with on-chain registry
+    all_miners = list(_registered_miners)
+    onchain_miners = _registry.get_active_miners()
+    # Add on-chain miners not already in memory
+    known_ids = {m["agent_id"] for m in all_miners}
+    for m in onchain_miners:
+        if m["agent_id"] not in known_ids:
+            all_miners.append(m)
+
     return NetworkStatus(
         validators=list(_registered_validators),
-        miners=list(_registered_miners),
+        miners=all_miners,
         total_verifications=len(results),
         mode=get_mode(),
     )

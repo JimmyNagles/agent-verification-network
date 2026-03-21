@@ -1,0 +1,270 @@
+{
+  "address": "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
+  "chain": "base-mainnet",
+  "rpc": "https://mainnet.base.org",
+  "tx_hash": "f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
+  "block_number": 43639741,
+  "abi": [
+    {
+      "type": "function",
+      "name": "agentIndex",
+      "inputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "deactivate",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "getActiveMinerCount",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "count",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getMiner",
+      "inputs": [
+        {
+          "name": "index",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "registeredAt",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getMinerCount",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "miners",
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "registeredAt",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "register",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "update",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "internalType": "string"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "MinerDeactivated",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "indexed": true,
+          "internalType": "string"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "MinerRegistered",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "indexed": true,
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "MinerUpdated",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "indexed": true,
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        }
+      ],
+      "anonymous": false
+    }
+  ]
+}

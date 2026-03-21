@@ -1175,6 +1175,19 @@
         "tx_hash": "fa269a30dba8d970eb15379163681c0d1fa8857ff3a4044721b397344087904a",
         "explorer": "https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E"
       }
+    },
+    {
+      "timestamp": "2026-03-21T04:55:20Z",
+      "type": "contract_deployed",
+      "agent_role": "system",
+      "agent_id": "deployer",
+      "details": {
+        "contract": "MinerRegistry",
+        "address": "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
+        "chain": "base-mainnet",
+        "tx_hash": "f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
+        "description": "On-chain agent registry \u2014 miners register once, discoverable forever"
+      }
     }
   ]
 }
