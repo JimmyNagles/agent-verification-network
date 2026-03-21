@@ -20,7 +20,7 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from agent_market.logger import log_event
-from agent_market.x402 import check_x402_payment, get_pricing_info
+from agent_market.x402 import check_x402_payment, get_pricing_info, verify_onchain_job
 from agent_market.storage import store_on_filecoin
 from agent_market.commerce import CommerceClient
 from agent_market.registry import RegistryClient
@@ -131,6 +131,7 @@ class VerifyRequest(BaseModel):
     code: str = Field(description="Source code to verify")
     intent: str = Field(description="What the code should do")
     language: str = Field(default="python", description="Programming language")
+    job_id: Optional[int] = Field(default=None, description="Pre-funded job ID on AgenticCommerceV2 (direct payment mode)")
 
 
 class VerifyResponse(BaseModel):
@@ -194,11 +195,18 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
     In connected mode, the task is routed through the validator to
     competing miner agents. In standalone mode, analysis runs locally.
     """
-    # x402 payment gate
+    # Payment gate: x402 header OR pre-funded on-chain job
     if raw_request:
-        payment_response = await check_x402_payment(raw_request)
-        if payment_response is not None:
-            return payment_response
+        # Check for direct on-chain payment (job_id in body)
+        if request.job_id is not None:
+            valid, msg = verify_onchain_job(request.job_id, _commerce)
+            if not valid:
+                return JSONResponse(status_code=402, content={"error": "Payment Required", "message": msg})
+        else:
+            # Check for x402 payment header
+            payment_response = await check_x402_payment(raw_request)
+            if payment_response is not None:
+                return payment_response
 
     if _validator is not None:
         task_id = _validator.add_task(

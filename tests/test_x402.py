@@ -97,9 +97,8 @@ class TestX402EnabledNoPayment:
         reqs = resp.json()["paymentRequirements"]
         assert reqs["network"] == "base"
         assert reqs["chainId"] == BASE_CHAIN_ID
-        assert reqs["token"] == USDC_CONTRACT
         assert reqs["recipient"] == RECIPIENT
-        assert reqs["amount"] == "0.01"
+        assert reqs["amount"] == "0.0001"  # Default ETH price
 
 
 # ── Enabled — Valid Payment ──────────────────────────────────────
@@ -196,7 +195,7 @@ class TestX402InvalidPayment:
 
 class TestX402Module:
     def test_build_payment_requirements(self):
-        with patch.dict(os.environ, {"PAYMENT_ADDRESS": RECIPIENT, "VERIFY_PRICE": "0.05"}):
+        with patch.dict(os.environ, {"PAYMENT_ADDRESS": RECIPIENT, "VERIFY_PRICE_ETH": "0.05"}):
             reqs = build_payment_requirements()
             assert reqs["recipient"] == RECIPIENT
             assert reqs["amount"] == "0.05"
@@ -217,8 +216,8 @@ class TestX402Module:
         assert "Missing" in reason
 
     def test_pricing_info(self):
-        with patch.dict(os.environ, {"X402_ENABLED": "true", "VERIFY_PRICE": "0.50"}):
+        with patch.dict(os.environ, {"X402_ENABLED": "true", "VERIFY_PRICE_ETH": "0.50"}):
             info = get_pricing_info()
             assert info["x402_enabled"] is True
             assert info["verify_price"] == "0.50"
-            assert info["currency"] == "USDC"
+            assert info["currency"] == "ETH"
