@@ -1269,6 +1269,49 @@
         "chain": "base-mainnet",
         "commerce_enabled": true
       }
+    },
+    {
+      "timestamp": "2026-03-21T08:28:11Z",
+      "type": "job_created",
+      "agent_role": "system",
+      "agent_id": "commerce",
+      "details": {
+        "task_id": "073e2166-523c-4789-82e8-8585ede6de27",
+        "job_id": 8,
+        "tx_hash": "72b6051c838626d11fe9cbd577ced66780380eea9d615d783bbd559fd6a91325",
+        "block_number": 43646173,
+        "chain": "base-mainnet",
+        "contract": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1"
+      }
+    },
+    {
+      "timestamp": "2026-03-21T08:29:31Z",
+      "type": "job_created",
+      "agent_role": "system",
+      "agent_id": "commerce",
+      "details": {
+        "task_id": "1c209111-2637-40c8-b167-cc49af839412",
+        "job_id": 9,
+        "tx_hash": "3427024c2a8fac16d3eeaf567ff7790866b9d2463f51d851d7d505a656a3236c",
+        "block_number": 43646213,
+        "chain": "base-mainnet",
+        "contract": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1"
+      }
+    },
+    {
+      "timestamp": "2026-03-21T17:22:49Z",
+      "type": "eigencompute_miner_fixed",
+      "agent_role": "miner",
+      "agent_id": "eigen-miner-001",
+      "details": {
+        "app_id": "0xEFfABA3aa730ebefF25c758EEB58a93a533c0DD0",
+        "ip": "34.16.84.211",
+        "port": 8000,
+        "strategy": "security-focused",
+        "tee": "Intel TDX",
+        "status": "healthy and registered",
+        "fix": "changed PORT from 8001 to 8000"
+      }
     }
   ]
 }
