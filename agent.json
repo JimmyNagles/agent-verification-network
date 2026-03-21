@@ -154,8 +154,13 @@
     "data_contracts": "Pydantic v2",
     "chain": "Base (ERC-8004 identity, AgentScorer contract)",
     "scoring": "AgentScorer.sol on Base Sepolia (on-chain reputation)",
-    "llm_providers": "OpenAI, Anthropic, Ollama (all optional)",
-    "tests": "pytest (14 tests, all passing)"
+    "llm_providers": "Venice (private, no-data-retention), OpenAI, Anthropic, Ollama",
+    "payments": "x402 protocol (USDC on Base)",
+    "tests": "pytest (31 tests, all passing)"
+  },
+  "deployed": {
+    "api": "https://agent-verification-network-production.up.railway.app",
+    "skill_file": "https://agent-verification-network-production.up.railway.app/skill.md"
   },
   "tracks": {
     "primary": [
@@ -163,6 +168,7 @@
       "Protocol Labs — Agents With Receipts / ERC-8004"
     ],
     "secondary": [
+      "Base — Agent Services on Base",
       "OpenServ — Ship Something Real with OpenServ"
     ]
   },
