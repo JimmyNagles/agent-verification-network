@@ -593,12 +593,14 @@ async def list_agents():
         "agent_id": "railway-validator",
         "role": "validator",
         "endpoint": "https://agent-verification-network-production.up.railway.app",
+        "owner": "0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501",
         "source": "infrastructure",
     })
     agents.append({
         "agent_id": "eigen-validator",
         "role": "validator",
         "endpoint": "http://34.142.184.34:8000",
+        "owner": "0xd68D8C09a1067814De8b08Eca443B0595a2b48Ba",
         "tee": "Intel TDX",
         "source": "EigenCompute TEE",
     })
