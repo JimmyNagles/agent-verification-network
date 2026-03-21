@@ -1204,6 +1204,19 @@
         "fee_recipient": "0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501",
         "description": "Job marketplace with validator fee split"
       }
+    },
+    {
+      "timestamp": "2026-03-21T05:32:18Z",
+      "type": "erc8004_miner_registered",
+      "agent_role": "system",
+      "agent_id": "miner-persistent-001",
+      "details": {
+        "erc8004_agent_id": 35127,
+        "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+        "tx_hash": "47e07f413c6c3481731f2842eb85cf8ca2701592ca8764bd66365905e0957599",
+        "chain": "base-mainnet",
+        "note": "Miner registered on official ERC-8004 Identity Registry"
+      }
     }
   ]
 }

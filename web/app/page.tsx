@@ -221,6 +221,11 @@ curl -X POST ${API_BASE}/register-validator \\
                 path: "/health",
                 desc: "Service status, mode, and task count.",
               },
+              {
+                method: "GET",
+                path: "/erc8004",
+                desc: "ERC-8004 identity and reputation on the official registries.",
+              },
             ].map((ep) => (
               <div key={ep.path} className="p-4 rounded border border-gray-800 bg-gray-950">
                 <div className="flex items-center gap-3 mb-2">
@@ -286,6 +291,14 @@ curl -X POST ${API_BASE}/register-validator \\
             <a href="https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E" target="_blank" rel="noopener noreferrer" className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-purple-500/50 transition-colors">
               <p className="text-xs text-gray-500">AgenticCommerce (ERC-8183)</p>
               <p className="text-purple-400 text-sm">Base Mainnet — 0xeE779106...</p>
+            </a>
+            <a href="https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" target="_blank" rel="noopener noreferrer" className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-purple-500/50 transition-colors">
+              <p className="text-xs text-gray-500">AgenticCommerceV2 (ERC-8183) — 15% Fee Split</p>
+              <p className="text-purple-400 text-sm">Base Mainnet — 0xE4ED0C73...</p>
+            </a>
+            <a href="https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA" target="_blank" rel="noopener noreferrer" className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-purple-500/50 transition-colors">
+              <p className="text-xs text-gray-500">MinerRegistry — On-Chain Agent Discovery</p>
+              <p className="text-purple-400 text-sm">Base Mainnet — 0xE0d1346b...</p>
             </a>
             <a href="https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da" target="_blank" rel="noopener noreferrer" className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-blue-500/50 transition-colors">
               <p className="text-xs text-gray-500">Self-Custody Transfer</p>

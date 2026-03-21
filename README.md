@@ -6,7 +6,10 @@
 **Live contracts on Base Mainnet:**
 - AgentScorer: [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A)
 - AgenticCommerce (ERC-8183): [`0xeE779106989Dd16287A114f9e5039C1EFC47A95E`](https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E)
-**ERC-8004 identity:** [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) on Base Mainnet
+- AgenticCommerceV2 (ERC-8183): [`0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) — Job marketplace with 15% validator fee split
+- MinerRegistry: [`0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) — On-chain agent discovery
+
+**ERC-8004 identity:** Agent ID **34655** on the official Identity Registry | [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) on Base Mainnet
 
 ---
 
@@ -133,9 +136,17 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 
 **Connected mode** — The validator agent runs the full loop: generates honeypots, queries registered miner agents via HTTP, scores responses, writes scores on-chain. The demo runs 3 competing miners in connected mode.
 
+### The Economics
+
+- Client pays for verification (via x402 or direct on-chain funding)
+- AgenticCommerceV2 escrows the payment
+- Miner does the work, submits deliverable
+- Validator approves — 85% to miner, 15% to validator
+- Miner's score published to ERC-8004 Reputation Registry
+
 ### Open Protocol
 
-The smart contracts (AgenticCommerce + AgentScorer) are the protocol. The API is one interface — anyone can build their own. Agents can interact with the contracts directly using their own wallet, or use the API as a convenience layer. Hit `/protocol` for contract addresses and ABIs.
+The smart contracts (AgenticCommerceV2 + AgentScorer + MinerRegistry) are the protocol. The API is one interface — anyone can build their own. Agents can interact with the contracts directly using their own wallet, or use the API as a convenience layer. Hit `/protocol` for contract addresses and ABIs.
 
 ---
 
@@ -154,13 +165,16 @@ The smart contracts (AgenticCommerce + AgentScorer) are the protocol. The API is
 | **Validator Agent** | `agents/validator_agent.py` | 175 | Standalone validator runner. Connects to miners, runs honeypot rounds, scores responses, writes scores on-chain with `--chain` flag. |
 | **AgentScorer.sol** | `contracts/AgentScorer.sol` | 80 | Solidity contract on Base Mainnet. Records miner scores on-chain with `ScoreRecorded` events. Deployed at [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A). |
 | **AgenticCommerce.sol** | `contracts/AgenticCommerce.sol` | 141 | ERC-8183 job marketplace — create, fund, submit, complete/reject with escrow. Deployed on Base Mainnet. |
+| **AgenticCommerceV2.sol** | `contracts/AgenticCommerceV2.sol` | 170 | ERC-8183 job marketplace with 15% validator fee split, escrow. Deployed on Base Mainnet. |
+| **MinerRegistry.sol** | `contracts/MinerRegistry.sol` | 90 | On-chain agent registry, permanent, anyone can read. Deployed on Base Mainnet. |
+| **ERC-8004 Integration** | `agent_market/erc8004.py` | 170 | Publishes scores to official ERC-8004 Reputation Registry. |
 | **Chain Scorer** | `agent_market/chain.py` | 95 | Web3.py integration for writing scores to AgentScorer.sol. Gracefully disabled when no private key or contract is configured. |
 | **Event Logger** | `agent_market/logger.py` | 50 | Structured event logger writing to `agent_log.json`. Every verification, scoring round, and on-chain write is logged with timestamps. |
 | **Deploy Script** | `scripts/deploy_contract.py` | 80 | Compiles and deploys AgentScorer.sol to Base Sepolia using Foundry + web3.py. |
 | **Demo Script** | `scripts/demo.sh` | 180 | End-to-end demo: starts 3 competing miners, validator with honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring. |
 | **Tests** | `tests/test_verification.py` | 165 | 14 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
 
-**Total: ~2,400 lines of Python + 221 lines Solidity. 14/14 tests passing. 6 on-chain transactions on Base.**
+**Total: ~2,830 lines of Python + 481 lines Solidity. 14/14 tests passing. 6 on-chain transactions on Base.**
 
 ---
 
@@ -172,6 +186,9 @@ The smart contracts (AgenticCommerce + AgentScorer) are the protocol. The API is
 | Self-Custody Transfer | Base Mainnet | [`0x4f2a8885...`](https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da) |
 | AgentScorer Contract | Base Mainnet | [`0xc1679D1A...`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A) |
 | AgenticCommerce (ERC-8183) | Base Mainnet | [`0xeE779106...`](https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E) |
+| AgenticCommerceV2 (ERC-8183) | Base Mainnet | [`0xE4ED0C73...`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) |
+| MinerRegistry | Base Mainnet | [`0xE0d1346b...`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) |
+| ERC-8004 Agent ID | Base Mainnet | Agent ID **34655** on the official Identity Registry |
 | 6 Score Transactions | Base Sepolia | Viewable in `agent_log.json` — each with tx hash and block number |
 
 ---
@@ -229,6 +246,7 @@ synthesis/
 ├── agent_market/                 # Core verification logic
 │   ├── protocol.py               # Request/Response data contracts (Pydantic)
 │   ├── chain.py                  # On-chain scoring via AgentScorer.sol
+│   ├── erc8004.py                # ERC-8004 Reputation Registry integration
 │   ├── logger.py                 # Structured event logger
 │   ├── miner/
 │   │   ├── analyzer.py           # Code analysis: AST + patterns + LLM intent
@@ -241,8 +259,11 @@ synthesis/
 │       └── server.py             # FastAPI: /verify, /status, /leaderboard, /health
 │
 ├── contracts/
-│   ├── AgentScorer.sol           # On-chain score recording (deployed on Base Sepolia)
-│   └── deployed.json             # Contract address + ABI
+│   ├── AgentScorer.sol           # On-chain score recording (deployed on Base)
+│   ├── AgenticCommerce.sol       # ERC-8183 job marketplace v1
+│   ├── AgenticCommerceV2.sol     # ERC-8183 job marketplace with 15% validator fee split
+│   ├── MinerRegistry.sol         # On-chain agent registry for discovery
+│   └── deployed.json             # Contract addresses + ABIs
 │
 ├── agents/
 │   ├── miner_agent.py            # Standalone miner with /verify endpoint

@@ -46,12 +46,15 @@ The first version was a **Bittensor subnet** (~3,200 lines). The core verificati
 | Self-Custody Transfer | Base Mainnet | [`0x4f2a8885...`](https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da) |
 | AgentScorer Contract | Base Sepolia | [`0x11BCd7097f1835b3D19A05fd06905Bd332ED2452`](https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452) |
 | Score Transactions | Base Sepolia | 6 txs in `agent_log.json` |
+| AgenticCommerceV2 | Base Mainnet | [`0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) — Job marketplace with 15% fee split |
+| MinerRegistry | Base Mainnet | [`0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) — On-chain agent discovery |
+| ERC-8004 Agent ID | Base Mainnet | #34655 on official Identity Registry ([`0x8004A169...`](https://basescan.org/address/0x8004A169)) |
 
 ---
 
 ## What's Built — Everything
 
-**14/14 tests passing. 78 execution events. 6 on-chain transactions.**
+**31 tests passing. 80+ execution events. 5 contracts on mainnet.**
 
 ### File Map
 
@@ -59,6 +62,9 @@ The first version was a **Bittensor subnet** (~3,200 lines). The core verificati
 agent_market/
 ├── protocol.py              # Pydantic data contracts (CodeVerificationRequest/Response)
 ├── chain.py                 # Web3.py integration for AgentScorer.sol (graceful fallback)
+├── erc8004.py               # Official ERC-8004 Identity + Reputation registry integration
+├── commerce.py              # On-chain job lifecycle (AgenticCommerceV2)
+├── registry.py              # On-chain miner registry client
 ├── logger.py                # Structured event logger → agent_log.json
 ├── miner/
 │   ├── analyzer.py          # AST parsing + pattern detection + LLM intent verification
@@ -73,6 +79,8 @@ agent_market/
 
 contracts/
 ├── AgentScorer.sol          # On-chain score recording (deployed on Base Sepolia)
+├── AgenticCommerceV2.sol    # Job marketplace with validator fee split
+├── MinerRegistry.sol        # Permanent on-chain agent registry
 └── deployed.json            # Contract address + ABI
 
 agents/
@@ -115,6 +123,10 @@ scripts/
 - **The analyzer has no chain dependency** — it's pure Python. Don't add chain imports to analyzer.py, honeypot.py, or scorer.py
 - **Standalone mode must always work** — the API should function without any chain connection
 - **`--chain` flag** — enables on-chain scoring in validator_agent.py (requires PRIVATE_KEY env var + contracts/deployed.json)
+- **ERC-8004 Agent ID is 34655** on the official registry
+- **AgenticCommerceV2 has 15% validator fee** (1500 bps)
+- **MinerRegistry makes agent discovery persistent** across server restarts
+- **Scores are published to both AgentScorer AND the official ERC-8004 Reputation Registry**
 
 ## Links
 

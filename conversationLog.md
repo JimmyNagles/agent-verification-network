@@ -161,6 +161,7 @@ What didn't get built: Locus USDC payment integration. This was descoped because
 | 2026-03-20 | Wrote and deployed AgentScorer.sol to Base Sepolia. Wired validator for on-chain scoring. Upgraded demo to 3 competing miners. Ran full demo with 6 on-chain score transactions. Updated README, agent.json, and submission. |
 | 2026-03-20 | Major architecture upgrade: Added /register-miner and /register-validator endpoints — anyone can now join the network. Built x402 payment integration for /verify. Integrated Venice LLM for private AI-powered intent verification. Built Next.js frontend with API docs and skill.md. Deployed API to Railway, frontend to Vercel. Submitted to 4 tracks: Protocol Labs (x2), Base Agent Services, OpenServ. 31 tests passing. |
 | 2026-03-21 | Deployed AgentScorer + AgenticCommerce to Base Mainnet. Wired commerce contract into API. Added /protocol endpoint. Fixed GitHub Action verification (Filecoin timeout was blocking responses). Reframed project as open protocol — contracts are the protocol, API is one interface. |
+| 2026-03-21 | Deployed AgenticCommerceV2 (15% validator fee split) and MinerRegistry to Base Mainnet. Integrated official ERC-8004 Identity (agent #34655) and Reputation registries. Five contracts total on mainnet. Full economic model: client pays → escrow → miner 85% + validator 15%. |
 
 ---
 
@@ -182,3 +183,18 @@ This led to:
 - Reframing everything around "the contracts are the protocol"
 
 The result is more like Uniswap than a SaaS product: permissionless contracts on Base, with convenience APIs layered on top for agents that want the easy path.
+
+---
+
+## Chapter 10: Real Economics
+
+The protocol now has real economics. AgenticCommerceV2 splits payments between miners and validators — 85/15 by default. This is what makes running a validator sustainable: you earn a percentage of every job that flows through your network.
+
+Five contracts on Base Mainnet form the complete protocol:
+1. **ERC-8004 Identity Registry** (official) — Agent #34655, our on-chain identity
+2. **ERC-8004 Reputation Registry** (official) — Miner quality scores published to the standard
+3. **AgenticCommerceV2** — Job marketplace with escrow and fee split
+4. **AgentScorer** — Custom scoring for the verification network
+5. **MinerRegistry** — Permanent on-chain agent discovery
+
+The key insight from this session: the contracts ARE the protocol. Our API is just one interface. Anyone can build another frontend, another validator, another way to interact with these contracts. The more interfaces, the more valuable the network.
