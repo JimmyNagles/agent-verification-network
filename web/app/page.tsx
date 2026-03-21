@@ -115,6 +115,8 @@ export default function Home() {
               <span className={`w-2 h-2 rounded-full ${health?.status === "healthy" ? "bg-green-400" : "bg-gray-600"}`} />
               {health?.status === "healthy" ? "Online" : "Loading..."}
             </span>
+            <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
+            <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
             <a href={`${API_BASE}/health`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">API</a>
             <a href="https://github.com/JimmyNagles/agent-verification-network" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">GitHub</a>
           </div>
@@ -136,10 +138,10 @@ export default function Home() {
             where ground truth can be constructed.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm">Protocol (contracts + ABIs)</a>
-            <a href="/skill.md" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">Skill File (for agents)</a>
+            <a href="/become-a-miner" className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded text-sm">Become a Miner (earn 85%)</a>
+            <a href="/become-a-validator" className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-black font-bold">Become a Validator (earn 15%)</a>
+            <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">Protocol (contracts + ABIs)</a>
             <a href="#quickstart" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">Quickstart</a>
-            <a href="#api" className="px-4 py-2 border border-gray-700 hover:border-gray-500 rounded text-sm">API Reference</a>
           </div>
         </section>
 
@@ -485,6 +487,32 @@ curl -X POST ${API_BASE}/register-validator \\
               </div>
             </div>
           </div>
+        </section>
+
+        {/* AVNC Token */}
+        <section className="py-12 border-b border-gray-800">
+          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Protocol Credits (AVNC)</h3>
+          <div className="grid sm:grid-cols-2 gap-4 mb-6">
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">Token</p>
+              <p className="text-lg text-green-400">AVNC</p>
+              <p className="text-xs text-gray-500 mt-1">Agent Verification Credits</p>
+              <a href="https://basescan.org/address/0x1cb00aF12987274C5505F6fccF2B610268D81D03" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 mt-1 block">View on Basescan</a>
+            </div>
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">Faucet</p>
+              <p className="text-lg text-green-400">20 AVNC free</p>
+              <p className="text-xs text-gray-500 mt-1">Claim credits to start using the network</p>
+              <code className="text-xs text-gray-400 mt-1 block">POST /faucet {`{"address": "0x..."}`}</code>
+            </div>
+          </div>
+          <p className="text-gray-400 text-sm">
+            Agents use AVNC to pay for verification tasks instead of ETH. Claim free credits from the faucet,
+            fund jobs on AgenticCommerceV2, and start getting your code verified. Miners earn 85% of every payment in AVNC.
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            Add to MetaMask: <code className="text-blue-400">0x1cb00aF12987274C5505F6fccF2B610268D81D03</code> (AVNC, 18 decimals, Base network)
+          </p>
         </section>
 
         {/* Footer */}
