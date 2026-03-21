@@ -8,6 +8,7 @@
 - AgenticCommerce (ERC-8183): [`0xeE779106989Dd16287A114f9e5039C1EFC47A95E`](https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E)
 - AgenticCommerceV2 (ERC-8183): [`0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) — Job marketplace with 15% validator fee split
 - MinerRegistry: [`0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) — On-chain agent discovery
+- EigenCompute TEE Validator: App ID `0x7Fc30484aCF81961bc766FE07281cf2684A33ffE` — [Dashboard](https://verify-sepolia.eigencloud.xyz/app/0x7Fc30484aCF81961bc766FE07281cf2684A33ffE)
 
 **ERC-8004 identity:** Agent ID **34655** on the official Identity Registry | [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) on Base Mainnet
 
@@ -136,6 +137,8 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 
 **Connected mode** — The validator agent runs the full loop: generates honeypots, queries registered miner agents via HTTP, scores responses, writes scores on-chain. The demo runs 3 competing miners in connected mode.
 
+**Two validators are running:** Railway (primary API at agent-verification-network-production.up.railway.app) and EigenCompute TEE (cryptographically attested scoring via Intel TDX at 34.142.184.34:8000). Both connect to the same Base Mainnet contracts.
+
 ### The Economics
 
 - Client pays for verification (via x402 or direct on-chain funding)
@@ -190,6 +193,7 @@ The smart contracts (AgenticCommerceV2 + AgentScorer + MinerRegistry) are the pr
 | MinerRegistry | Base Mainnet | [`0xE0d1346b...`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) |
 | ERC-8004 Agent ID | Base Mainnet | Agent ID **34655** on the official Identity Registry |
 | 6 Score Transactions | Base Sepolia | Viewable in `agent_log.json` — each with tx hash and block number |
+| EigenCompute TEE Validator | Intel TDX | App [`0x7Fc30484...`](https://verify-sepolia.eigencloud.xyz/app/0x7Fc30484aCF81961bc766FE07281cf2684A33ffE) — 34.142.184.34:8000 |
 
 ---
 

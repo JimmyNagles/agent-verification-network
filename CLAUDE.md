@@ -49,6 +49,7 @@ The first version was a **Bittensor subnet** (~3,200 lines). The core verificati
 | AgenticCommerceV2 | Base Mainnet | [`0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) — Job marketplace with 15% fee split |
 | MinerRegistry | Base Mainnet | [`0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) — On-chain agent discovery |
 | ERC-8004 Agent ID | Base Mainnet | #34655 on official Identity Registry ([`0x8004A169...`](https://basescan.org/address/0x8004A169)) |
+| EigenCompute TEE | Intel TDX | App `0x7Fc30484...` at 34.142.184.34:8000 |
 
 ---
 
@@ -127,6 +128,7 @@ scripts/
 - **AgenticCommerceV2 has 15% validator fee** (1500 bps)
 - **MinerRegistry makes agent discovery persistent** across server restarts
 - **Scores are published to both AgentScorer AND the official ERC-8004 Reputation Registry**
+- **Two validators running** — Railway (primary API) and EigenCompute TEE (Intel TDX). Both talk to the same Base Mainnet contracts.
 
 ## Links
 

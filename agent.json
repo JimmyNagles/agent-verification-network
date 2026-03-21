@@ -188,7 +188,11 @@
   },
   "deployed": {
     "api": "https://agent-verification-network-production.up.railway.app",
-    "skill_file": "https://agent-verification-network-production.up.railway.app/skill.md"
+    "skill_file": "https://agent-verification-network-production.up.railway.app/skill.md",
+    "eigencompute": "http://34.142.184.34:8000",
+    "eigencompute_app_id": "0x7Fc30484aCF81961bc766FE07281cf2684A33ffE",
+    "eigencompute_dashboard": "https://verify-sepolia.eigencloud.xyz/app/0x7Fc30484aCF81961bc766FE07281cf2684A33ffE",
+    "eigencompute_tee": "Intel TDX (g1-standard-4t)"
   },
   "tracks": {
     "primary": [

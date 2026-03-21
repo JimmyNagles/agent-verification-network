@@ -301,6 +301,10 @@ curl -X POST ${API_BASE}/register-validator \\
               <p className="text-xs text-gray-500">MinerRegistry — On-Chain Agent Discovery</p>
               <p className="text-purple-400 text-sm">Base Mainnet — 0xE0d1346b...</p>
             </a>
+            <a href="https://verify-sepolia.eigencloud.xyz/app/0x7Fc30484aCF81961bc766FE07281cf2684A33ffE" target="_blank" rel="noopener noreferrer" className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-green-500/50 transition-colors">
+              <p className="text-xs text-gray-500">EigenCompute TEE Validator</p>
+              <p className="text-green-400 text-sm">Intel TDX — 34.142.184.34:8000</p>
+            </a>
             <a href="https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da" target="_blank" rel="noopener noreferrer" className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-blue-500/50 transition-colors">
               <p className="text-xs text-gray-500">Self-Custody Transfer</p>
               <p className="text-blue-400 text-sm">Base Mainnet — 0x4f2a8885...</p>

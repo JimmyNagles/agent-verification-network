@@ -7,3 +7,5 @@ venv/
 contracts/out/
 contracts/cache/
 .pytest_cache/
+.env.eigencompute
+submission_description.md
