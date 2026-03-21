@@ -171,11 +171,14 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
     else:
         task_id = str(uuid4())
 
+        import os
         from agent_market.miner.analyzer import analyze_code
+        use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
         result = analyze_code(
             code=request.code,
             intent=request.intent,
             language=request.language,
+            use_llm=use_llm,
         )
 
         response = VerifyResponse(
