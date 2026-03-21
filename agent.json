@@ -44,6 +44,12 @@
       "explorer": "https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
       "deploy_tx": "https://basescan.org/tx/f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
       "description": "On-chain agent registry — miners register once, discoverable forever"
+    },
+    "ProtocolCredits": {
+      "address": "0x1cb00aF12987274C5505F6fccF2B610268D81D03",
+      "chain": "base-mainnet",
+      "symbol": "AVNC",
+      "description": "Protocol credits — agents use AVNC to pay for tasks. Faucet gives 10 free."
     }
   },
   "capabilities": [
@@ -142,6 +148,15 @@
       "endpoint": "/health",
       "method": "GET",
       "description": "Health check — returns service status, mode, and task count."
+    },
+    {
+      "name": "register",
+      "type": "REST",
+      "endpoint": "/register",
+      "method": "POST",
+      "input": {"agent_name": "string — unique name for your agent"},
+      "output": {"api_key": "string — shown once", "credits": "number — 10 free"},
+      "description": "Register as a client and get an API key with 10 free verifications."
     }
   ],
   "agents": {

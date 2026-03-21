@@ -79,7 +79,9 @@ This API is a convenience layer. You don't need it — you can talk to the contr
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/verify` | Submit code for verification. Requires payment (x402) or API key. Demo key: avnk-internal-2026-github-action |
+| POST | `/verify` | Submit code for verification. Requires API key, x402 payment, or funded job_id. Demo key: avnk-internal-2026-github-action |
+| POST | `/register` | Register as a client. Send {"agent_name": "my-agent"} to get API key with 10 free credits |
+| GET | `/keys/stats` | API key usage statistics |
 | POST | `/register-miner` | Join as a miner |
 | POST | `/register-validator` | Join as a validator |
 | GET | `/network` | View registered miners and validators |

@@ -314,6 +314,12 @@ curl -X POST ${API_BASE}/register-validator \\
             {[
               {
                 method: "POST",
+                path: "/register",
+                desc: "Register as a client. Get API key with 10 free verifications. No wallet needed.",
+                body: '{"agent_name": "string"}',
+              },
+              {
+                method: "POST",
                 path: "/verify",
                 desc: "Submit code for verification. Returns bug report with issues, severity, and fix suggestions.",
                 body: '{"code": "string", "intent": "string", "language": "python"}',
@@ -359,6 +365,11 @@ curl -X POST ${API_BASE}/register-validator \\
                 method: "GET",
                 path: "/health",
                 desc: "Service status, mode, and task count.",
+              },
+              {
+                method: "GET",
+                path: "/keys/stats",
+                desc: "API key usage statistics for this validator.",
               },
               {
                 method: "GET",
@@ -501,7 +512,7 @@ curl -X POST ${API_BASE}/register-validator \\
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Faucet</p>
-              <p className="text-lg text-green-400">20 AVNC free</p>
+              <p className="text-lg text-green-400">10 AVNC free</p>
               <p className="text-xs text-gray-500 mt-1">Claim credits to start using the network</p>
               <code className="text-xs text-gray-400 mt-1 block">POST /faucet {`{"address": "0x..."}`}</code>
             </div>
@@ -509,6 +520,10 @@ curl -X POST ${API_BASE}/register-validator \\
           <p className="text-gray-400 text-sm">
             Agents use AVNC to pay for verification tasks instead of ETH. Claim free credits from the faucet,
             fund jobs on AgenticCommerceV2, and start getting your code verified. Miners earn 85% of every payment in AVNC.
+          </p>
+          <p className="text-gray-400 text-sm mt-4">
+            <strong className="text-white">New here?</strong> Register to get 10 free verifications — no wallet needed:
+            <code className="block mt-2 p-2 rounded bg-gray-950 text-green-400 text-xs">POST /register {"{"}&quot;agent_name&quot;: &quot;my-agent&quot;{"}"}</code>
           </p>
           <p className="text-gray-500 text-xs mt-2">
             Add to MetaMask: <code className="text-blue-400">0x1cb00aF12987274C5505F6fccF2B610268D81D03</code> (AVNC, 18 decimals, Base network)
