@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from agent_market.logger import log_event
 from agent_market.x402 import check_x402_payment, get_pricing_info
+from agent_market.storage import store_on_filecoin
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,8 @@ class VerifyResponse(BaseModel):
     agent_id: Optional[str] = None
     score: Optional[float] = None
     mode: Optional[str] = None
+    filecoin_cid: Optional[str] = None
+    filecoin_url: Optional[str] = None
 
 
 class TaskStatus(BaseModel):
@@ -189,6 +192,18 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             suggestions=result["suggestions"],
             mode="standalone",
         )
+
+        # Store report on Filecoin (async, non-blocking)
+        try:
+            storage = await store_on_filecoin(
+                data=response.model_dump(),
+                filename=f"verification_{task_id}.json",
+            )
+            if storage:
+                response.filecoin_cid = storage["cid"]
+                response.filecoin_url = storage["url"]
+        except Exception:
+            pass  # Storage failure shouldn't break verification
 
         results[task_id] = response
         return response
