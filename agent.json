@@ -13,15 +13,17 @@
   },
   "contracts": {
     "AgentScorer": {
-      "address": "0x11BCd7097f1835b3D19A05fd06905Bd332ED2452",
-      "chain": "base-sepolia",
-      "explorer": "https://sepolia.basescan.org/address/0x11BCd7097f1835b3D19A05fd06905Bd332ED2452"
+      "address": "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+      "chain": "base-mainnet",
+      "explorer": "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+      "deploy_tx": "https://basescan.org/tx/d0ad72553761ab68978f984cdeb93ed304aec0f893c826a5697314a1534b4e03"
     },
     "AgenticCommerce": {
-      "address": "0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
-      "chain": "base-sepolia",
+      "address": "0xeE779106989Dd16287A114f9e5039C1EFC47A95E",
+      "chain": "base-mainnet",
       "standard": "ERC-8183",
-      "explorer": "https://sepolia.basescan.org/address/0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
+      "explorer": "https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E",
+      "deploy_tx": "https://basescan.org/tx/fa269a30dba8d970eb15379163681c0d1fa8857ff3a4044721b397344087904a",
       "description": "Job marketplace — create, fund, submit, complete/reject verification jobs with escrow"
     }
   },
@@ -159,8 +161,8 @@
     "language": "Python 3.9+",
     "framework": "FastAPI",
     "data_contracts": "Pydantic v2",
-    "chain": "Base (ERC-8004 identity, AgentScorer contract)",
-    "scoring": "AgentScorer.sol on Base Sepolia (on-chain reputation)",
+    "chain": "Base Mainnet (ERC-8004 identity, AgentScorer, AgenticCommerce)",
+    "scoring": "AgentScorer.sol on Base Mainnet (on-chain reputation)",
     "llm_providers": "Venice (private, no-data-retention), OpenAI, Anthropic, Ollama",
     "payments": "x402 protocol (USDC on Base)",
     "tests": "pytest (31 tests, all passing)"

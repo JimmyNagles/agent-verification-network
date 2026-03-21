@@ -1148,6 +1148,33 @@
         "explorer": "https://sepolia.basescan.org/address/0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
         "description": "Job marketplace contract \u2014 create, fund, submit, complete/reject jobs with escrow"
       }
+    },
+    {
+      "timestamp": "2026-03-21T04:26:55Z",
+      "type": "contract_deployed",
+      "agent_role": "system",
+      "agent_id": "deployer",
+      "details": {
+        "contract": "AgentScorer",
+        "address": "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+        "chain": "base-mainnet",
+        "tx_hash": "d0ad72553761ab68978f984cdeb93ed304aec0f893c826a5697314a1534b4e03",
+        "explorer": "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A"
+      }
+    },
+    {
+      "timestamp": "2026-03-21T04:26:55Z",
+      "type": "contract_deployed",
+      "agent_role": "system",
+      "agent_id": "deployer",
+      "details": {
+        "contract": "AgenticCommerce",
+        "standard": "ERC-8183",
+        "address": "0xeE779106989Dd16287A114f9e5039C1EFC47A95E",
+        "chain": "base-mainnet",
+        "tx_hash": "fa269a30dba8d970eb15379163681c0d1fa8857ff3a4044721b397344087904a",
+        "explorer": "https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E"
+      }
     }
   ]
 }

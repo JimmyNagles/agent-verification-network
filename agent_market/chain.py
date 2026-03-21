@@ -51,7 +51,8 @@ class ChainScorer:
                 abi=info["abi"],
             )
             self.account = self.w3.eth.account.from_key(private_key)
-            self.chain_id = 84532  # Base Sepolia
+            # Detect chain from deployed.json or default to mainnet
+            self.chain_id = info.get("chain_id", 8453 if "mainnet" in info.get("chain", "") else 84532)
             self.enabled = True
             logger.info(f"On-chain scoring enabled: contract={info['address']}")
 

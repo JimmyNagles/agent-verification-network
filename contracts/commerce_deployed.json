@@ -1,9 +1,9 @@
 {
-  "address": "0x99fFc55A56FBdD2b9183386cF8B9F61578D16a85",
-  "chain": "base-sepolia",
-  "rpc": "https://sepolia.base.org",
-  "tx_hash": "3f82b6a984da5337b853a7456a0932de681a1daf0e3029fe8d29959c330861d2",
-  "block_number": 39149332,
+  "address": "0xeE779106989Dd16287A114f9e5039C1EFC47A95E",
+  "chain": "base-mainnet",
+  "rpc": "https://mainnet.base.org",
+  "tx_hash": "fa269a30dba8d970eb15379163681c0d1fa8857ff3a4044721b397344087904a",
+  "block_number": 43638903,
   "abi": [
     {
       "type": "function",
