@@ -194,9 +194,9 @@ export default function Home() {
                     <>
                       <div className="flex items-center gap-3">
                         <span className="text-green-400">ON-CHAIN</span>
-                        <span className="text-gray-400">Miner <span className="text-white">{item.agent_id}</span> on MinerRegistry</span>
+                        <span className="text-gray-400">{item.strategy?.includes("validator") ? "Validator" : "Miner"} <span className="text-white">{item.agent_id}</span> registered</span>
                       </div>
-                      <span className="text-xs text-gray-500">{item.strategy || ""}</span>
+                      <span className={`text-xs ${item.strategy?.includes("validator") ? "text-yellow-400" : "text-purple-400"}`}>{item.strategy || ""}</span>
                     </>
                   ) : null}
                 </div>
