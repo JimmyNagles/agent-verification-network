@@ -650,14 +650,28 @@ async def list_agents():
     return {"agents": agents, "total": len(agents)}
 
 
+_register_rate_limit: dict = {}  # IP → timestamp
+
 @app.post("/register")
 async def register_client(request: Request):
     """
     Register as a client and get an API key.
 
     Send your agent name (unique) and optionally a wallet address.
-    You get 20 free verifications. After that, pay with AVNC or x402.
+    You get 10 free verifications. After that, pay with AVNC or x402.
+    Rate limited: 1 registration per IP per hour.
     """
+    import time as _time
+
+    # Rate limit by IP
+    client_ip = request.client.host if request.client else "unknown"
+    last_register = _register_rate_limit.get(client_ip, 0)
+    if _time.time() - last_register < 3600:  # 1 hour
+        return JSONResponse(status_code=429, content={
+            "error": "Rate limited",
+            "message": "One registration per hour. Try again later.",
+        })
+
     try:
         body = await request.json()
         agent_name = body.get("agent_name") or body.get("name")
@@ -678,6 +692,7 @@ async def register_client(request: Request):
 
         result = _keys.create_key(agent_name=agent_name, wallet_address=wallet_address)
         if result:
+            _register_rate_limit[client_ip] = _time.time()
             log_event(
                 event_type="client_registered",
                 agent_role="client",
@@ -691,7 +706,8 @@ async def register_client(request: Request):
                 "endpoints": {
                     "/verify": "Submit code for verification (costs 1 credit per call)",
                     "/token": "AVNC token info",
-                    "/faucet": "Claim free AVNC tokens (if you have a wallet)",
+                    "/faucet": "Claim free AVNC tokens (requires wallet address)",
+                    "/pricing": "Payment options when credits run out",
                 },
             }
         return JSONResponse(status_code=500, content={"error": "Registration failed"})
