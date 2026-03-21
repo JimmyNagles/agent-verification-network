@@ -463,6 +463,51 @@ async def get_jobs():
     }
 
 
+@app.get("/protocol")
+async def protocol_info():
+    """Contract addresses and ABIs — everything an agent needs to interact directly."""
+    import json as _json
+    from pathlib import Path
+
+    contracts = {}
+    commerce_path = Path(__file__).parent.parent.parent / "contracts" / "commerce_deployed.json"
+    scorer_path = Path(__file__).parent.parent.parent / "contracts" / "deployed.json"
+
+    if commerce_path.exists():
+        with open(commerce_path) as f:
+            data = _json.load(f)
+            contracts["AgenticCommerce"] = {
+                "address": data["address"],
+                "chain": data.get("chain", "base-mainnet"),
+                "explorer": f"https://basescan.org/address/{data['address']}",
+                "abi": data["abi"],
+                "description": "Job marketplace — create, fund, submit, complete/reject with escrow",
+            }
+
+    if scorer_path.exists():
+        with open(scorer_path) as f:
+            data = _json.load(f)
+            contracts["AgentScorer"] = {
+                "address": data["address"],
+                "chain": data.get("chain", "base-mainnet"),
+                "explorer": f"https://basescan.org/address/{data['address']}",
+                "abi": data["abi"],
+                "description": "On-chain miner reputation scores",
+            }
+
+    return {
+        "protocol": "Agent Verification Network",
+        "network": "base-mainnet",
+        "chain_id": 8453,
+        "contracts": contracts,
+        "identity": {
+            "standard": "ERC-8004",
+            "registration_tx": "0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751",
+        },
+        "note": "These contracts are permissionless. Any agent with a wallet can interact directly — no API required.",
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -511,6 +556,7 @@ async def root():
             "/register-validator": "POST — Register a validator agent",
             "/network": "GET — View network state",
             "/jobs": "GET — On-chain job status from AgenticCommerce",
+            "/protocol": "GET — Contract addresses and ABIs for direct interaction",
             "/pricing": "GET — Verification pricing and x402 config",
             "/skill.md": "GET — Machine-readable skill file for agents",
             "/health": "GET — Health check",
