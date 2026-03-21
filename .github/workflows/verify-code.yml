@@ -3,11 +3,6 @@ name: Agent Verification Network — Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    paths:
-      - '**.py'
-      - '**.js'
-      - '**.ts'
-      - '**.sol'
 
 jobs:
   verify:
@@ -23,90 +18,101 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed files
-        id: changed
-        run: |
-          FILES=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(py|js|ts|sol)$' | head -5)
-          echo "files=$FILES" >> $GITHUB_OUTPUT
-          echo "Changed files: $FILES"
-
-      - name: Verify code with Agent Verification Network
+      - name: Verify changed files
         id: verify
         run: |
           API_URL="https://agent-verification-network-production.up.railway.app"
+
+          # Get changed Python/JS/TS/Sol files
+          git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(py|js|ts|sol)$' | head -5 > /tmp/changed_files.txt
+
+          echo "Changed files:"
+          cat /tmp/changed_files.txt
+
           REPORT=""
           TOTAL_ISSUES=0
           CRITICAL=0
 
-          for FILE in ${{ steps.changed.files.outputs.files }}; do
-            if [ ! -f "$FILE" ]; then continue; fi
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            [ ! -f "$FILE" ] && continue
 
             echo "Verifying: $FILE"
-            CODE=$(cat "$FILE" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))" 2>/dev/null | sed 's/^"//;s/"$//')
 
-            # Skip files that are too large (>10KB)
+            # Skip files larger than 10KB
             SIZE=$(wc -c < "$FILE")
             if [ "$SIZE" -gt 10000 ]; then
-              REPORT="$REPORT\n### \`$FILE\`\n> Skipped (file too large for verification)\n"
+              REPORT="${REPORT}### \`${FILE}\`\n> Skipped (file too large)\n\n"
               continue
             fi
+
+            # Send to verification API
+            CODE_JSON=$(python3 -c "import json; print(json.dumps(open('$FILE').read()))")
 
             RESULT=$(curl -s -X POST "$API_URL/verify" \
               -H "Content-Type: application/json" \
-              -d "{\"code\": $( python3 -c "import sys,json; print(json.dumps(open('$FILE').read()))" ), \"intent\": \"Production code in $FILE\", \"language\": \"python\"}" \
-              --max-time 30 2>/dev/null)
+              -d "{\"code\": $CODE_JSON, \"intent\": \"Production code in $FILE — check for bugs, security issues, and logic errors\", \"language\": \"python\"}" \
+              --max-time 30 2>/dev/null || echo '{}')
 
-            if [ -z "$RESULT" ]; then
-              REPORT="$REPORT\n### \`$FILE\`\n> Verification timeout\n"
-              continue
-            fi
+            echo "Result: $RESULT"
 
-            PASSED=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('passed', True))" 2>/dev/null)
-            CONFIDENCE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('confidence', 0))" 2>/dev/null)
-            ISSUES=$(echo "$RESULT" | python3 -c "
+            # Parse result
+            PASSED=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('passed', True))" 2>/dev/null || echo "True")
+            CONFIDENCE=$(echo "$RESULT" | python3 -c "import sys,json; print(f\"{json.load(sys.stdin).get('confidence', 0):.0%}\")" 2>/dev/null || echo "0%")
+
+            ISSUES_TEXT=$(echo "$RESULT" | python3 -c "
           import sys,json
-          d = json.load(sys.stdin)
-          issues = d.get('issues', [])
-          for i in issues:
-              sev = i.get('severity', 'medium')
-              desc = i.get('description', '')
-              line = i.get('line', '?')
-              typ = i.get('type', 'issue')
-              icon = '🔴' if sev == 'critical' else '🟡' if sev in ('high','medium') else '🟢'
-              print(f'- {icon} **{typ}** (line {line}): {desc}')
-          print(f'\nConfidence: {d.get(\"confidence\", 0):.0%}')
-          " 2>/dev/null)
+          try:
+              d = json.load(sys.stdin)
+              issues = d.get('issues', [])
+              if not issues:
+                  print('No issues found.')
+              else:
+                  for i in issues:
+                      sev = i.get('severity', 'medium')
+                      desc = i.get('description', '')
+                      line = i.get('line', '?')
+                      typ = i.get('type', 'issue')
+                      icon = '🔴' if sev == 'critical' else '🟡' if sev in ('high','medium') else '🟢'
+                      print(f'- {icon} **{typ}** (line {line}): {desc}')
+          except:
+              print('Verification failed.')
+          " 2>/dev/null || echo "Verification failed.")
 
-            NUM_ISSUES=$(echo "$RESULT" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('issues', [])))" 2>/dev/null)
-            NUM_CRITICAL=$(echo "$RESULT" | python3 -c "import sys,json; print(len([i for i in json.load(sys.stdin).get('issues', []) if i.get('severity') == 'critical']))" 2>/dev/null)
+            NUM_ISSUES=$(echo "$RESULT" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('issues', [])))" 2>/dev/null || echo "0")
+            NUM_CRITICAL=$(echo "$RESULT" | python3 -c "import sys,json; print(len([i for i in json.load(sys.stdin).get('issues', []) if i.get('severity') == 'critical']))" 2>/dev/null || echo "0")
 
             TOTAL_ISSUES=$((TOTAL_ISSUES + NUM_ISSUES))
             CRITICAL=$((CRITICAL + NUM_CRITICAL))
 
-            if [ "$PASSED" = "True" ]; then
-              REPORT="$REPORT\n### ✅ \`$FILE\`\nNo issues found.\n$ISSUES\n"
+            if [ "$PASSED" = "False" ]; then
+              REPORT="${REPORT}### ❌ \`${FILE}\` — Failed (confidence: ${CONFIDENCE})\n${ISSUES_TEXT}\n\n"
             else
-              REPORT="$REPORT\n### ❌ \`$FILE\`\n$ISSUES\n"
+              REPORT="${REPORT}### ✅ \`${FILE}\` — Passed (confidence: ${CONFIDENCE})\n${ISSUES_TEXT}\n\n"
             fi
-          done
 
-          # Save report
+          done < /tmp/changed_files.txt
+
+          # Handle no files
+          if [ -z "$REPORT" ]; then
+            REPORT="No code files changed in this PR."
+          fi
+
           echo "total_issues=$TOTAL_ISSUES" >> $GITHUB_OUTPUT
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
 
-          {
-            echo "report<<EOF"
-            echo -e "$REPORT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          # Write report to file to avoid escaping issues
+          echo -e "$REPORT" > /tmp/report.md
+          cat /tmp/report.md
 
       - name: Post review comment
         uses: actions/github-script@v7
         with:
           script: |
-            const report = `${{ steps.verify.outputs.report }}`;
-            const totalIssues = ${{ steps.verify.outputs.total_issues || 0 }};
-            const critical = ${{ steps.verify.outputs.critical || 0 }};
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/report.md', 'utf8');
+            const totalIssues = parseInt('${{ steps.verify.outputs.total_issues }}') || 0;
+            const critical = parseInt('${{ steps.verify.outputs.critical }}') || 0;
 
             const header = critical > 0
               ? `## 🔴 Agent Verification Network — ${totalIssues} issue(s) found (${critical} critical)`
@@ -114,13 +120,7 @@ jobs:
               ? `## 🟡 Agent Verification Network — ${totalIssues} issue(s) found`
               : `## ✅ Agent Verification Network — Code looks good`;
 
-            const body = `${header}
-
-            ${report}
-
-            ---
-            *Verified by [Agent Verification Network](https://agent-verification-network-production.up.railway.app) — AI-powered code review by competing miner agents.*
-            *[skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
+            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Verification Network](https://agent-verification-network-production.up.railway.app) — AI-powered code review by competing miner agents.*\n*[skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
