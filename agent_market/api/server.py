@@ -511,11 +511,24 @@ async def get_stats():
     miners_count = len([a for a in onchain if "validator" not in a.get("strategy", "").lower()])
     validators_count = len([a for a in onchain if "validator" in a.get("strategy", "").lower()])
 
+    # Read payment stats from CommerceV2
+    total_paid = 0
+    total_fees = 0
+    if _commerce.enabled:
+        try:
+            total_paid = _commerce.contract.functions.totalPaidOut().call()
+            total_fees = _commerce.contract.functions.totalFees().call()
+        except Exception:
+            pass
+
     return {
         "miners_onchain": miners_count,
         "validators": validators_count,
         "jobs_onchain": _commerce.get_job_count() if _commerce.enabled else 0,
         "verifications": len(results),
+        "total_paid_wei": total_paid,
+        "total_fees_wei": total_fees,
+        "total_volume_wei": total_paid + total_fees,
         "chain": "base-mainnet",
         "registry_enabled": _registry.enabled,
         "commerce_enabled": _commerce.enabled,

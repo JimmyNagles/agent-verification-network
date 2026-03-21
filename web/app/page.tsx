@@ -32,6 +32,9 @@ interface StatsData {
   validators: number;
   jobs_onchain: number;
   verifications: number;
+  total_paid_wei: number;
+  total_fees_wei: number;
+  total_volume_wei: number;
   chain: string;
 }
 
@@ -143,10 +146,10 @@ export default function Home() {
         {/* Network Status */}
         <section className="py-12 border-b border-gray-800">
           <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Live Network</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Miners (on-chain)</p>
-              <p className="text-lg text-purple-400">{stats?.miners_onchain ?? network?.miners?.length ?? "..."}</p>
+              <p className="text-xs text-gray-500">Miners</p>
+              <p className="text-lg text-purple-400">{stats?.miners_onchain ?? "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Validators</p>
@@ -154,11 +157,19 @@ export default function Home() {
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">On-Chain Jobs</p>
-              <p className="text-lg text-green-400">{stats?.jobs_onchain ?? jobs?.total_jobs ?? "..."}</p>
+              <p className="text-lg text-green-400">{stats?.jobs_onchain ?? "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Chain</p>
-              <p className="text-lg text-blue-400">{stats?.chain ?? "..."}</p>
+              <p className="text-xs text-gray-500">Paid to Miners</p>
+              <p className="text-lg text-green-400">{stats?.total_paid_wei ? `${(stats.total_paid_wei / 1e18).toFixed(6)} ETH` : "..."}</p>
+            </div>
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">Validator Fees</p>
+              <p className="text-lg text-yellow-400">{stats?.total_fees_wei ? `${(stats.total_fees_wei / 1e18).toFixed(6)} ETH` : "..."}</p>
+            </div>
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">Total Volume</p>
+              <p className="text-lg text-white">{stats?.total_volume_wei ? `${(stats.total_volume_wei / 1e18).toFixed(6)} ETH` : "..."}</p>
             </div>
           </div>
         </section>
