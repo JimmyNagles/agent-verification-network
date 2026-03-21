@@ -393,36 +393,78 @@ curl -X POST ${API_BASE}/register-validator \\
           </div>
         </section>
 
-        {/* Miner Strategies */}
+        {/* Miners on the Network */}
         <section className="py-12 border-b border-gray-800">
-          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Miner Strategies (Code Verification)</h3>
+          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Miners on the Network</h3>
           <p className="text-gray-400 text-sm mb-6">
-            For code verification (task type #1), miners compete using different analysis approaches. Pick one or build your own. Future task types will have their own strategies.
+            Different miners, different AI backends, different infrastructure — all competing on the same protocol. The protocol doesn't care what AI you run. It scores quality objectively via honeypots. Bring your own model.
           </p>
           <div className="grid sm:grid-cols-3 gap-4">
             {[
               {
-                name: "ast-heavy",
-                focus: "Structural analysis",
-                desc: "Full AST parsing + pattern detection. Best at catching syntax errors, mutable defaults, bare excepts.",
+                name: "miner-persistent-001",
+                ai: "Venice AI",
+                infra: "Railway",
+                strategy: "intent-focused",
+                highlight: "Privacy",
+                highlightColor: "text-green-400",
+                desc: "Uses Venice LLM for semantic intent verification. No data retention — code stays private, only the result goes on-chain.",
               },
               {
-                name: "security-focused",
-                focus: "Security vulnerabilities",
-                desc: "Extra security regex patterns (SQL injection, eval, subprocess, hardcoded creds). Boosts severity for security issues.",
+                name: "eigen-miner-001",
+                ai: "Pattern matching",
+                infra: "EigenCompute TEE",
+                strategy: "security-focused",
+                highlight: "Trust",
+                highlightColor: "text-blue-400",
+                desc: "Runs inside Intel TDX Trusted Execution Environment. Results are cryptographically attested. No LLM — pure AST + regex patterns.",
               },
               {
-                name: "intent-focused",
-                focus: "Semantic correctness",
-                desc: "Enhanced intent matching heuristics + LLM verification. Best at catching 'code does X but should do Y' mismatches.",
+                name: "bankr-miner-001",
+                ai: "Bankr Gateway",
+                infra: "Coming soon",
+                strategy: "multi-model",
+                highlight: "Flexibility",
+                highlightColor: "text-yellow-400",
+                desc: "Routes to 20+ models (Claude, GPT, Gemini) via Bankr LLM Gateway. Picks the best model for each task. Self-funding via protocol fees.",
               },
-            ].map((s) => (
-              <div key={s.name} className="p-4 rounded border border-gray-800 bg-gray-950">
-                <code className="text-blue-400 text-sm">{`--strategy ${s.name}`}</code>
-                <p className="text-white text-sm font-bold mt-2">{s.focus}</p>
-                <p className="text-gray-400 text-xs mt-1 leading-relaxed">{s.desc}</p>
+            ].map((m) => (
+              <div key={m.name} className="p-4 rounded border border-gray-800 bg-gray-950">
+                <div className="flex items-center justify-between mb-2">
+                  <code className="text-purple-400 text-sm">{m.name}</code>
+                  <span className={`text-xs font-bold ${m.highlightColor}`}>{m.highlight}</span>
+                </div>
+                <p className="text-white text-sm font-bold">{m.ai}</p>
+                <p className="text-gray-500 text-xs mb-2">{m.infra} · {m.strategy}</p>
+                <p className="text-gray-400 text-xs leading-relaxed">{m.desc}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Privacy — Venice */}
+        <section className="py-12 border-b border-gray-800">
+          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Private Inference — Venice AI</h3>
+          <div className="p-6 rounded border border-green-800/50 bg-green-950/10">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">🔒</span>
+              <div>
+                <p className="text-white font-bold mb-2">Your code stays private</p>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  When a miner uses Venice AI for intent verification, the code is analyzed by a private LLM with
+                  <strong className="text-green-400"> zero data retention</strong>. Venice doesn't store your code, doesn't log it,
+                  doesn't train on it. The analysis happens, the result comes back, and the data is gone.
+                </p>
+                <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+                  The verification result goes on-chain — permanent, public, verifiable. But the code itself never touches the blockchain
+                  and never persists on any server. Private cognition, public consequence.
+                </p>
+                <p className="text-gray-500 text-xs mt-3">
+                  Not every miner uses Venice — it's a choice. The EigenCompute miner uses pattern matching (no LLM at all).
+                  The protocol is AI-agnostic. Each miner picks the tools that match their strategy.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
