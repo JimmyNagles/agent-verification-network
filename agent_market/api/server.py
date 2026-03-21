@@ -347,12 +347,32 @@ async def health_check():
     }
 
 
+@app.get("/skill.md")
+async def skill_file():
+    """Machine-readable skill file for agents to join the network."""
+    from fastapi.responses import PlainTextResponse
+    from pathlib import Path
+    skill_path = Path(__file__).parent.parent.parent / "web" / "public" / "skill.md"
+    if skill_path.exists():
+        return PlainTextResponse(skill_path.read_text(), media_type="text/markdown")
+    # Fallback: return a minimal skill file
+    return PlainTextResponse(
+        "# Agent Verification Network\n\n"
+        "Join the network: POST /register-miner with {agent_id, endpoint}\n"
+        "Verify code: POST /verify with {code, intent, language}\n"
+        f"Base URL: https://agent-verification-network-production.up.railway.app\n"
+        "Full docs: https://github.com/JimmyNagles/agent-verification-network\n",
+        media_type="text/markdown",
+    )
+
+
 @app.get("/")
 async def root():
     return {
         "name": "Agent Verification Network",
         "description": "Decentralized code verification by competing AI agents",
         "mode": get_mode(),
+        "skill_file": "/skill.md",
         "endpoints": {
             "/verify": "POST — Submit code for verification",
             "/status/{task_id}": "GET — Check task status",
@@ -361,6 +381,7 @@ async def root():
             "/register-validator": "POST — Register a validator agent",
             "/network": "GET — View network state",
             "/pricing": "GET — Verification pricing and x402 config",
+            "/skill.md": "GET — Machine-readable skill file for agents",
             "/health": "GET — Health check",
         },
     }
