@@ -163,15 +163,15 @@ export default function Home() {
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Paid to Miners</p>
-              <p className="text-lg text-green-400">{stats?.total_paid_wei ? `${(stats.total_paid_wei / 1e18).toFixed(6)} ETH` : "..."}</p>
+              <p className="text-lg text-green-400">{stats?.total_paid_wei ? `${(stats.total_paid_wei / 1e18).toFixed(2)} AVNC` : "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Validator Fees</p>
-              <p className="text-lg text-yellow-400">{stats?.total_fees_wei ? `${(stats.total_fees_wei / 1e18).toFixed(6)} ETH` : "..."}</p>
+              <p className="text-lg text-yellow-400">{stats?.total_fees_wei ? `${(stats.total_fees_wei / 1e18).toFixed(2)} AVNC` : "..."}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Total Volume</p>
-              <p className="text-lg text-white">{stats?.total_volume_wei ? `${(stats.total_volume_wei / 1e18).toFixed(6)} ETH` : "..."}</p>
+              <p className="text-lg text-white">{stats?.total_volume_wei ? `${(stats.total_volume_wei / 1e18).toFixed(2)} AVNC` : "..."}</p>
             </div>
           </div>
         </section>
