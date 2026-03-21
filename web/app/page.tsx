@@ -31,7 +31,25 @@ interface StatsData {
   miners_onchain: number;
   validators: number;
   jobs_onchain: number;
+  verifications: number;
   chain: string;
+}
+
+interface ActivityItem {
+  type: string;
+  task_id?: string;
+  passed?: boolean;
+  confidence?: number;
+  issues?: number;
+  agent_id?: string;
+  mode?: string;
+  strategy?: string;
+}
+
+interface ActivityData {
+  activity: ActivityItem[];
+  total_verifications: number;
+  total_miners: number;
 }
 
 export default function Home() {
@@ -39,17 +57,20 @@ export default function Home() {
   const [network, setNetwork] = useState<NetworkData | null>(null);
   const [jobs, setJobs] = useState<JobsData | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [activity, setActivity] = useState<ActivityData | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [h, n, j, s] = await Promise.all([
+      const [h, n, j, s, a] = await Promise.all([
         fetch(`${API_BASE}/health`).then((r) => r.json()),
         fetch(`${API_BASE}/network`).then((r) => r.json()).catch(() => null),
         fetch(`${API_BASE}/jobs`).then((r) => r.json()).catch(() => null),
         fetch(`${API_BASE}/stats`).then((r) => r.json()).catch(() => null),
+        fetch(`${API_BASE}/activity`).then((r) => r.json()).catch(() => null),
       ]);
       setHealth(h);
       if (n) setNetwork(n);
+      if (a) setActivity(a);
       if (j) setJobs(j);
       if (s) setStats(s);
     } catch {}
@@ -121,6 +142,50 @@ export default function Home() {
               <p className="text-lg text-blue-400">{stats?.chain ?? "..."}</p>
             </div>
           </div>
+        </section>
+
+        {/* Activity Feed */}
+        <section className="py-12 border-b border-gray-800">
+          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Network Activity</h3>
+          {activity?.activity && activity.activity.length > 0 ? (
+            <div className="space-y-2">
+              {activity.activity.map((item, i) => (
+                <div key={i} className="p-3 rounded border border-gray-800 bg-gray-950 flex items-center justify-between text-sm">
+                  {item.type === "verification" ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <span className={item.passed ? "text-green-400" : "text-red-400"}>{item.passed ? "PASS" : "FAIL"}</span>
+                        <span className="text-gray-400">Verification by <span className="text-purple-400">{item.agent_id || "local"}</span></span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-gray-500">{item.issues} issues</span>
+                        <span className="text-gray-500">{((item.confidence || 0) * 100).toFixed(0)}% confidence</span>
+                        <span className="text-blue-400">{item.mode}</span>
+                      </div>
+                    </>
+                  ) : item.type === "miner_registered" ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-400">JOIN</span>
+                        <span className="text-gray-400">Miner <span className="text-white">{item.agent_id}</span> registered</span>
+                      </div>
+                      <span className="text-xs text-gray-500">{item.strategy || "default"}</span>
+                    </>
+                  ) : item.type === "miner_onchain" ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-400">ON-CHAIN</span>
+                        <span className="text-gray-400">Miner <span className="text-white">{item.agent_id}</span> on MinerRegistry</span>
+                      </div>
+                      <span className="text-xs text-gray-500">{item.strategy || ""}</span>
+                    </>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No activity yet. Submit a verification to see the feed.</p>
+          )}
         </section>
 
         {/* Quickstart */}

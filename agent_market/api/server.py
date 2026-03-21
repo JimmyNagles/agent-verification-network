@@ -510,9 +510,51 @@ async def get_stats():
         "miners_onchain": _registry.get_miner_count() if _registry.enabled else 0,
         "validators": len(_registered_validators) + 2,  # Railway + EigenCompute + any registered
         "jobs_onchain": _commerce.get_job_count() if _commerce.enabled else 0,
+        "verifications": len(results),
         "chain": "base-mainnet",
         "registry_enabled": _registry.enabled,
         "commerce_enabled": _commerce.enabled,
+    }
+
+
+@app.get("/activity")
+async def get_activity():
+    """Recent network activity — verifications, registrations, on-chain events."""
+    activity = []
+
+    # Recent verifications
+    for task_id, result in list(results.items())[-10:]:
+        activity.append({
+            "type": "verification",
+            "task_id": task_id,
+            "passed": result.passed,
+            "confidence": result.confidence,
+            "issues": len(result.issues),
+            "agent_id": result.agent_id,
+            "mode": result.mode,
+        })
+
+    # Registered miners
+    for miner in _registered_miners[-5:]:
+        activity.append({
+            "type": "miner_registered",
+            "agent_id": miner["agent_id"],
+            "strategy": miner.get("strategy"),
+        })
+
+    # On-chain miners from registry
+    onchain_miners = _registry.get_active_miners() if _registry.enabled else []
+    for m in onchain_miners[-5:]:
+        activity.append({
+            "type": "miner_onchain",
+            "agent_id": m["agent_id"],
+            "strategy": m.get("strategy", ""),
+        })
+
+    return {
+        "activity": activity,
+        "total_verifications": len(results),
+        "total_miners": len(_registered_miners) + len(onchain_miners),
     }
 
 
