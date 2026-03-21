@@ -258,6 +258,15 @@ curl -X POST http://localhost:8000/verify \
   }'
 
 # Expected: {"passed": false, "issues": [{"type": "intent_mismatch", ...}], ...}
+
+# With demo API key (free for testing)
+curl -X POST https://agent-verification-network-production.up.railway.app/verify \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: avnk-internal-2026-github-action" \
+  -d '{"code": "def add(a, b):\n    return a - b", "intent": "Add two numbers"}'
+
+# Without API key → returns 402 with payment requirements
+# Pay 0.0001 ETH or fund a job on AgenticCommerceV2
 ```
 
 ---

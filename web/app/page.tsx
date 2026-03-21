@@ -265,6 +265,7 @@ export default function Home() {
               <h4 className="text-white font-bold mb-3">Verify code (one command)</h4>
               <pre className="p-4 rounded bg-gray-950 border border-gray-800 text-sm text-green-400 overflow-x-auto">{`curl -X POST ${API_BASE}/verify \\
   -H "Content-Type: application/json" \\
+  -H "X-API-Key: avnk-internal-2026-github-action" \\
   -d '{
     "code": "def add(a, b):\\n    return a - b",
     "intent": "Add two numbers and return the result"
