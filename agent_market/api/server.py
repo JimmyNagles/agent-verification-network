@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from agent_market.logger import log_event
 from agent_market.x402 import check_x402_payment, get_pricing_info
 from agent_market.storage import store_on_filecoin
+from agent_market.commerce import CommerceClient
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,9 @@ app = FastAPI(
 
 # Validator reference — None means standalone/demo mode
 _validator = None
+
+# Commerce client for on-chain job lifecycle
+_commerce = CommerceClient()
 
 # In-memory task storage
 results = {}
@@ -56,6 +60,41 @@ async def _store_filecoin_background(task_id: str, response):
             results[task_id] = response  # Update with CID
     except Exception:
         pass
+
+
+def _create_job_background(task_id: str, response):
+    """Create an on-chain job for this verification task (fire-and-forget)."""
+    import hashlib
+    import threading
+
+    def _do():
+        try:
+            # Hash the task_id as the job description
+            desc_hash = hashlib.sha256(task_id.encode()).digest()
+            job_result = _commerce.create_job(description_hash=desc_hash)
+            if job_result:
+                response.job_id = job_result["job_id"]
+                response.job_tx = job_result["tx_hash"]
+                results[task_id] = response
+
+                log_event(
+                    event_type="job_created",
+                    agent_role="system",
+                    agent_id="commerce",
+                    details={
+                        "task_id": task_id,
+                        "job_id": job_result["job_id"],
+                        "tx_hash": job_result["tx_hash"],
+                        "block_number": job_result["block_number"],
+                        "chain": job_result["chain"],
+                        "contract": job_result["contract"],
+                    },
+                )
+        except Exception as e:
+            logger.warning(f"Background job creation failed: {e}")
+
+    if _commerce.enabled:
+        threading.Thread(target=_do, daemon=True).start()
 
 
 def attach_validator(validator):
@@ -88,6 +127,8 @@ class VerifyResponse(BaseModel):
     mode: Optional[str] = None
     filecoin_cid: Optional[str] = None
     filecoin_url: Optional[str] = None
+    job_id: Optional[int] = None
+    job_tx: Optional[str] = None
 
 
 class TaskStatus(BaseModel):
@@ -260,6 +301,9 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         # Store report on Filecoin in background (fire-and-forget)
         asyncio.ensure_future(_store_filecoin_background(task_id, response))
 
+        # Create on-chain job record (fire-and-forget)
+        _create_job_background(task_id, response)
+
         return response
 
 
@@ -406,6 +450,19 @@ async def pricing():
     return get_pricing_info()
 
 
+@app.get("/jobs")
+async def get_jobs():
+    """On-chain job status from AgenticCommerce contract."""
+    job_count = _commerce.get_job_count()
+    return {
+        "commerce_enabled": _commerce.enabled,
+        "contract": _commerce.contract.address if _commerce.enabled else None,
+        "chain": "base-mainnet" if _commerce.enabled and _commerce.chain_id == 8453 else "base-sepolia" if _commerce.enabled else None,
+        "total_jobs": job_count,
+        "explorer": f"https://basescan.org/address/{_commerce.contract.address}" if _commerce.enabled else None,
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -414,6 +471,7 @@ async def health_check():
         "service": "Agent Verification Network",
         "version": "1.0.0",
         "mode": get_mode(),
+        "commerce_enabled": _commerce.enabled,
         "task_types": ["code_verification"],
         "tasks_completed": len(results),
     }
@@ -452,6 +510,7 @@ async def root():
             "/register-miner": "POST — Register a miner agent",
             "/register-validator": "POST — Register a validator agent",
             "/network": "GET — View network state",
+            "/jobs": "GET — On-chain job status from AgenticCommerce",
             "/pricing": "GET — Verification pricing and x402 config",
             "/skill.md": "GET — Machine-readable skill file for agents",
             "/health": "GET — Health check",
