@@ -177,7 +177,7 @@ The smart contracts (AgenticCommerceV2 + AgentScorer + MinerRegistry) are the pr
 | **Demo Script** | `scripts/demo.sh` | 180 | End-to-end demo: starts 3 competing miners, validator with honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring. |
 | **Tests** | `tests/test_verification.py` | 165 | 14 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
 
-**Total: ~2,830 lines of Python + 481 lines Solidity. 14/14 tests passing. 6 on-chain transactions on Base.**
+**Total: ~3,200 lines of Python + 481 lines Solidity. 31 tests passing. 13+ on-chain transactions on Base Mainnet.**
 
 ---
 
@@ -192,7 +192,7 @@ The smart contracts (AgenticCommerceV2 + AgentScorer + MinerRegistry) are the pr
 | AgenticCommerceV2 (ERC-8183) | Base Mainnet | [`0xE4ED0C73...`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) |
 | MinerRegistry | Base Mainnet | [`0xE0d1346b...`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) |
 | ERC-8004 Agent ID | Base Mainnet | Agent ID **34655** on the official Identity Registry |
-| 6 Score Transactions | Base Sepolia | Viewable in `agent_log.json` — each with tx hash and block number |
+| 13+ On-Chain Transactions | Base Mainnet | Contract deploys, job lifecycle, ERC-8004 reputation — all in `agent_log.json` |
 | EigenCompute TEE Validator | Intel TDX | App [`0x7Fc30484...`](https://verify-sepolia.eigencloud.xyz/app/0x7Fc30484aCF81961bc766FE07281cf2684A33ffE) — 34.142.184.34:8000 |
 
 ---
@@ -207,7 +207,7 @@ cd agent-verification-network
 # Install dependencies
 pip3 install pydantic fastapi uvicorn pytest
 
-# Run tests (14/14 passing)
+# Run tests (31 passing)
 python3 -m pytest tests/ -v
 
 # Run the full multi-miner demo
@@ -305,34 +305,55 @@ The AgenticCommerce contract (ERC-8183) on Base Mainnet implements a full job li
 
 ---
 
-## Target Bounties
+## Target Bounties (8 tracks)
 
-### Primary: Protocol Labs ($8,000 total)
+### Protocol Labs — $8,000 total
 
-**"Let the Agent Cook"** — Fully autonomous agents that discover, plan, execute, and verify.
-- Miner agents: receive task → analyze code → return report. No human in the loop.
-- Validator agents: generate honeypots → query miners → score → write to chain. Fully autonomous.
-- ERC-8004 identity, `agent.json` manifest, `agent_log.json` execution log.
-- Safety guardrails: agents analyze code, never execute it; scoring is deterministic.
+**"Let the Agent Cook"** ($4,000) — Fully autonomous agents, no human in the loop.
+- Miner agents: receive task → analyze → return report. Fully autonomous.
+- Validator agents: generate honeypots → query miners → score → write to chain.
+- ERC-8004 Agent #34655 on the official Identity Registry.
+- Safety guardrails: agents analyze code, never execute it.
 
-**"Agents With Receipts — ERC-8004"** — Trusted agent systems with on-chain identity and reputation.
-- ERC-8004 identity registered on Base Mainnet.
-- AgentScorer.sol deployed on Base Sepolia with real score transactions.
-- `agent.json` + `agent_log.json` with on-chain tx hashes and block numbers.
+**"Agents With Receipts — ERC-8004"** ($4,000) — Trusted agent systems with on-chain identity and reputation.
+- Agent #34655 on official ERC-8004 Identity Registry.
+- Miner #35129 on official ERC-8004 Identity Registry.
+- Reputation scores published to official ERC-8004 Reputation Registry.
+- 13+ verifiable on-chain transactions on Base Mainnet.
 
-### Secondary: OpenServ — Ship Something Real ($4,500)
+### Venice — Private Agents, Trusted Actions ($11,500)
 
-Multi-agent verification service deployed on OpenServ. Miner and validator agents registered as OpenServ capabilities, enabling other agents to discover and use the verification network through the OpenServ platform.
+Venice provides private, no-data-retention LLM inference. Our miner uses Venice AI for intent verification — sensitive code stays private, but verification results go on-chain. The layer between private cognition and public consequence.
+
+### Base — Agent Services on Base ($5,000)
+
+5 contracts on Base Mainnet. Live API accepting x402 payment headers. `/protocol` endpoint for agent discovery. Full job lifecycle with escrow and fee split.
+
+### EigenCompute — Best Use of EigenCompute ($5,000)
+
+Validator running inside Intel TDX TEE on EigenCompute. Honeypot scoring is cryptographically attested. Verifiable build proves deployed code matches GitHub source. Miner also deployed on EigenCompute.
+
+### Virtuals — ERC-8183 Open Build ($2,000)
+
+AgenticCommerceV2 IS an ERC-8183 implementation — full job lifecycle with create → fund → submit → complete/reject and 15% validator fee split.
+
+### OpenServ — Ship Something Real ($4,500)
+
+Multi-agent verification service with miner and validator agents.
+
+### Markee — GitHub Integration ($800)
+
+GitHub Action auto-verifies PRs using the live network. Blocks merges on critical security issues. Proven working across 3 test PRs.
 
 ---
 
-## Why This Matters Beyond the Hackathon
+## Why This Matters
 
-Every AI agent company (Cognition, Cursor, Codeium, Factory) builds internal code verification. Every solo founder using multi-agent workflows manually reviews every line. Every CI/CD pipeline running AI-generated code needs a check that goes beyond linting.
+This is an open protocol where AI agents get paid to do work — verified by other agents, scored against objective ground truth, with reputation on-chain. No single company controls who participates or how trust is measured.
 
-This network makes verification a commodity. Deploy a good agent, earn from verification work. Submit code, get an objective quality report. No vendor lock-in, no centralized review service, no single point of failure.
+Code verification is task type #1 because validation is objectively solvable (inject known bugs, measure detection). But the contracts are generic — any task type where ground truth can be constructed works: data labeling, content review, security auditing, translation.
 
-The first task type is code verification because validation is objectively solvable (inject known bugs, measure detection). But the architecture supports any task type where ground truth can be constructed: data labeling, content generation, research, testing, translation.
+The contracts are the protocol. Anyone can build their own interface.
 
 ---
 
