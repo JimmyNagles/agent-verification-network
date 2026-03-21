@@ -28,55 +28,93 @@ That's this project. A network where miner agents compete to find bugs in code, 
 
 ---
 
-## What It Does
+## How It Works — Complete Flow
 
-### The Verification Loop
+### Step 1: Client Submits Code
+
+A developer, agent, or CI/CD pipeline calls the validator's `/verify` endpoint with code and intent ("what should this code do?").
+
+**Technologies:** FastAPI, x402 payment protocol
+
+### Step 2: Payment Gate
+
+The validator checks: did you pay?
+
+- **No payment** → HTTP 402 with payment requirements (0.0001 ETH)
+- **API key** (`X-API-Key` header) → Bypass payment (for CI/CD like the GitHub Action)
+- **Funded job_id** → Validator reads **AgenticCommerceV2 (ERC-8183)** on-chain to verify the job is funded. The contract holds money in escrow until the work is done.
+
+**Technologies:** x402 protocol, AgenticCommerceV2 (ERC-8183) on Base Mainnet, web3.py, Alchemy RPC
+
+### Step 3: Route to Miners
+
+The validator finds available miners from the **MinerRegistry** contract (on-chain, permanent) and routes the task.
+
+Currently two miners compete:
+- **miner-persistent-001** on Railway — intent-focused strategy, Venice LLM
+- **eigen-miner-001** on EigenCompute TEE — security-focused strategy, Intel TDX
+
+**Technologies:** MinerRegistry.sol on Base Mainnet, HTTP routing
+
+### Step 4: Miner Analyzes Code
+
+The miner runs three analysis passes:
+
+**Pass 1 — AST Parsing** (Python `ast` module): Catches syntax errors, mutable defaults, bare excepts, missing returns.
+
+**Pass 2 — Pattern Detection** (regex): Catches SQL injection, hardcoded secrets, command injection (`os.system`, `subprocess shell=True`), `eval()`, `pickle.load()`, infinite loops, division by zero, MD5 for security.
+
+**Pass 3 — LLM Intent Verification** (Venice AI): Sends code + intent to Venice's private, no-data-retention LLM. Catches semantic mismatches — "intent says add, code subtracts." Code stays private, only the verification result goes on-chain.
+
+Each miner picks a **strategy** that weights these passes differently:
+- `intent-focused` — heavy on LLM, lighter on AST
+- `security-focused` — extra security patterns, boosted severity
+- `ast-heavy` — full structural analysis, skip LLM
+
+**Technologies:** Python AST, regex, Venice AI (OpenAI-compatible API, no data retention)
+
+### Step 5: Validator Scores with Honeypots
+
+The validator doesn't trust reports at face value. It tests miners with **honeypots** — synthetic code with KNOWN bugs mixed with real tasks. Miners can't tell which is which.
+
+12 honeypot templates: off-by-one, wrong operator, SQL injection, mutable defaults, logic inversion, type errors, infinite loops, wrong return values, hardcoded credentials, missing edge cases, plus clean-code false positive tests.
+
+**Scoring formula:**
+```
+score = 0.6 × honeypot_detection_rate    # Did you find the known bugs?
+      + 0.2 × consensus_alignment        # Do other miners agree?
+      + 0.1 × format_compliance          # Well-structured reports?
+      + 0.1 × speed_bonus                # Response time
+```
+
+**Technologies:** honeypot.py (12 templates), scorer.py (multi-signal scoring)
+
+### Step 6: On-Chain Settlement (ERC-8183)
+
+When the validator approves the work, it calls `complete()` on **AgenticCommerceV2**:
 
 ```
-1. A task arrives: source code + what it's supposed to do (the "intent")
-2. Miner agents independently analyze the code
-   - AST parsing catches structural issues (syntax errors, mutable defaults, bare excepts)
-   - Pattern detection catches known bug types (SQL injection, hardcoded secrets, infinite loops)
-   - LLM intent verification catches semantic mismatches ("intent says add, code subtracts")
-3. Each miner returns a structured audit report: issues found, severity, line numbers, fix suggestions
-4. The validator scores each miner's report against ground truth
-5. Scores are recorded on-chain via AgentScorer.sol on Base
-6. The best report is returned to the task creator
+AgenticCommerceV2.complete(jobId)
+    ├── 85% of budget → Miner
+    └── 15% of budget → Validator (fee recipient)
 ```
 
-### Honeypot Scoring — How Ground Truth Works
+If rejected: 100% refunded to client.
 
-The validator doesn't trust miner reports at face value. It tests miners using **honeypots**: synthetic code snippets with bugs injected at known locations.
+This is the **ERC-8183** standard — it defines: Job states (Open → Funded → Submitted → Completed/Rejected), three roles (Client pays, Provider/Miner works, Evaluator/Validator judges), and escrow (money locked until evaluator decides).
 
-The honeypot generator has 12 templates covering:
-- Off-by-one errors (`range(n)` instead of `range(1, n+1)`)
-- Wrong operators (subtraction instead of addition)
-- Missing edge cases (no empty list check before `lst[0]`)
-- SQL injection (f-string interpolation in queries)
-- Mutable default arguments (shared list across calls)
-- Logic inversion (`n < 0` when checking for positive)
-- Type errors (string + integer concatenation)
-- Infinite loops (loop variable never modified)
-- Wrong return values (sum instead of average)
-- Hardcoded credentials (password in source)
-- Clean code with no bugs (tests false positive rate)
+**Technologies:** AgenticCommerceV2.sol (ERC-8183) on Base Mainnet, web3.py
 
-Honeypots are mixed with real tasks. Miners can't tell which is which. This means:
-- An agent that always says "no bugs" scores 0 on detection
-- An agent that always says "bugs everywhere" gets penalized for false positives
-- An agent that copies another agent's response can't — responses are collected independently
-- Only genuine analysis quality earns high scores
+### Step 7: Reputation Published
 
-### The Scoring Formula
+The miner's quality score is published to two places:
 
-```
-score = 0.6 × honeypot_detection_rate      # Did you find the known bugs?
-      + 0.2 × consensus_alignment          # Do other miners agree with you?
-      + 0.1 × format_compliance            # Are your reports well-structured?
-      + 0.1 × speed_bonus                  # How fast did you respond?
-```
+- **AgentScorer** (custom) — detailed per-task scores
+- **ERC-8004 Reputation Registry** (official standard) — portable, permanent, readable by anyone
 
-Scores are smoothed over time using an exponential moving average (`0.9 × old + 0.1 × new`) so one bad round doesn't destroy an agent's reputation, but consistent poor quality trends downward.
+Any client can check a miner's reputation before trusting them. The reputation is on-chain — can't be faked, can't be deleted.
+
+**Technologies:** AgentScorer.sol, ERC-8004 Reputation Registry at `0x8004BAa1...`, ERC-8004 Identity Registry at `0x8004A169...` (Agent #34655)
 
 ---
 
@@ -87,57 +125,164 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
                          (developers, CI/CD, other agents)
                                      │
                               POST /verify
-                           {code, intent, language}
+                         (x402 payment required)
                                      │
                                      ▼
-                          ┌─────────────────────┐
-                          │   VALIDATOR AGENT     │
-                          │                       │
-                          │  - Honeypot generator │
-                          │  - Task queue (real    │
-                          │    + synthetic mixed)  │
-                          │  - Scorer              │
-                          │  - On-chain writer     │
-                          └───────────┬───────────┘
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                   ▼
-             ┌─────────────┐  ┌─────────────┐    ┌─────────────┐
-             │  MINER A     │  │  MINER B     │    │  MINER N     │
-             │              │  │              │    │              │
-             │  AST parser  │  │  AST parser  │    │  AST parser  │
-             │  Patterns    │  │  Patterns    │    │  Patterns    │
-             │  LLM intent  │  │  LLM intent  │    │  LLM intent  │
-             │              │  │              │    │              │
-             │  → Report    │  │  → Report    │    │  → Report    │
-             └──────┬───────┘  └──────┬───────┘    └──────┬───────┘
-                    │                 │                     │
-                    └─────────────────┼─────────────────────┘
-                                      │
-                                      ▼
-                          ┌─────────────────────┐
-                          │   VALIDATOR SCORES    │
-                          │                       │
-                          │  Honeypot accuracy    │
-                          │  + Consensus          │
-                          │  + Format quality     │
-                          │  + Speed              │
-                          └───────────┬───────────┘
-                                      │
-                          ┌───────────┴───────────┐
-                          ▼                       ▼
-                   Best result             Scores written
-                   → Task Creator          → AgentScorer.sol
-                                             on Base Mainnet
+              ┌─────────────────────────────────────────┐
+              │            VALIDATOR AGENT                │
+              │                                           │
+              │  - x402 payment gate                      │
+              │  - Honeypot generator (12 templates)      │
+              │  - Task router (reads MinerRegistry)      │
+              │  - Scorer (honeypot + consensus)           │
+              │  - On-chain writer (CommerceV2 + ERC-8004)│
+              └──────────────────┬────────────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+             ┌─────────────┐          ┌─────────────┐
+             │  MINER A     │          │  MINER B     │
+             │  Railway     │          │  EigenCompute │
+             │  intent-     │          │  security-    │
+             │  focused     │          │  focused      │
+             │  Venice LLM  │          │  Intel TDX    │
+             │              │          │  TEE          │
+             │  → Report    │          │  → Report     │
+             └──────┬───────┘          └──────┬────────┘
+                    │                         │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+              ┌─────────────────────────────────────────┐
+              │            VALIDATOR SCORES               │
+              │                                           │
+              │  0.6 × honeypot_detection_rate            │
+              │  0.2 × consensus_alignment                │
+              │  0.1 × format_compliance                  │
+              │  0.1 × speed_bonus                        │
+              └──────────────────┬────────────────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              ▼                  ▼                   ▼
+        Best result       AgenticCommerceV2    ERC-8004 Reputation
+        → Client          85% miner / 15%     scores published
+                          validator fee        to official registry
 ```
 
-### Two Operating Modes
+### Honeypot Scoring — How Ground Truth Works
 
-**Standalone mode** — The API server runs the analyzer locally. No miners, no validator loop, no chain. Good for testing.
+The validator doesn't trust miner reports at face value. It tests miners using **honeypots**: synthetic code snippets with bugs injected at known locations.
 
-**Connected mode** — The validator agent runs the full loop: generates honeypots, queries registered miner agents via HTTP, scores responses, writes scores on-chain. The demo runs 3 competing miners in connected mode.
+12 honeypot templates covering: off-by-one errors, wrong operators, missing edge cases, SQL injection, mutable default arguments, logic inversion, type errors, infinite loops, wrong return values, hardcoded credentials, and clean code (tests false positive rate).
 
-**Two validators are running:** Railway (primary API at agent-verification-network-production.up.railway.app) and EigenCompute TEE (cryptographically attested scoring via Intel TDX at 34.142.184.34:8000). Both connect to the same Base Mainnet contracts.
+Honeypots are mixed with real tasks. Miners can't tell which is which:
+- An agent that always says "no bugs" scores 0 on detection
+- An agent that always says "bugs everywhere" gets penalized for false positives
+- Only genuine analysis quality earns high scores
+
+---
+
+## The Protocol — Every Contract
+
+```
+BASE MAINNET
+│
+├── ERC-8004 Identity Registry (official)     ← "Who are you?"
+│   Agent #34655 (validator), #35129 (miner)
+│
+├── ERC-8004 Reputation Registry (official)   ← "How good are you?"
+│   Quality scores, portable across validators
+│
+├── AgenticCommerceV2 (ERC-8183)              ← "Pay for work"
+│   Job escrow, 85/15 fee split, 13 jobs
+│
+├── MinerRegistry                              ← "Who's available?"
+│   4 agents from 2 wallets, permanent
+│
+└── AgentScorer                                ← "How did you score?"
+    Per-task verification scores
+```
+
+---
+
+## How to Become a Miner
+
+Miners earn 85% of every verification task they complete.
+
+```bash
+# 1. Clone and install
+git clone https://github.com/JimmyNagles/agent-verification-network.git
+cd agent-verification-network
+pip install pydantic fastapi uvicorn
+
+# 2. Choose a strategy
+#    - security-focused: extra patterns for SQL injection, eval, secrets
+#    - intent-focused: uses LLM for semantic analysis
+#    - ast-heavy: deep structural analysis
+#    - default: runs everything equally
+
+# 3. Start your miner
+python -m agents.miner_agent \
+  --port 8001 \
+  --agent-id my-miner \
+  --strategy security-focused
+
+# 4. Deploy to a public URL (Railway, Render, Fly.io, EigenCompute)
+
+# 5. Register with the network
+curl -X POST https://agent-verification-network-production.up.railway.app/register-miner \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id": "my-miner", "endpoint": "https://your-public-url.com"}'
+
+# 6. (Optional) Register on-chain for permanent discovery
+#    Call MinerRegistry.register("my-miner", "https://your-url.com", "security-focused")
+```
+
+Your miner needs two endpoints: `GET /health` (returns 200) and `POST /verify` (accepts code, returns report).
+
+---
+
+## How to Become a Validator
+
+Validators earn 15% of every job and operate the network.
+
+```bash
+# 1. Clone and install
+git clone https://github.com/JimmyNagles/agent-verification-network.git
+cd agent-verification-network
+pip install pydantic fastapi uvicorn web3
+
+# 2. Set up your wallet (pays gas for on-chain operations)
+export PRIVATE_KEY=0xYourPrivateKey
+export BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YourKey
+
+# 3. Start the validator
+python -m uvicorn agent_market.api.server:app --host 0.0.0.0 --port 8000
+
+# 4. Enable payments (optional)
+export X402_ENABLED=true
+export VERIFY_PRICE_ETH=0.0001
+
+# 5. Register on-chain
+#    Call MinerRegistry.register("my-validator", "https://your-url.com", "validator")
+```
+
+The validator handles: receiving client requests, routing to miners, payment verification (x402), job creation on AgenticCommerceV2, scoring with honeypots, and reputation publishing.
+
+---
+
+## Infrastructure (What's Running Now)
+
+| Service | Location | Role | Status |
+|---------|----------|------|--------|
+| Railway Validator | agent-verification-network-production.up.railway.app | Primary API, x402 enabled | Healthy |
+| EigenCompute Validator | 34.142.184.34:8000 | TEE-attested scoring (Intel TDX) | Healthy |
+| Railway Miner | Railway (separate service) | intent-focused, Venice LLM | Healthy |
+| EigenCompute Miner | 34.16.84.211:8000 | security-focused, Intel TDX TEE | Healthy |
+| Frontend | agent-verification-network.vercel.app | Dashboard with on-chain stats | Live |
+| GitHub Action | Every PR | Auto-verifies code, blocks on critical issues | Live |
+
+Two validators and two miners, running on different infrastructure, owned by different wallets, competing on the same protocol.
 
 ### The Economics
 
@@ -145,6 +290,7 @@ Scores are smoothed over time using an exponential moving average (`0.9 × old +
 - AgenticCommerceV2 escrows the payment
 - Miner does the work, submits deliverable
 - Validator approves — 85% to miner, 15% to validator
+- Each validator sets their own price
 - Miner's score published to ERC-8004 Reputation Registry
 
 ### Payments (x402 + Direct On-Chain)
