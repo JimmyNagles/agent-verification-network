@@ -134,27 +134,31 @@ def auto_register(validator_url: str, agent_id: str, my_url: str, strategy: str)
     import threading
 
     def _register():
-        time.sleep(5)  # Wait for server to be ready
-        try:
-            data = _json.dumps({
-                "agent_id": agent_id,
-                "endpoint": my_url,
-                "strategy": strategy,
-            }).encode("utf-8")
-            req = urllib.request.Request(
-                f"{validator_url.rstrip('/')}/register-miner",
-                data=data,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "AgentVerificationNetwork/1.0",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                result = _json.loads(resp.read().decode("utf-8"))
-                logger.info(f"Registered with validator: {result}")
-        except Exception as e:
-            logger.warning(f"Auto-registration failed: {e}")
+        time.sleep(10)  # Wait for both services to be ready
+        registered = False
+        while not registered:
+            try:
+                data = _json.dumps({
+                    "agent_id": agent_id,
+                    "endpoint": my_url,
+                    "strategy": strategy,
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    f"{validator_url.rstrip('/')}/register-miner",
+                    data=data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "AgentVerificationNetwork/1.0",
+                    },
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    result = _json.loads(resp.read().decode("utf-8"))
+                    logger.info(f"Registered with validator: {result}")
+                    registered = True
+            except Exception as e:
+                logger.warning(f"Auto-registration failed: {e} — retrying in 30s")
+                time.sleep(30)
 
     thread = threading.Thread(target=_register, daemon=True)
     thread.start()
