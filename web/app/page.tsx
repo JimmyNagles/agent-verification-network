@@ -472,8 +472,6 @@ curl -X POST ${API_BASE}/register-validator \\
               </div>
             </div>
           </div>
-            ))}
-          </div>
         </section>
 
         {/* Privacy — Venice */}
