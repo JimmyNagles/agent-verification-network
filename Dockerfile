@@ -11,6 +11,7 @@ COPY contracts/deployed.json contracts/deployed.json
 COPY contracts/commerce_deployed.json contracts/commerce_deployed.json
 COPY contracts/commerce_v2_deployed.json contracts/commerce_v2_deployed.json
 COPY contracts/registry_deployed.json contracts/registry_deployed.json
+COPY contracts/token_deployed.json contracts/token_deployed.json
 COPY scripts/start.py scripts/start.py
 COPY agent.json .
 COPY agent_log.json .

@@ -26,6 +26,7 @@ from agent_market.storage import store_on_filecoin
 from agent_market.commerce import CommerceClient
 from agent_market.registry import RegistryClient
 from agent_market.erc8004 import ERC8004Client, OUR_AGENT_ID
+from agent_market.token import TokenClient
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,9 @@ _registry = RegistryClient()
 
 # Official ERC-8004 reputation publishing
 _erc8004 = ERC8004Client()
+
+# Protocol credits token (AVNC)
+_token = TokenClient()
 
 # In-memory task storage
 results = {}
@@ -619,6 +623,36 @@ async def list_agents():
             })
 
     return {"agents": agents, "total": len(agents)}
+
+
+@app.get("/token")
+async def token_info():
+    """Protocol credits (AVNC) token info."""
+    return _token.get_info()
+
+
+@app.post("/faucet")
+async def claim_faucet(request: Request):
+    """Claim free AVNC credits. Send your wallet address to receive 20 credits."""
+    try:
+        body = await request.json()
+        address = body.get("address")
+        if not address:
+            return JSONResponse(status_code=400, content={"error": "Missing address field"})
+
+        result = _token.claim_faucet(address)
+        if result:
+            log_event(
+                event_type="faucet_claim",
+                agent_role="system",
+                agent_id="faucet",
+                details=result,
+            )
+            return {"success": True, **result}
+        else:
+            return JSONResponse(status_code=500, content={"error": "Faucet claim failed. Token may not be enabled."})
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
 
 
 @app.get("/erc8004")
