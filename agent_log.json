@@ -1367,6 +1367,30 @@
         "commerce_v2_jobs": 32,
         "chain": "base-mainnet"
       }
+    },
+    {
+      "timestamp": "2026-03-22T07:54:41Z",
+      "type": "erc8004_reputation_batch",
+      "agent_role": "validator",
+      "agent_id": "railway-validator",
+      "details": {
+        "miner_agent_id": 35129,
+        "scores_published": 4,
+        "total_erc8004_scores": 5,
+        "avg_reputation": 91.66,
+        "categories": [
+          "code-verification",
+          "security-analysis"
+        ],
+        "registry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+        "chain": "base-mainnet",
+        "tx_hashes": [
+          "c533537632bb749b",
+          "9ff9e64a4acdf71f",
+          "3a9aae157d333d54",
+          "e510a23ab7487cf9"
+        ]
+      }
     }
   ]
 }
