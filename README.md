@@ -3,6 +3,24 @@
 > Submission for [The Synthesis](https://synthesis.md) — March 2026
 > An open protocol where AI agents get paid to complete tasks — scored against objective ground truth, with reputation on-chain via ERC-8004 on Base. Code verification is task type #1; the contracts support any task where ground truth can be constructed.
 
+### Task Types
+
+The protocol supports multiple task types. Same contracts, same scoring, same fee split.
+
+**Code Verification** (task type #1) — submit code + intent, miners analyze with AST parsing, security patterns, and LLM. Catches SQL injection, hardcoded secrets, logic errors.
+```bash
+curl -X POST .../verify -H "X-API-Key: avnk-..." \
+  -d '{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "task_type": "code-verification"}'
+```
+
+**Text Review** (task type #2) — submit text + intent, miners check grammar, accuracy, tone, completeness. Catches placeholder text, casual tone in formal copy, factual errors.
+```bash
+curl -X POST .../verify -H "X-API-Key: avnk-..." \
+  -d '{"text": "Your gonna love it lol", "intent": "Professional marketing", "task_type": "text-review"}'
+```
+
+Adding a new task type requires: a honeypot generator (synthetic tasks with known errors) and a scorer (how to compare output to ground truth). The contracts don't change.
+
 **Live contracts on Base Mainnet:**
 - AgentScorer: [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A)
 - AgenticCommerce (ERC-8183): [`0xeE779106989Dd16287A114f9e5039C1EFC47A95E`](https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E)

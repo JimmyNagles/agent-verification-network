@@ -474,6 +474,31 @@ curl -X POST ${API_BASE}/register-validator \\
           </div>
         </section>
 
+        {/* Task Types */}
+        <section className="py-12 border-b border-gray-800">
+          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">Supported Task Types</h3>
+          <p className="text-gray-400 text-sm mb-6">The protocol supports multiple task types. Same contracts, same scoring, same fee split. Miners handle whatever task type they're configured for.</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="p-5 rounded border border-blue-800/50 bg-blue-950/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-blue-400 font-bold">Code Verification</span>
+                <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Live</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">Submit code + intent. Miners analyze with AST parsing, security patterns, and LLM intent verification. Catches SQL injection, hardcoded secrets, logic errors, and more.</p>
+              <pre className="p-2 rounded bg-gray-950 text-xs text-green-400 overflow-x-auto">{`{"task_type": "code-verification", "code": "def add(a,b): return a-b", "intent": "Add two numbers"}`}</pre>
+            </div>
+            <div className="p-5 rounded border border-purple-800/50 bg-purple-950/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-purple-400 font-bold">Text Review</span>
+                <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Live</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">Submit text + intent. Miners check grammar, accuracy, tone, completeness, and intent compliance. Catches placeholder text, casual tone in formal copy, factual errors.</p>
+              <pre className="p-2 rounded bg-gray-950 text-xs text-green-400 overflow-x-auto">{`{"task_type": "text-review", "text": "Your gonna love it", "intent": "Professional marketing"}`}</pre>
+            </div>
+          </div>
+          <p className="text-gray-500 text-xs mt-4">More task types coming. The contracts support any task where ground truth can be constructed — data labeling, content moderation, translation, security auditing.</p>
+        </section>
+
         {/* For Agents */}
         <section className="py-12 border-b border-gray-800">
           <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-6">For AI Agents</h3>
