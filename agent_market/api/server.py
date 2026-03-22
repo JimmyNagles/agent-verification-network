@@ -597,21 +597,16 @@ class CreateJobRequest(BaseModel):
     budget_avnc: float = Field(default=5.0, description="Budget in AVNC tokens")
 
 
-# In-memory marketplace jobs (links on-chain job IDs to task details)
-_marketplace_jobs: dict = {}
-
-
 @app.post("/jobs/create")
 async def create_marketplace_job(request: CreateJobRequest, raw_request: Request = None):
     """
-    Create a task on the marketplace. The job is created on-chain via AgenticCommerceV2.
-    Miners can browse and claim it.
+    Create a task on the marketplace.
 
-    Two ways to fund:
-    1. Include API key — we fund from the validator's balance (deducts credits)
-    2. Fund directly on-chain — call AgenticCommerceV2.createJob() + fund() yourself
+    1. Job created on-chain via AgenticCommerceV2 (permanent, source of truth)
+    2. Metadata stored in Supabase (title, code, intent — persistent across restarts)
+    3. Miners browse, claim on-chain via submit(), and get paid automatically
     """
-    # Check API key for credit-based funding
+    # Check API key
     request_key = None
     if raw_request:
         request_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key")
@@ -622,35 +617,33 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
             return JSONResponse(status_code=401, content={"error": "Invalid API key"})
         if key_info.get("credits_remaining", 0) <= 0:
             return JSONResponse(status_code=402, content={"error": "No credits remaining"})
-        # Use a credit for creating the job
         _keys.use_credit(request_key, "/jobs/create")
 
     import hashlib
     task_id = str(uuid4())
     desc_hash = hashlib.sha256(f"{request.title}:{task_id}".encode()).digest()
 
-    # Create on-chain job
+    # 1. Create on-chain (source of truth)
     job_result = None
+    on_chain_id = None
     if _commerce.enabled:
         job_result = _commerce.create_job(description_hash=desc_hash)
+        if job_result:
+            on_chain_id = job_result.get("job_id")
 
-    # Store marketplace details
-    job_data = {
+    # 2. Store metadata in Supabase (persistent)
+    from agent_market.keys import _supabase_post
+    _supabase_post("marketplace_jobs", {
+        "on_chain_job_id": on_chain_id,
         "task_id": task_id,
         "title": request.title,
         "description": request.description,
         "task_type": request.task_type,
         "code": request.code,
-        "text": request.text,
+        "text_content": request.text,
         "intent": request.intent,
-        "budget_avnc": request.budget_avnc,
-        "status": "open",
-        "on_chain_job_id": job_result.get("job_id") if job_result else None,
-        "on_chain_tx": job_result.get("tx_hash") if job_result else None,
-        "claimed_by": None,
-        "result": None,
-    }
-    _marketplace_jobs[task_id] = job_data
+        "budget_avnc": float(request.budget_avnc),
+    })
 
     log_event(
         event_type="marketplace_job_created",
@@ -660,125 +653,160 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
             "task_id": task_id,
             "title": request.title,
             "task_type": request.task_type,
-            "budget_avnc": request.budget_avnc,
-            "on_chain_job_id": job_data.get("on_chain_job_id"),
+            "on_chain_job_id": on_chain_id,
         },
     )
 
     return {
         "success": True,
         "task_id": task_id,
+        "on_chain_job_id": on_chain_id,
+        "on_chain_tx": job_result.get("tx_hash") if job_result else None,
         "title": request.title,
         "task_type": request.task_type,
         "status": "open",
-        "on_chain_job_id": job_data.get("on_chain_job_id"),
-        "on_chain_tx": job_data.get("on_chain_tx"),
-        "message": "Job posted to marketplace. Miners can claim it at /jobs/marketplace.",
+        "claim_via_api": f"POST /jobs/{task_id}/claim",
+        "claim_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
+        "message": "Job created on-chain and stored in Supabase. Permanent.",
     }
 
 
 @app.get("/jobs/marketplace")
 async def get_marketplace_jobs():
-    """Browse open marketplace jobs that miners can claim."""
-    open_jobs = [
-        {
-            "task_id": j["task_id"],
-            "on_chain_job_id": j.get("on_chain_job_id"),
-            "title": j["title"],
-            "task_type": j["task_type"],
-            "intent": j["intent"],
-            "budget_avnc": j["budget_avnc"],
-            "status": j["status"],
-            "has_code": bool(j.get("code")),
-            "has_text": bool(j.get("text")),
-        }
-        for j in _marketplace_jobs.values()
-        if j["status"] in ("open", "funded")
-    ]
+    """
+    Browse open marketplace jobs.
+
+    Reads job metadata from Supabase + status from on-chain contract.
+    Survives server restarts because both sources are persistent.
+    """
+    from agent_market.keys import _supabase_get
+
+    # Read all job metadata from Supabase
+    supabase_jobs = _supabase_get("marketplace_jobs?select=*&order=id.desc&limit=50") or []
+
+    # For each job, check on-chain status
+    states = ["Open", "Funded", "Submitted", "Completed", "Rejected", "Expired"]
+    open_jobs = []
+
+    for sj in supabase_jobs:
+        on_chain_id = sj.get("on_chain_job_id")
+        status = "open"
+
+        if on_chain_id is not None and _commerce.enabled:
+            try:
+                job_data = _commerce.contract.functions.getJob(on_chain_id).call()
+                state_idx = job_data[6]
+                status = states[state_idx].lower() if state_idx < len(states) else "unknown"
+            except Exception:
+                pass
+
+        # Only show open/funded jobs (not completed/rejected)
+        if status in ("open", "funded"):
+            open_jobs.append({
+                "task_id": sj["task_id"],
+                "on_chain_job_id": on_chain_id,
+                "title": sj["title"],
+                "task_type": sj["task_type"],
+                "intent": sj["intent"],
+                "budget_avnc": float(sj.get("budget_avnc", 0)),
+                "status": status,
+                "has_code": bool(sj.get("code")),
+                "has_text": bool(sj.get("text_content")),
+            })
 
     return {
         "jobs": open_jobs,
         "total_open": len(open_jobs),
-        "total_all": len(_marketplace_jobs),
+        "total_all": len(supabase_jobs),
     }
 
 
 @app.post("/jobs/{task_id}/claim")
-async def claim_marketplace_job(task_id: str, raw_request: Request = None):
+async def claim_marketplace_job(task_id: str):
     """
-    Miner claims a marketplace job. The miner receives the task details and
-    must submit a result via /jobs/{task_id}/submit.
+    Get task details for a marketplace job. The miner receives the code/text
+    and intent, then submits their result.
+
+    On-chain: the actual claim happens when you call submit() on the contract.
+    This endpoint just gives you the task details to work on.
     """
-    if task_id not in _marketplace_jobs:
+    from agent_market.keys import _supabase_get
+
+    # Read from Supabase
+    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
+    if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
-    job = _marketplace_jobs[task_id]
-    if job["status"] not in ("open", "funded"):
-        return JSONResponse(status_code=400, content={"error": f"Job is {job['status']}, cannot claim"})
+    job = jobs[0]
+    on_chain_id = job.get("on_chain_job_id")
 
-    # Get miner identity from API key
-    miner_id = "anonymous"
-    if raw_request:
-        request_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key")
-        if request_key:
-            key_info = _keys.validate_key(request_key)
-            if key_info:
-                miner_id = key_info.get("agent_name", "anonymous")
+    # Check on-chain status
+    status = "open"
+    if on_chain_id is not None and _commerce.enabled:
+        try:
+            job_data = _commerce.contract.functions.getJob(on_chain_id).call()
+            states = ["Open", "Funded", "Submitted", "Completed", "Rejected", "Expired"]
+            status = states[job_data[6]].lower() if job_data[6] < len(states) else "unknown"
+        except Exception:
+            pass
 
-    job["status"] = "claimed"
-    job["claimed_by"] = miner_id
+    if status in ("submitted", "completed", "rejected"):
+        return JSONResponse(status_code=400, content={"error": f"Job is already {status}"})
 
     return {
         "success": True,
         "task_id": task_id,
+        "on_chain_job_id": on_chain_id,
         "title": job["title"],
         "task_type": job["task_type"],
         "intent": job["intent"],
         "code": job.get("code", ""),
-        "text": job.get("text", ""),
-        "budget_avnc": job["budget_avnc"],
-        "message": "Job claimed. Submit your result at POST /jobs/{task_id}/submit",
+        "text": job.get("text_content", ""),
+        "budget_avnc": float(job.get("budget_avnc", 0)),
+        "status": status,
+        "submit_via_api": f"POST /jobs/{task_id}/submit",
+        "submit_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
     }
 
 
 @app.post("/jobs/{task_id}/submit")
 async def submit_marketplace_job(task_id: str, raw_request: Request = None):
     """
-    Miner submits result for a claimed marketplace job.
-    The validator scores the result and completes/rejects on-chain.
+    Submit result for a marketplace job. The validator runs the analysis
+    (or accepts a pre-computed result) and records the score on-chain.
     """
-    if task_id not in _marketplace_jobs:
+    from agent_market.keys import _supabase_get
+
+    # Read from Supabase
+    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
+    if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
-    job = _marketplace_jobs[task_id]
-    if job["status"] != "claimed":
-        return JSONResponse(status_code=400, content={"error": f"Job is {job['status']}, cannot submit"})
+    job = jobs[0]
 
     try:
         body = await raw_request.json() if raw_request else {}
     except Exception:
         body = {}
 
-    # Run the analysis locally if no result provided
+    # Run analysis if no result provided
     result = body.get("result")
     if not result:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
         if job["task_type"] == "text-review":
             from agent_market.miner.text_analyzer import analyze_text
-            result = analyze_text(text=job.get("text") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
+            result = analyze_text(text=job.get("text_content") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
         else:
             from agent_market.miner.analyzer import analyze_code
             result = analyze_code(code=job.get("code", ""), intent=job["intent"], use_llm=use_llm)
 
-    job["status"] = "completed"
-    job["result"] = result
-
     log_event(
         event_type="marketplace_job_completed",
         agent_role="miner",
-        agent_id=job.get("claimed_by", "anonymous"),
+        agent_id="api-submitter",
         details={
             "task_id": task_id,
+            "on_chain_job_id": job.get("on_chain_job_id"),
             "task_type": job["task_type"],
             "issues_found": len(result.get("issues", [])),
             "confidence": result.get("confidence", 0),
@@ -788,6 +816,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
     return {
         "success": True,
         "task_id": task_id,
+        "on_chain_job_id": job.get("on_chain_job_id"),
         "status": "completed",
         "result": result,
     }
