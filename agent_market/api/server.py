@@ -13,6 +13,7 @@ Usage:
 
 import asyncio
 import logging
+import os
 import urllib.request
 from typing import Optional
 from uuid import uuid4
@@ -88,38 +89,64 @@ async def _store_filecoin_background(task_id: str, response):
         pass
 
 
-def _create_job_background(task_id: str, response):
-    """Create an on-chain job for this verification task (fire-and-forget)."""
+def _process_onchain_background(task_id: str, response):
+    """After verification: record score on AgentScorer + publish to ERC-8004 (fire-and-forget)."""
     import hashlib
     import threading
 
     def _do():
         try:
-            # Hash the task_id as the job description
-            desc_hash = hashlib.sha256(task_id.encode()).digest()
-            job_result = _commerce.create_job(description_hash=desc_hash)
-            if job_result:
-                response.job_id = job_result["job_id"]
-                response.job_tx = job_result["tx_hash"]
-                results[task_id] = response
+            # 1. Record score on AgentScorer
+            if response.confidence and response.confidence > 0:
+                from agent_market.chain import ChainScorer
+                scorer = ChainScorer()
+                if scorer.enabled:
+                    score_uint = int(response.confidence * 10000)
+                    score_result = scorer.record_score(
+                        agent_id=response.agent_id or "local",
+                        task_id=task_id,
+                        score=response.confidence,
+                        round_num=0,
+                    )
+                    if score_result:
+                        log_event(
+                            event_type="score_recorded",
+                            agent_role="validator",
+                            agent_id="railway-validator",
+                            details={
+                                "task_id": task_id,
+                                "miner": response.agent_id or "local",
+                                "score": response.confidence,
+                                "tx_hash": score_result.get("tx_hash"),
+                                "chain": score_result.get("chain"),
+                            },
+                        )
 
-                log_event(
-                    event_type="job_created",
-                    agent_role="system",
-                    agent_id="commerce",
-                    details={
-                        "task_id": task_id,
-                        "job_id": job_result["job_id"],
-                        "tx_hash": job_result["tx_hash"],
-                        "block_number": job_result["block_number"],
-                        "chain": job_result["chain"],
-                        "contract": job_result["contract"],
-                    },
-                )
+            # 2. Create job on AgenticCommerceV2
+            if _commerce.enabled:
+                desc_hash = hashlib.sha256(task_id.encode()).digest()
+                job_result = _commerce.create_job(description_hash=desc_hash)
+                if job_result:
+                    response.job_id = job_result["job_id"]
+                    response.job_tx = job_result["tx_hash"]
+                    results[task_id] = response
+
+                    log_event(
+                        event_type="job_created",
+                        agent_role="system",
+                        agent_id="commerce",
+                        details={
+                            "task_id": task_id,
+                            "job_id": job_result["job_id"],
+                            "tx_hash": job_result["tx_hash"],
+                            "chain": job_result["chain"],
+                        },
+                    )
+
         except Exception as e:
-            logger.warning(f"Background job creation failed: {e}")
+            logger.warning(f"Background on-chain processing failed: {e}")
 
-    if _commerce.enabled:
+    if _commerce.enabled or os.environ.get("PRIVATE_KEY"):
         threading.Thread(target=_do, daemon=True).start()
 
 
@@ -357,7 +384,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         asyncio.ensure_future(_store_filecoin_background(task_id, response))
 
         # Create on-chain job record (fire-and-forget)
-        _create_job_background(task_id, response)
+        _process_onchain_background(task_id, response)
 
         return response
 
