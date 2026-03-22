@@ -171,9 +171,11 @@ def get_mode():
 # ── Request/Response Models ──────────────────────────────────────
 
 class VerifyRequest(BaseModel):
-    code: str = Field(description="Source code to verify")
-    intent: str = Field(description="What the code should do")
-    language: str = Field(default="python", description="Programming language")
+    code: str = Field(default="", description="Source code to verify (for code-verification tasks)")
+    text: str = Field(default="", description="Text to review (for text-review tasks)")
+    intent: str = Field(description="What the code/text should do or convey")
+    language: str = Field(default="python", description="Programming language (code tasks only)")
+    task_type: str = Field(default="code-verification", description="Task type: 'code-verification' or 'text-review'")
     job_id: Optional[int] = Field(default=None, description="Pre-funded job ID on AgenticCommerceV2 (direct payment mode)")
 
 
@@ -332,9 +334,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             for miner in _registered_miners:
                 try:
                     data = _json.dumps({
-                        "code": request.code,
+                        "code": request.code or request.text,
+                        "text": request.text,
                         "intent": request.intent,
                         "language": request.language,
+                        "task_type": request.task_type,
                         "task_id": task_id,
                     }).encode("utf-8")
                     req = urllib.request.Request(
@@ -366,14 +370,22 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
 
         # Fallback to local analysis if no miners responded
         if best_result is None:
-            from agent_market.miner.analyzer import analyze_code
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-            best_result = analyze_code(
-                code=request.code,
-                intent=request.intent,
-                language=request.language,
-                use_llm=use_llm,
-            )
+            if request.task_type == "text-review":
+                from agent_market.miner.text_analyzer import analyze_text
+                best_result = analyze_text(
+                    text=request.text or request.code,
+                    intent=request.intent,
+                    use_llm=use_llm,
+                )
+            else:
+                from agent_market.miner.analyzer import analyze_code
+                best_result = analyze_code(
+                    code=request.code,
+                    intent=request.intent,
+                    language=request.language,
+                    use_llm=use_llm,
+                )
 
         response = VerifyResponse(
             task_id=task_id,

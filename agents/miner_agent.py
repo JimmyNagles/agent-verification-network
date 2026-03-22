@@ -38,9 +38,11 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
     _strategy = strategy
 
     class VerifyRequest(BaseModel):
-        code: str
+        code: str = ""
+        text: str = ""
         intent: str
         language: str = "python"
+        task_type: str = "code-verification"
         task_id: str = ""
 
     class VerifyResponse(BaseModel):
@@ -60,14 +62,23 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         task_id = request.task_id or str(uuid4())
         start = time.time()
 
-        logger.info(f"Task {task_id}: analyzing {request.language} code")
+        logger.info(f"Task {task_id}: analyzing {request.task_type}")
 
-        result = run_strategy(
-            strategy=_strategy,
-            code=request.code,
-            intent=request.intent,
-            language=request.language,
-        )
+        if request.task_type == "text-review":
+            from agent_market.miner.text_analyzer import analyze_text
+            use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
+            result = analyze_text(
+                text=request.text or request.code,
+                intent=request.intent,
+                use_llm=use_llm,
+            )
+        else:
+            result = run_strategy(
+                strategy=_strategy,
+                code=request.code,
+                intent=request.intent,
+                language=request.language,
+            )
 
         elapsed = time.time() - start
         stats["tasks_completed"] += 1
