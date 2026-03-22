@@ -809,30 +809,28 @@ async def protocol_info():
     from pathlib import Path
 
     contracts = {}
-    commerce_path = Path(__file__).parent.parent.parent / "contracts" / "commerce_deployed.json"
-    scorer_path = Path(__file__).parent.parent.parent / "contracts" / "deployed.json"
+    base = Path(__file__).parent.parent.parent / "contracts"
 
-    if commerce_path.exists():
-        with open(commerce_path) as f:
-            data = _json.load(f)
-            contracts["AgenticCommerce"] = {
-                "address": data["address"],
-                "chain": data.get("chain", "base-mainnet"),
-                "explorer": f"https://basescan.org/address/{data['address']}",
-                "abi": data["abi"],
-                "description": "Job marketplace — create, fund, submit, complete/reject with escrow",
-            }
+    contract_files = {
+        "AgenticCommerceV2": ("commerce_v2_deployed.json", "Job marketplace (ERC-8183) — escrow + 85/15 fee split. This is the active version."),
+        "MinerRegistry": ("registry_deployed.json", "On-chain agent discovery — miners and validators register permanently."),
+        "AgentScorer": ("deployed.json", "On-chain miner quality scores per task."),
+        "ProtocolCredits": ("token_deployed.json", "AVNC token (ERC-20) — protocol credits with faucet. Agents use AVNC to pay for tasks."),
+        "AgenticCommerce": ("commerce_deployed.json", "Job marketplace V1 (legacy, no fee split)."),
+    }
 
-    if scorer_path.exists():
-        with open(scorer_path) as f:
-            data = _json.load(f)
-            contracts["AgentScorer"] = {
-                "address": data["address"],
-                "chain": data.get("chain", "base-mainnet"),
-                "explorer": f"https://basescan.org/address/{data['address']}",
-                "abi": data["abi"],
-                "description": "On-chain miner reputation scores",
-            }
+    for name, (filename, description) in contract_files.items():
+        path = base / filename
+        if path.exists():
+            with open(path) as f:
+                data = _json.load(f)
+                contracts[name] = {
+                    "address": data["address"],
+                    "chain": data.get("chain", "base-mainnet"),
+                    "explorer": f"https://basescan.org/address/{data['address']}",
+                    "abi": data["abi"],
+                    "description": description,
+                }
 
     return {
         "protocol": "Agent Verification Network",
