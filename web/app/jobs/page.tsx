@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
-interface Job {
+interface OnChainJob {
   id: number;
   client: string;
   provider: string | null;
@@ -15,22 +15,33 @@ interface Job {
   created_at: number;
 }
 
-interface JobsData {
-  jobs: Job[];
-  total: number;
-  contract: string;
-  chain: string;
+interface MarketplaceJob {
+  task_id: string;
+  title: string;
+  task_type: string;
+  intent: string;
+  budget_avnc: number;
+  status: string;
+  has_code: boolean;
+  has_text: boolean;
 }
 
 export default function JobsPage() {
-  const [data, setData] = useState<JobsData | null>(null);
+  const [onChainJobs, setOnChainJobs] = useState<OnChainJob[]>([]);
+  const [marketplaceJobs, setMarketplaceJobs] = useState<MarketplaceJob[]>([]);
+  const [totalOnChain, setTotalOnChain] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"marketplace" | "onchain">("marketplace");
 
-  const fetchJobs = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const resp = await fetch(`${API_BASE}/jobs/list`);
-      const d = await resp.json();
-      setData(d);
+      const [onchain, marketplace] = await Promise.all([
+        fetch(`${API_BASE}/jobs/list`).then((r) => r.json()).catch(() => ({ jobs: [], total: 0 })),
+        fetch(`${API_BASE}/jobs/marketplace`).then((r) => r.json()).catch(() => ({ jobs: [], total_all: 0 })),
+      ]);
+      setOnChainJobs(onchain.jobs || []);
+      setTotalOnChain(onchain.total || 0);
+      setMarketplaceJobs(marketplace.jobs || []);
     } catch {
     } finally {
       setLoading(false);
@@ -38,18 +49,17 @@ export default function JobsPage() {
   }, []);
 
   useEffect(() => {
-    fetchJobs();
-    const interval = setInterval(fetchJobs, 30000);
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
-  }, [fetchJobs]);
+  }, [fetchData]);
 
   const stateColor = (state: string) => {
-    switch (state) {
-      case "Completed": return "text-green-400 bg-green-500/10";
-      case "Funded": return "text-blue-400 bg-blue-500/10";
-      case "Submitted": return "text-yellow-400 bg-yellow-500/10";
-      case "Open": return "text-gray-400 bg-gray-500/10";
-      case "Rejected": return "text-red-400 bg-red-500/10";
+    switch (state.toLowerCase()) {
+      case "completed": return "text-green-400 bg-green-500/10";
+      case "funded": case "open": return "text-blue-400 bg-blue-500/10";
+      case "submitted": case "claimed": return "text-yellow-400 bg-yellow-500/10";
+      case "rejected": return "text-red-400 bg-red-500/10";
       default: return "text-gray-400 bg-gray-500/10";
     }
   };
@@ -64,7 +74,6 @@ export default function JobsPage() {
           <div className="flex items-center gap-4 text-sm">
             <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
             <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
-            <a href="https://github.com/JimmyNagles/agent-verification-network" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">GitHub</a>
           </div>
         </div>
       </header>
@@ -72,101 +81,160 @@ export default function JobsPage() {
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">On-Chain Jobs</h1>
+            <h1 className="text-3xl font-bold">Jobs</h1>
             <p className="text-gray-400 text-sm mt-1">
-              All jobs from AgenticCommerceV2 on Base Mainnet — real transactions, real payments.
+              Tasks posted by clients, completed by miners. All payments on-chain.
             </p>
           </div>
-          {data && (
-            <div className="text-right">
-              <p className="text-2xl font-bold text-green-400">{data.total}</p>
-              <p className="text-gray-500 text-xs">total jobs</p>
-            </div>
-          )}
+          <div className="text-right">
+            <p className="text-2xl font-bold text-green-400">{totalOnChain}</p>
+            <p className="text-gray-500 text-xs">on-chain jobs</p>
+          </div>
         </div>
 
-        {/* Stats bar */}
-        {data && data.jobs.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
-            {["Completed", "Funded", "Submitted", "Open", "Rejected"].map((state) => {
-              const count = data.jobs.filter((j) => j.state === state).length;
-              return (
-                <div key={state} className="p-3 rounded border border-gray-800 bg-gray-950 text-center">
-                  <p className={`text-lg font-bold ${stateColor(state).split(" ")[0]}`}>{count}</p>
-                  <p className="text-gray-500 text-xs">{state}</p>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8">
+          <button
+            onClick={() => setTab("marketplace")}
+            className={`px-4 py-2 rounded text-sm ${tab === "marketplace" ? "bg-purple-600 text-white" : "border border-gray-700 text-gray-400 hover:border-gray-500"}`}
+          >
+            Marketplace ({marketplaceJobs.length} open)
+          </button>
+          <button
+            onClick={() => setTab("onchain")}
+            className={`px-4 py-2 rounded text-sm ${tab === "onchain" ? "bg-blue-600 text-white" : "border border-gray-700 text-gray-400 hover:border-gray-500"}`}
+          >
+            On-Chain History ({totalOnChain})
+          </button>
+        </div>
 
-        {/* Jobs table */}
         {loading ? (
-          <p className="text-gray-500">Loading jobs from Base Mainnet...</p>
-        ) : data && data.jobs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-800 text-gray-500 text-xs">
-                  <th className="py-3 text-left">ID</th>
-                  <th className="py-3 text-left">Status</th>
-                  <th className="py-3 text-left">Budget</th>
-                  <th className="py-3 text-left">Client</th>
-                  <th className="py-3 text-left">Miner</th>
-                  <th className="py-3 text-left">Validator</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.jobs.map((job) => (
-                  <tr key={job.id} className="border-b border-gray-800/50 hover:bg-gray-950">
-                    <td className="py-3">
-                      <span className="text-white font-bold">#{job.id}</span>
-                    </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${stateColor(job.state)}`}>
-                        {job.state}
+          <p className="text-gray-500">Loading jobs...</p>
+        ) : tab === "marketplace" ? (
+          /* Marketplace tab */
+          <div>
+            {marketplaceJobs.length > 0 ? (
+              <div className="space-y-4">
+                {marketplaceJobs.map((job) => (
+                  <div key={job.task_id} className="p-5 rounded border border-gray-800 bg-gray-950 hover:border-purple-500/30 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-white font-bold">{job.title}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${stateColor(job.status)}`}>{job.status}</span>
+                        <span className="text-green-400 font-bold text-sm">{job.budget_avnc} AVNC</span>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-3">{job.intent}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span className={`px-2 py-0.5 rounded ${job.task_type === "code-verification" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"}`}>
+                        {job.task_type}
                       </span>
-                    </td>
-                    <td className="py-3">
-                      <span className="text-green-400">{job.budget > 0.001 ? job.budget.toFixed(2) : job.budget.toFixed(6)}</span>
-                      <span className="text-gray-500 ml-1">{job.token}</span>
-                    </td>
-                    <td className="py-3">
-                      <a href={`https://basescan.org/address/${job.client}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-xs">
-                        {shortAddr(job.client)}
-                      </a>
-                    </td>
-                    <td className="py-3">
-                      {job.provider ? (
-                        <a href={`https://basescan.org/address/${job.provider}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 text-xs">
-                          {shortAddr(job.provider)}
-                        </a>
-                      ) : (
-                        <span className="text-gray-600 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      <a href={`https://basescan.org/address/${job.evaluator}`} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-300 text-xs">
-                        {shortAddr(job.evaluator)}
-                      </a>
-                    </td>
-                  </tr>
+                      {job.has_code && <span>Has code</span>}
+                      {job.has_text && <span>Has text</span>}
+                      <span className="text-gray-600">{job.task_id.slice(0, 8)}...</span>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-gray-500 mb-4">No open jobs right now.</p>
+                <p className="text-gray-600 text-sm mb-6">Create a task and miners will pick it up.</p>
+                <pre className="inline-block p-4 rounded bg-gray-950 border border-gray-800 text-sm text-green-400 text-left">{`curl -X POST ${API_BASE}/jobs/create \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: your-key" \\
+  -d '{
+    "title": "Review my code",
+    "task_type": "code-verification",
+    "code": "def add(a,b): return a-b",
+    "intent": "Add two numbers",
+    "budget_avnc": 5
+  }'`}</pre>
+              </div>
+            )}
+
+            {/* How it works */}
+            <div className="mt-8 p-5 rounded border border-gray-800 bg-gray-950">
+              <h4 className="text-white font-bold mb-3">How the Marketplace Works</h4>
+              <div className="grid sm:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-blue-400 font-bold mb-1">1. Client posts</p>
+                  <p className="text-gray-500 text-xs">POST /jobs/create with code/text + intent + budget</p>
+                </div>
+                <div>
+                  <p className="text-purple-400 font-bold mb-1">2. Miner claims</p>
+                  <p className="text-gray-500 text-xs">Browse /jobs/marketplace, POST /jobs/id/claim</p>
+                </div>
+                <div>
+                  <p className="text-yellow-400 font-bold mb-1">3. Miner submits</p>
+                  <p className="text-gray-500 text-xs">Does the work, POST /jobs/id/submit with result</p>
+                </div>
+                <div>
+                  <p className="text-green-400 font-bold mb-1">4. Payment splits</p>
+                  <p className="text-gray-500 text-xs">85% to miner, 15% to validator. On-chain.</p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
-          <p className="text-gray-500">No jobs found.</p>
-        )}
+          /* On-chain history tab */
+          <div>
+            {/* Stats bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+              {["Completed", "Funded", "Submitted", "Open", "Rejected"].map((state) => {
+                const count = onChainJobs.filter((j) => j.state === state).length;
+                return (
+                  <div key={state} className="p-3 rounded border border-gray-800 bg-gray-950 text-center">
+                    <p className={`text-lg font-bold ${stateColor(state).split(" ")[0]}`}>{count}</p>
+                    <p className="text-gray-500 text-xs">{state}</p>
+                  </div>
+                );
+              })}
+            </div>
 
-        {/* Contract link */}
-        {data?.contract && (
-          <div className="mt-8 p-4 rounded border border-gray-800 bg-gray-950 text-center">
-            <p className="text-gray-500 text-xs mb-1">AgenticCommerceV2 on Base Mainnet</p>
-            <a href={`https://basescan.org/address/${data.contract}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-sm">
-              {data.contract}
-            </a>
-            <p className="text-gray-600 text-xs mt-1">All jobs are on-chain. Verify any transaction on Basescan.</p>
+            {onChainJobs.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-800 text-gray-500 text-xs">
+                      <th className="py-3 text-left">ID</th>
+                      <th className="py-3 text-left">Status</th>
+                      <th className="py-3 text-left">Budget</th>
+                      <th className="py-3 text-left">Client</th>
+                      <th className="py-3 text-left">Miner</th>
+                      <th className="py-3 text-left">Validator</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {onChainJobs.map((job) => (
+                      <tr key={job.id} className="border-b border-gray-800/50 hover:bg-gray-950">
+                        <td className="py-3"><span className="text-white font-bold">#{job.id}</span></td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${stateColor(job.state)}`}>{job.state}</span>
+                        </td>
+                        <td className="py-3">
+                          <span className="text-green-400">{job.budget > 0.001 ? job.budget.toFixed(2) : job.budget.toFixed(6)}</span>
+                          <span className="text-gray-500 ml-1">{job.token}</span>
+                        </td>
+                        <td className="py-3">
+                          <a href={`https://basescan.org/address/${job.client}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-xs">{shortAddr(job.client)}</a>
+                        </td>
+                        <td className="py-3">
+                          {job.provider ? (
+                            <a href={`https://basescan.org/address/${job.provider}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 text-xs">{shortAddr(job.provider)}</a>
+                          ) : <span className="text-gray-600 text-xs">—</span>}
+                        </td>
+                        <td className="py-3">
+                          <a href={`https://basescan.org/address/${job.evaluator}`} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-300 text-xs">{shortAddr(job.evaluator)}</a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500">No on-chain jobs loaded.</p>
+            )}
           </div>
         )}
       </div>
