@@ -113,6 +113,29 @@ export default function JobsPage() {
         ) : tab === "marketplace" ? (
           /* Marketplace tab */
           <div>
+            {/* How it works — on top */}
+            <div className="mb-8 p-5 rounded border border-gray-800 bg-gray-950">
+              <h4 className="text-white font-bold mb-3">How the Marketplace Works</h4>
+              <div className="grid sm:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-blue-400 font-bold mb-1">1. Client posts</p>
+                  <p className="text-gray-500 text-xs">POST /jobs/create with code/text + intent + budget</p>
+                </div>
+                <div>
+                  <p className="text-purple-400 font-bold mb-1">2. Miner claims</p>
+                  <p className="text-gray-500 text-xs">Browse jobs below, POST /jobs/TASK_ID/claim</p>
+                </div>
+                <div>
+                  <p className="text-yellow-400 font-bold mb-1">3. Miner submits</p>
+                  <p className="text-gray-500 text-xs">Does the work, POST /jobs/TASK_ID/submit</p>
+                </div>
+                <div>
+                  <p className="text-green-400 font-bold mb-1">4. Payment splits</p>
+                  <p className="text-gray-500 text-xs">85% to miner, 15% to validator. On-chain.</p>
+                </div>
+              </div>
+            </div>
+
             {marketplaceJobs.length > 0 ? (
               <div className="space-y-4">
                 {marketplaceJobs.map((job) => (
@@ -124,14 +147,25 @@ export default function JobsPage() {
                         <span className="text-green-400 font-bold text-sm">{job.budget_avnc} AVNC</span>
                       </div>
                     </div>
-                    <p className="text-gray-400 text-sm mb-3">{job.intent}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <p className="text-gray-400 text-sm mb-2">{job.intent}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
                       <span className={`px-2 py-0.5 rounded ${job.task_type === "code-verification" ? "bg-blue-500/10 text-blue-400" : "bg-purple-500/10 text-purple-400"}`}>
                         {job.task_type}
                       </span>
                       {job.has_code && <span>Has code</span>}
                       {job.has_text && <span>Has text</span>}
-                      <span className="text-gray-600">{job.task_id.slice(0, 8)}...</span>
+                    </div>
+                    {/* Task ID + Claim instructions */}
+                    <div className="p-3 rounded bg-gray-900 border border-gray-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-gray-500 text-xs">Task ID:</span>
+                        <code className="text-blue-400 text-xs select-all">{job.task_id}</code>
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        <p className="mb-1">To claim this job:</p>
+                        <pre className="p-2 rounded bg-black text-green-400 overflow-x-auto">{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim \\
+  -H "X-API-Key: your-key"`}</pre>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -153,25 +187,21 @@ export default function JobsPage() {
               </div>
             )}
 
-            {/* How it works */}
+            {/* Submit flow after claiming */}
             <div className="mt-8 p-5 rounded border border-gray-800 bg-gray-950">
-              <h4 className="text-white font-bold mb-3">How the Marketplace Works</h4>
-              <div className="grid sm:grid-cols-4 gap-4 text-sm">
+              <h4 className="text-white font-bold mb-3">After Claiming a Job</h4>
+              <div className="text-sm text-gray-400 space-y-3">
                 <div>
-                  <p className="text-blue-400 font-bold mb-1">1. Client posts</p>
-                  <p className="text-gray-500 text-xs">POST /jobs/create with code/text + intent + budget</p>
+                  <p className="text-yellow-400 font-bold mb-1">Step 1: Claim gives you the task details (code/text + intent)</p>
                 </div>
                 <div>
-                  <p className="text-purple-400 font-bold mb-1">2. Miner claims</p>
-                  <p className="text-gray-500 text-xs">Browse /jobs/marketplace, POST /jobs/id/claim</p>
+                  <p className="text-yellow-400 font-bold mb-1">Step 2: Analyze the code or text with your AI engine</p>
                 </div>
                 <div>
-                  <p className="text-yellow-400 font-bold mb-1">3. Miner submits</p>
-                  <p className="text-gray-500 text-xs">Does the work, POST /jobs/id/submit with result</p>
-                </div>
-                <div>
-                  <p className="text-green-400 font-bold mb-1">4. Payment splits</p>
-                  <p className="text-gray-500 text-xs">85% to miner, 15% to validator. On-chain.</p>
+                  <p className="text-yellow-400 font-bold mb-1">Step 3: Submit your result</p>
+                  <pre className="p-2 rounded bg-black text-green-400 text-xs overflow-x-auto mt-1">{`curl -X POST ${API_BASE}/jobs/TASK_ID/submit \\
+  -H "X-API-Key: your-key"`}</pre>
+                  <p className="text-gray-500 text-xs mt-1">The validator scores your work and releases payment: 85% to you, 15% to validator.</p>
                 </div>
               </div>
             </div>
