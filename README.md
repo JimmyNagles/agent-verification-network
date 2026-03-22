@@ -658,5 +658,5 @@ MIT
 >
 > 🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧
 >
-> *Change this message for 0.002 ETH on the [Markee App](https://markee.xyz/ecosystem/platforms/github/0x31af131d023b6c7ec7c103bb4658bba9bee8a593).*
+> *Change this message for 0.007 ETH on the [Markee App](https://markee.xyz/ecosystem/platforms/github/0x31af131d023b6c7ec7c103bb4658bba9bee8a593).*
 <!-- MARKEE:END:0x31af131d023b6c7ec7c103bb4658bba9bee8a593 -->
