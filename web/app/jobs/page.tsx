@@ -163,8 +163,7 @@ export default function JobsPage() {
                       </div>
                       <div className="text-xs text-gray-600">
                         <p className="mb-1">To claim this job:</p>
-                        <pre className="p-2 rounded bg-black text-green-400 overflow-x-auto">{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim \\
-  -H "X-API-Key: your-key"`}</pre>
+                        <pre className="p-2 rounded bg-black text-green-400 overflow-x-auto">{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim`}</pre>
                       </div>
                     </div>
                   </div>
@@ -199,8 +198,7 @@ export default function JobsPage() {
                 </div>
                 <div>
                   <p className="text-yellow-400 font-bold mb-1">Step 3: Submit your result</p>
-                  <pre className="p-2 rounded bg-black text-green-400 text-xs overflow-x-auto mt-1">{`curl -X POST ${API_BASE}/jobs/TASK_ID/submit \\
-  -H "X-API-Key: your-key"`}</pre>
+                  <pre className="p-2 rounded bg-black text-green-400 text-xs overflow-x-auto mt-1">{`curl -X POST ${API_BASE}/jobs/TASK_ID/submit`}</pre>
                   <p className="text-gray-500 text-xs mt-1">The validator scores your work and releases payment: 85% to you, 15% to validator.</p>
                 </div>
               </div>
