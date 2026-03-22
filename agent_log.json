@@ -1354,6 +1354,19 @@
         "fee_split": "85/15",
         "total_jobs_onchain": 18
       }
+    },
+    {
+      "timestamp": "2026-03-22T07:34:13Z",
+      "type": "scoring_batch",
+      "agent_role": "validator",
+      "agent_id": "railway-validator",
+      "details": {
+        "verifications_run": 10,
+        "scores_recorded": 10,
+        "agent_scorer_total": 16,
+        "commerce_v2_jobs": 32,
+        "chain": "base-mainnet"
+      }
     }
   ]
 }
