@@ -589,7 +589,7 @@ async def get_jobs():
 
 class CreateJobRequest(BaseModel):
     title: str = Field(description="Short description of the task")
-    description: str = Field(description="Detailed description of what needs to be done")
+    description: str = Field(default="", description="Detailed description of what needs to be done")
     task_type: str = Field(default="code-verification", description="Task type: code-verification or text-review")
     code: str = Field(default="", description="Code to verify (for code-verification tasks)")
     text: str = Field(default="", description="Text to review (for text-review tasks)")
