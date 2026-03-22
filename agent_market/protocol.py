@@ -12,10 +12,12 @@ from pydantic import BaseModel, Field
 class CodeVerificationRequest(BaseModel):
     """Task sent from validator to miner agents."""
 
-    code: str = Field(description="Source code to verify")
+    code: str = Field(default="", description="Source code to verify")
     intent: str = Field(description="Natural language description of what the code should do")
     language: str = Field(default="python", description="Programming language of the code")
     task_id: str = Field(default="", description="Unique identifier for this task")
+    image: str = Field(default="", description="Base64-encoded image data (for image-analysis tasks)")
+    task_type: str = Field(default="code-verification", description="'code-verification' | 'text-review' | 'image-analysis'")
 
 
 class CodeVerificationResponse(BaseModel):

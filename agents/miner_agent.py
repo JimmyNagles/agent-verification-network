@@ -40,6 +40,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
     class VerifyRequest(BaseModel):
         code: str = ""
         text: str = ""
+        image: str = ""
         intent: str
         language: str = "python"
         task_type: str = "code-verification"
@@ -64,7 +65,15 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
 
         logger.info(f"Task {task_id}: analyzing {request.task_type}")
 
-        if request.task_type == "text-review":
+        if request.task_type == "image-analysis":
+            from agent_market.miner.image_analyzer import analyze_image
+            use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
+            result = analyze_image(
+                image_data=request.image or request.code,
+                intent=request.intent,
+                use_llm=use_llm,
+            )
+        elif request.task_type == "text-review":
             from agent_market.miner.text_analyzer import analyze_text
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
             result = analyze_text(

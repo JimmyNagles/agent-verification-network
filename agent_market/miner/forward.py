@@ -28,12 +28,29 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
 
     try:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-        result = analyze_code(
-            code=request.code,
-            intent=request.intent,
-            language=request.language,
-            use_llm=use_llm,
-        )
+        task_type = getattr(request, "task_type", "code-verification")
+
+        if task_type == "image-analysis":
+            from agent_market.miner.image_analyzer import analyze_image
+            result = analyze_image(
+                image_data=getattr(request, "image", "") or request.code,
+                intent=request.intent,
+                use_llm=use_llm,
+            )
+        elif task_type == "text-review":
+            from agent_market.miner.text_analyzer import analyze_text
+            result = analyze_text(
+                text=getattr(request, "text", "") or request.code,
+                intent=request.intent,
+                use_llm=use_llm,
+            )
+        else:
+            result = analyze_code(
+                code=request.code,
+                intent=request.intent,
+                language=request.language,
+                use_llm=use_llm,
+            )
 
         response = CodeVerificationResponse(
             task_id=request.task_id,

@@ -15,6 +15,7 @@ from uuid import uuid4
 
 from agent_market.protocol import CodeVerificationRequest, CodeVerificationResponse
 from agent_market.validator.honeypot import HoneypotGenerator
+from agent_market.validator.image_honeypot import ImageHoneypotGenerator
 from agent_market.validator.scorer import MinerScorer
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class ValidatorForward:
 
     def __init__(self):
         self.honeypot_gen = HoneypotGenerator()
+        self.image_honeypot_gen = ImageHoneypotGenerator()
         self.scorer = MinerScorer()
         self.scores: Dict[str, float] = {}  # agent_id -> running score
         self.task_queue: List[dict] = []
@@ -79,22 +81,38 @@ class ValidatorForward:
         if self.task_queue and random.random() > 0.3:
             task = self.task_queue.pop(0)
         else:
-            # Generate honeypot
-            code, intent, known_bugs = self.honeypot_gen.generate()
-            task = {
-                "task_id": str(uuid4()),
-                "code": code,
-                "intent": intent,
-                "language": "python",
-                "is_honeypot": True,
-                "known_bugs": known_bugs,
-            }
+            # Generate honeypot — 85% code, 15% image
+            if random.random() < 0.15:
+                image_b64, intent, known_bugs = self.image_honeypot_gen.generate()
+                task = {
+                    "task_id": str(uuid4()),
+                    "code": "",
+                    "image": image_b64,
+                    "intent": intent,
+                    "language": "python",
+                    "task_type": "image-analysis",
+                    "is_honeypot": True,
+                    "known_bugs": known_bugs,
+                }
+            else:
+                code, intent, known_bugs = self.honeypot_gen.generate()
+                task = {
+                    "task_id": str(uuid4()),
+                    "code": code,
+                    "intent": intent,
+                    "language": "python",
+                    "task_type": "code-verification",
+                    "is_honeypot": True,
+                    "known_bugs": known_bugs,
+                }
 
         request = CodeVerificationRequest(
-            code=task["code"],
+            code=task.get("code", ""),
+            image=task.get("image", ""),
             intent=task["intent"],
-            language=task["language"],
+            language=task.get("language", "python"),
             task_id=task["task_id"],
+            task_type=task.get("task_type", "code-verification"),
         )
 
         # Collect responses from all miners
@@ -170,8 +188,10 @@ class ValidatorForward:
             try:
                 data = json.dumps({
                     "code": request.code,
+                    "image": request.image,
                     "intent": request.intent,
                     "language": request.language,
+                    "task_type": request.task_type,
                     "task_id": request.task_id,
                 }).encode("utf-8")
 

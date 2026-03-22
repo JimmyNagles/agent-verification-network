@@ -54,11 +54,13 @@
   },
   "capabilities": [
     "code_verification",
+    "image_validation",
     "bug_detection",
     "ast_parsing",
     "pattern_matching",
     "llm_intent_verification",
     "security_analysis",
+    "vision_analysis",
     "honeypot_generation",
     "objective_agent_scoring",
     "on_chain_reputation"
@@ -70,9 +72,12 @@
       "endpoint": "/verify",
       "method": "POST",
       "input": {
-        "code": "string — source code to verify",
-        "intent": "string — natural language description of what the code should do",
-        "language": "string — programming language (default: python)"
+        "code": "string — source code to verify (code-verification tasks)",
+        "text": "string — text to review (text-review tasks)",
+        "image": "string — base64-encoded image (image-analysis tasks)",
+        "intent": "string — natural language description of what the code/text/image should do",
+        "language": "string — programming language (default: python)",
+        "task_type": "string — 'code-verification' | 'text-review' | 'image-analysis' (default: code-verification)"
       },
       "output": {
         "task_id": "string",
@@ -81,7 +86,7 @@
         "issues": "array of {type, severity, line, description, suggestion}",
         "suggestions": "array of fix suggestions"
       },
-      "description": "Submit code + intent for verification by competing miner agents. Returns a structured audit report with issues found, confidence score, and fix suggestions. Requires payment when x402 is enabled (0.0001 ETH or funded job_id)."
+      "description": "Submit code, text, or images for verification by competing miner agents. Supports three task types: code-verification (AST + pattern + LLM), text-review (quality + tone + accuracy), and image-analysis (format + quality + Venice vision AI). Returns a structured audit report with issues found, confidence score, and fix suggestions. Requires payment when x402 is enabled (0.0001 ETH or funded job_id)."
     },
     {
       "name": "leaderboard",
@@ -161,11 +166,14 @@
   ],
   "agents": {
     "miner": {
-      "role": "Code verification worker. Receives code + intent, runs a three-stage analysis pipeline (AST parsing, pattern detection, LLM intent verification), and returns a structured audit report with issues, severity levels, line numbers, and fix suggestions.",
+      "role": "Verification worker supporting three task types: code verification (AST + patterns + LLM), text review (quality + tone + accuracy), and image analysis (format + dimensions + Venice vision AI). Receives content + intent, runs the appropriate analysis pipeline, and returns a structured audit report.",
       "analysis_pipeline": [
-        "AST syntax analysis — catches syntax errors, mutable default args, bare except clauses, unused variables",
-        "Pattern detection — catches SQL injection, hardcoded secrets, eval() usage, infinite loops, off-by-one errors, type mismatches, division by zero",
-        "LLM intent verification — semantic check of whether code fulfills its stated purpose. Supports OpenAI, Anthropic, and Ollama. Falls back to heuristic intent matching."
+        "Code: AST syntax analysis — catches syntax errors, mutable default args, bare except clauses, unused variables",
+        "Code: Pattern detection — catches SQL injection, hardcoded secrets, eval() usage, infinite loops, off-by-one errors, type mismatches, division by zero",
+        "Code: LLM intent verification — semantic check of whether code fulfills its stated purpose. Supports OpenAI, Anthropic, and Ollama. Falls back to heuristic intent matching.",
+        "Image: Format validation — magic bytes, dimensions, truncation detection (stdlib only, no Pillow)",
+        "Image: Content analysis — blank detection, size checks, intent matching",
+        "Image: Venice vision AI — semantic analysis using qwen3-vl-235b-a22b for content/quality/safety verification"
       ],
       "autonomy": "full — receives task, executes analysis pipeline, returns structured report. No human intervention at any step."
     },
