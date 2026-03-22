@@ -587,6 +587,52 @@ async def get_jobs():
     }
 
 
+@app.get("/jobs/list")
+async def list_jobs():
+    """List all on-chain jobs with details from AgenticCommerceV2."""
+    if not _commerce.enabled:
+        return {"jobs": [], "total": 0}
+
+    try:
+        count = _commerce.get_job_count()
+        states = ["Open", "Funded", "Submitted", "Completed", "Rejected", "Expired"]
+        jobs = []
+
+        # Read last 50 jobs (or all if fewer)
+        start = max(0, count - 50)
+        for i in range(start, count):
+            try:
+                job = _commerce.contract.functions.getJob(i).call()
+                client, provider, evaluator, description, budget, token, state, deliverable, created_at = job
+
+                token_symbol = "AVNC" if token.lower() != "0x0000000000000000000000000000000000000000" else "ETH"
+                budget_human = budget / 1e18
+
+                jobs.append({
+                    "id": i,
+                    "client": client,
+                    "provider": provider if provider != "0x0000000000000000000000000000000000000000" else None,
+                    "evaluator": evaluator,
+                    "budget": budget_human,
+                    "token": token_symbol,
+                    "state": states[state] if state < len(states) else f"Unknown({state})",
+                    "created_at": created_at,
+                })
+            except Exception:
+                pass
+
+        jobs.reverse()  # Most recent first
+
+        return {
+            "jobs": jobs,
+            "total": count,
+            "contract": _commerce.contract.address,
+            "chain": "base-mainnet",
+        }
+    except Exception as e:
+        return {"jobs": [], "total": 0, "error": str(e)}
+
+
 @app.get("/stats")
 async def get_stats():
     """On-chain stats from all contracts — the real numbers."""
