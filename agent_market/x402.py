@@ -171,21 +171,34 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
         # Get the transaction details
         tx = w3.eth.get_transaction(tx_hash)
 
-        # Verify recipient
+        # Verify the payment — supports ETH direct transfers AND ERC-20 token transfers
         expected_recipient = _get_recipient().lower()
         tx_to = (tx.to or "").lower()
-        if tx_to != expected_recipient:
-            return False, f"Transaction sent to {tx_to}, expected {expected_recipient}"
 
-        # Verify minimum amount (for ETH payments)
-        token = _get_token()
-        if token == "eth":
-            min_price = float(_get_price())
+        # Check if this is an ETH transfer to the recipient
+        if tx.value > 0 and tx_to == expected_recipient:
+            min_price = float(os.environ.get("VERIFY_PRICE_ETH", "0.0001"))
             min_wei = int(min_price * 1e18)
             if tx.value < min_wei:
                 return False, f"Payment too low: sent {w3.from_wei(tx.value, 'ether')} ETH, minimum is {min_price} ETH"
+            return True, f"ETH payment verified on-chain: tx {tx_hash}"
 
-        return True, f"Payment verified on-chain: tx {tx_hash}"
+        # Check if this is an ERC-20 token transfer (AVNC or other)
+        # ERC-20 transfers go TO the token contract, not the recipient directly
+        avnc_address = "0x1cb00aF12987274C5505F6fccF2B610268D81D03".lower()
+        if tx_to == avnc_address or tx_to == expected_recipient:
+            # Check transfer events in the receipt for ERC-20 Transfer
+            transfer_topic = w3.keccak(text="Transfer(address,address,uint256)")
+            for log_entry in receipt.logs:
+                if log_entry.topics and log_entry.topics[0] == transfer_topic:
+                    # Found a Transfer event — verify recipient in the event data
+                    if len(log_entry.topics) >= 3:
+                        to_addr = "0x" + log_entry.topics[2].hex()[-40:]
+                        if to_addr.lower() == expected_recipient:
+                            return True, f"AVNC token payment verified on-chain: tx {tx_hash}"
+
+        # If we got here, payment didn't match
+        return False, f"Transaction {tx_hash} does not contain a valid payment to {expected_recipient}"
 
     except Exception as e:
         return False, f"On-chain verification failed: {e}"

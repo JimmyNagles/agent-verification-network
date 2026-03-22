@@ -62,6 +62,14 @@ _erc8004 = ERC8004Client()
 # Protocol credits token (AVNC)
 _token = TokenClient()
 
+# On-chain scorer
+from agent_market.chain import ChainScorer
+_scorer = ChainScorer()
+
+# Lock for serializing on-chain transactions (prevents nonce conflicts)
+import threading
+_onchain_lock = threading.Lock()
+
 # API key manager
 _keys = KeyManager()
 
@@ -90,19 +98,17 @@ async def _store_filecoin_background(task_id: str, response):
 
 
 def _process_onchain_background(task_id: str, response):
-    """After verification: record score on AgentScorer + publish to ERC-8004 (fire-and-forget)."""
+    """After verification: record score + create job on-chain. Serialized to prevent nonce conflicts."""
     import hashlib
-    import threading
 
     def _do():
-        try:
-            # 1. Record score on AgentScorer
-            if response.confidence and response.confidence > 0:
-                from agent_market.chain import ChainScorer
-                scorer = ChainScorer()
-                if scorer.enabled:
-                    score_uint = int(response.confidence * 10000)
-                    score_result = scorer.record_score(
+        with _onchain_lock:  # Serialize all on-chain txs to prevent nonce conflicts
+            try:
+                import time
+
+                # 1. Record score on AgentScorer
+                if _scorer.enabled and response.confidence and response.confidence > 0:
+                    score_result = _scorer.record_score(
                         agent_id=response.agent_id or "local",
                         task_id=task_id,
                         score=response.confidence,
@@ -121,32 +127,33 @@ def _process_onchain_background(task_id: str, response):
                                 "chain": score_result.get("chain"),
                             },
                         )
+                    time.sleep(2)  # Wait for nonce to update
 
-            # 2. Create job on AgenticCommerceV2
-            if _commerce.enabled:
-                desc_hash = hashlib.sha256(task_id.encode()).digest()
-                job_result = _commerce.create_job(description_hash=desc_hash)
-                if job_result:
-                    response.job_id = job_result["job_id"]
-                    response.job_tx = job_result["tx_hash"]
-                    results[task_id] = response
+                # 2. Create job on AgenticCommerceV2
+                if _commerce.enabled:
+                    desc_hash = hashlib.sha256(task_id.encode()).digest()
+                    job_result = _commerce.create_job(description_hash=desc_hash)
+                    if job_result:
+                        response.job_id = job_result["job_id"]
+                        response.job_tx = job_result["tx_hash"]
+                        results[task_id] = response
 
-                    log_event(
-                        event_type="job_created",
-                        agent_role="system",
-                        agent_id="commerce",
-                        details={
-                            "task_id": task_id,
-                            "job_id": job_result["job_id"],
-                            "tx_hash": job_result["tx_hash"],
-                            "chain": job_result["chain"],
-                        },
-                    )
+                        log_event(
+                            event_type="job_created",
+                            agent_role="system",
+                            agent_id="commerce",
+                            details={
+                                "task_id": task_id,
+                                "job_id": job_result["job_id"],
+                                "tx_hash": job_result["tx_hash"],
+                                "chain": job_result["chain"],
+                            },
+                        )
 
-        except Exception as e:
-            logger.warning(f"Background on-chain processing failed: {e}")
+            except Exception as e:
+                logger.warning(f"Background on-chain processing failed: {e}")
 
-    if _commerce.enabled or os.environ.get("PRIVATE_KEY"):
+    if _commerce.enabled or _scorer.enabled:
         threading.Thread(target=_do, daemon=True).start()
 
 
