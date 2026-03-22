@@ -683,6 +683,7 @@ async def get_marketplace_jobs():
     open_jobs = [
         {
             "task_id": j["task_id"],
+            "on_chain_job_id": j.get("on_chain_job_id"),
             "title": j["title"],
             "task_type": j["task_type"],
             "intent": j["intent"],

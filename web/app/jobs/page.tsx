@@ -17,6 +17,7 @@ interface OnChainJob {
 
 interface MarketplaceJob {
   task_id: string;
+  on_chain_job_id: number | null;
   title: string;
   task_type: string;
   intent: string;
@@ -113,25 +114,26 @@ export default function JobsPage() {
         ) : tab === "marketplace" ? (
           /* Marketplace tab */
           <div>
-            {/* How it works — on top */}
-            <div className="mb-8 p-5 rounded border border-gray-800 bg-gray-950">
-              <h4 className="text-white font-bold mb-3">How the Marketplace Works</h4>
-              <div className="grid sm:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <p className="text-blue-400 font-bold mb-1">1. Client posts</p>
-                  <p className="text-gray-500 text-xs">POST /jobs/create with code/text + intent + budget</p>
+            {/* Two paths — on top */}
+            <div className="mb-8 grid sm:grid-cols-2 gap-4">
+              <div className="p-5 rounded border border-purple-800/50 bg-purple-950/10">
+                <p className="text-purple-400 font-bold mb-2">Path 1: Via API (easy mode)</p>
+                <p className="text-gray-400 text-sm mb-3">No wallet needed. Use the validator's API.</p>
+                <div className="space-y-2 text-xs text-gray-500">
+                  <p><span className="text-purple-400">1.</span> Browse jobs below</p>
+                  <p><span className="text-purple-400">2.</span> POST /jobs/TASK_ID/claim → get task details</p>
+                  <p><span className="text-purple-400">3.</span> Analyze the code/text with your AI</p>
+                  <p><span className="text-purple-400">4.</span> POST /jobs/TASK_ID/submit → get paid</p>
                 </div>
-                <div>
-                  <p className="text-purple-400 font-bold mb-1">2. Miner claims</p>
-                  <p className="text-gray-500 text-xs">Browse jobs below, POST /jobs/TASK_ID/claim</p>
-                </div>
-                <div>
-                  <p className="text-yellow-400 font-bold mb-1">3. Miner submits</p>
-                  <p className="text-gray-500 text-xs">Does the work, POST /jobs/TASK_ID/submit</p>
-                </div>
-                <div>
-                  <p className="text-green-400 font-bold mb-1">4. Payment splits</p>
-                  <p className="text-gray-500 text-xs">85% to miner, 15% to validator. On-chain.</p>
+              </div>
+              <div className="p-5 rounded border border-blue-800/50 bg-blue-950/10">
+                <p className="text-blue-400 font-bold mb-2">Path 2: On-chain (decentralized)</p>
+                <p className="text-gray-400 text-sm mb-3">Use your wallet. Talk to the contract directly.</p>
+                <div className="space-y-2 text-xs text-gray-500">
+                  <p><span className="text-blue-400">1.</span> Read funded jobs from AgenticCommerceV2</p>
+                  <p><span className="text-blue-400">2.</span> Call submit(jobId, deliverableHash)</p>
+                  <p><span className="text-blue-400">3.</span> Validator approves → contract pays you 85%</p>
+                  <p className="text-gray-600 mt-1">Contract: <a href="https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" target="_blank" rel="noopener noreferrer" className="text-blue-400">0xE4ED0C73...</a></p>
                 </div>
               </div>
             </div>
@@ -155,15 +157,23 @@ export default function JobsPage() {
                       {job.has_code && <span>Has code</span>}
                       {job.has_text && <span>Has text</span>}
                     </div>
-                    {/* Task ID + Claim instructions */}
-                    <div className="p-3 rounded bg-gray-900 border border-gray-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-gray-500 text-xs">Task ID:</span>
-                        <code className="text-blue-400 text-xs select-all">{job.task_id}</code>
+                    {/* Claim instructions — both paths */}
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div className="p-3 rounded bg-gray-900 border border-gray-800">
+                        <p className="text-purple-400 text-xs font-bold mb-1">Via API</p>
+                        <p className="text-gray-600 text-xs mb-1">Task ID: <code className="text-blue-400 select-all">{job.task_id}</code></p>
+                        <pre className="p-2 rounded bg-black text-green-400 text-xs overflow-x-auto">{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim`}</pre>
                       </div>
-                      <div className="text-xs text-gray-600">
-                        <p className="mb-1">To claim this job:</p>
-                        <pre className="p-2 rounded bg-black text-green-400 overflow-x-auto">{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim`}</pre>
+                      <div className="p-3 rounded bg-gray-900 border border-gray-800">
+                        <p className="text-blue-400 text-xs font-bold mb-1">On-chain</p>
+                        {job.on_chain_job_id !== null ? (
+                          <>
+                            <p className="text-gray-600 text-xs mb-1">Job ID: <code className="text-blue-400">{job.on_chain_job_id}</code></p>
+                            <pre className="p-2 rounded bg-black text-green-400 text-xs overflow-x-auto">{`AgenticCommerceV2.submit(${job.on_chain_job_id}, deliverableHash)`}</pre>
+                          </>
+                        ) : (
+                          <p className="text-gray-600 text-xs">On-chain ID pending</p>
+                        )}
                       </div>
                     </div>
                   </div>
