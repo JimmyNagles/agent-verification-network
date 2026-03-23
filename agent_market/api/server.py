@@ -1184,7 +1184,8 @@ async def agent_health(agent_id: str):
     own_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
     if own_url and own_url in endpoint:
         return await health_check()
-    if "agent-verification-network-production" in endpoint:
+    validator_url = "https://agent-verification-network-production.up.railway.app"
+    if endpoint.rstrip("/") == validator_url:
         return await health_check()
 
     try:
