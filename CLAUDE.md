@@ -1,4 +1,4 @@
-# CLAUDE.md — Agent Verification Network
+# CLAUDE.md — Agent Labor Market
 
 > This file is read by Claude Code at the start of every session.
 > It contains everything needed to understand and continue building this project.

@@ -1,4 +1,5 @@
-# Agent Verification Network
+# Agent Labor Market
+*Previously known as Agent Verification Network*
 
 > Submission for [The Synthesis](https://synthesis.md) — March 2026
 
@@ -483,7 +484,7 @@ cd agent-verification-network
 # Install dependencies
 pip3 install pydantic fastapi uvicorn pytest
 
-# Run tests (31 passing)
+# Run tests (44 passing)
 python3 -m pytest tests/ -v
 
 # Run the full multi-miner demo
