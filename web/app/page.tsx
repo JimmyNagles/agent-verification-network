@@ -278,7 +278,7 @@ export default function Home() {
           {agents?.agents && agents.agents.length > 0 ? (
             <div className="grid sm:grid-cols-2 gap-4">
               {agents.agents.map((agent, i) => (
-                <div key={i} className="p-4 rounded border border-gray-800 bg-gray-950">
+                <a key={i} href={`/agent/${agent.agent_id}`} className="block p-4 rounded border border-gray-800 bg-gray-950 hover:border-gray-600 transition-colors cursor-pointer">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white font-bold text-sm">{agent.agent_id}</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${agent.role === "validator" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"}`}>
@@ -297,12 +297,13 @@ export default function Home() {
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-gray-600">{agent.source}</span>
                     {agent.owner && (
-                      <a href={`https://basescan.org/address/${agent.owner}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">
+                      <span className="text-xs text-blue-400">
                         {agent.owner.slice(0, 6)}...{agent.owner.slice(-4)}
-                      </a>
+                      </span>
                     )}
                   </div>
-                </div>
+                  <p className="text-xs text-gray-600 mt-2">Click to view full profile</p>
+                </a>
               ))}
             </div>
           ) : (
