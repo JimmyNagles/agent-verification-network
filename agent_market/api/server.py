@@ -915,10 +915,17 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
     """
     from agent_market.keys import _supabase_get, _supabase_patch
 
-    # Get the API key from the request (to credit earnings)
+    # Get the API key and agent name from the request (to credit earnings)
     submitter_key = None
+    submitter_name = None
     if raw_request:
         submitter_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key")
+        if submitter_key:
+            import hashlib
+            key_hash = hashlib.sha256(submitter_key.encode()).hexdigest()
+            name_rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=agent_name")
+            if name_rows:
+                submitter_name = name_rows[0].get("agent_name")
 
     # Read from Supabase
     jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
@@ -969,7 +976,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
             log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
             log_data = _jlog.dumps({
                 "task_id": task_id,
-                "agent_id": "marketplace-submitter",
+                "agent_id": submitter_name or "marketplace-submitter",
                 "task_type": job.get("task_type", "code-verification"),
                 "passed": result.get("passed", True),
                 "confidence": result.get("confidence", 0),

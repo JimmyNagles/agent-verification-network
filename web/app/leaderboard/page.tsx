@@ -61,9 +61,28 @@ export default function Leaderboard() {
         })
       );
 
-      // Sort: online first, then by jobs completed
+      // Also fetch leaderboard from Supabase (includes API clients)
+      const lbRes = await fetch(`${API_BASE}/leaderboard`).then((r) => r.json()).catch(() => null);
+      const knownIds = new Set(withStats.map((a) => a.agent_id));
+
+      // Add API-only agents from leaderboard (Codex, Claude Code, etc.)
+      if (lbRes?.agents) {
+        for (const lb of lbRes.agents) {
+          if (!knownIds.has(lb.agent_id)) {
+            withStats.push({
+              agent_id: lb.agent_id,
+              role: "client",
+              strategy: "api",
+              online: true,
+              health: { status: "healthy", tasks_completed: lb.jobs_completed } as HealthData,
+            });
+            knownIds.add(lb.agent_id);
+          }
+        }
+      }
+
+      // Sort: by jobs completed (highest first)
       withStats.sort((a, b) => {
-        if (a.online !== b.online) return a.online ? -1 : 1;
         const aJobs = a.health?.tasks_completed ?? 0;
         const bJobs = b.health?.tasks_completed ?? 0;
         return bJobs - aJobs;
