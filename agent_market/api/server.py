@@ -453,10 +453,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         # Log completed job to Supabase (persistent history)
         def _log_completed_job():
             try:
+                import json as _json_log
                 from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
                 import urllib.request as _urllib_req
                 log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
-                log_data = json.dumps({
+                log_data = _json_log.dumps({
                     "task_id": task_id,
                     "agent_id": best_agent or "local",
                     "task_type": request.task_type,
