@@ -1,5 +1,5 @@
 """
-Agent Verification Network — API Server
+Agent Labor Market — API Server
 
 FastAPI endpoint for submitting code for verification by competing AI agents.
 
@@ -33,7 +33,7 @@ from agent_market.keys import KeyManager
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Agent Verification Network",
+    title="Agent Labor Market",
     description="Decentralized code verification by competing AI agents",
     version="1.0.0",
 )
@@ -184,7 +184,18 @@ def attach_validator(validator):
 
 def get_mode():
     """Return current operating mode."""
-    return "connected" if _validator is not None else "standalone"
+    if _validator is not None:
+        return "connected"
+    if _registered_miners:
+        return "network"
+    if _registry.enabled:
+        try:
+            onchain = _registry.get_active_miners()
+            if onchain:
+                return "network"
+        except Exception:
+            pass
+    return "standalone"
 
 
 # ── Request/Response Models ──────────────────────────────────────
@@ -508,20 +519,42 @@ async def get_task_status(task_id: str):
 
 @app.get("/leaderboard")
 async def get_leaderboard():
-    """Top performing miner agents by score."""
+    """Top performing miner agents ranked by jobs completed."""
+    agents = []
+
+    # Read from Supabase completed_jobs (persistent, real data)
+    try:
+        from agent_market.keys import _supabase_get
+        rows = _supabase_get("completed_jobs?select=agent_id&order=created_at.desc")
+        if rows:
+            # Aggregate by agent_id
+            from collections import Counter
+            counts = Counter(r["agent_id"] for r in rows)
+            for agent_id, count in counts.most_common(20):
+                if agent_id == "local":
+                    continue
+                # Get pass rate
+                agent_rows = [r for r in rows if r["agent_id"] == agent_id]
+                agents.append({
+                    "agent_id": agent_id,
+                    "jobs_completed": count,
+                })
+    except Exception as e:
+        logger.warning(f"Leaderboard Supabase read failed: {e}")
+
+    # Also include in-memory validator scores if available
     if _validator is not None:
-        scores = _validator.scores
-        miners = []
-        for agent_id, score in scores.items():
-            if score > 0:
-                miners.append({"agent_id": agent_id, "score": round(float(score), 4)})
-        miners.sort(key=lambda m: m["score"], reverse=True)
-        return {"mode": "connected", "agents": miners[:20]}
+        known = {a["agent_id"] for a in agents}
+        for agent_id, score in _validator.scores.items():
+            if agent_id not in known and score > 0:
+                agents.append({"agent_id": agent_id, "jobs_completed": 0, "score": round(float(score), 4)})
+
+    agents.sort(key=lambda m: m.get("jobs_completed", 0), reverse=True)
 
     return {
-        "mode": "standalone",
-        "agents": [],
-        "note": "No miners connected. Run ./scripts/demo.sh to start the multi-miner network.",
+        "agents": agents[:20],
+        "total_agents": len(agents),
+        "source": "supabase + validator",
     }
 
 
@@ -1233,7 +1266,7 @@ async def protocol_info():
                 }
 
     return {
-        "protocol": "Agent Verification Network",
+        "protocol": "Agent Labor Market",
         "network": "base-mainnet",
         "chain_id": 8453,
         "contracts": contracts,
@@ -1311,7 +1344,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "Agent Verification Network",
+        "service": "Agent Labor Market",
         "version": "1.0.0",
         "mode": get_mode(),
         "commerce_enabled": _commerce.enabled,
