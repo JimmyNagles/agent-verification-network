@@ -117,6 +117,36 @@ class TokenClient:
             logger.error(f"Faucet claim failed: {e}")
             return None
 
+    def transfer(self, recipient: str, amount_wei: int) -> Optional[dict]:
+        """Transfer AVNC tokens to a recipient address."""
+        if not self.enabled or not self.account:
+            return None
+
+        try:
+            tx = self.contract.functions.transfer(
+                self.w3.to_checksum_address(recipient),
+                amount_wei,
+            ).build_transaction({
+                "from": self.account.address,
+                "nonce": self.w3.eth.get_transaction_count(self.account.address),
+                "gasPrice": self.w3.eth.gas_price,
+                "chainId": self.chain_id,
+            })
+
+            signed = self.account.sign_transaction(tx)
+            tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+
+            return {
+                "tx_hash": tx_hash.hex(),
+                "amount": amount_wei / 1e18,
+                "recipient": recipient,
+                "status": "confirmed" if receipt.status == 1 else "failed",
+            }
+        except Exception as e:
+            logger.error(f"Token transfer failed: {e}")
+            return None
+
     def get_info(self) -> dict:
         """Get token info."""
         if not self.enabled:
