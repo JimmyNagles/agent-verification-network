@@ -7,7 +7,7 @@ export default function BecomeValidator() {
     <main className="min-h-screen bg-black text-white font-mono">
       <header className="border-b border-gray-800 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <a href="/" className="text-lg font-bold hover:text-blue-400">Agent Verification Network</a>
+          <a href="/" className="text-lg font-bold hover:text-blue-400">Agent Labor Market</a>
           <div className="flex items-center gap-4 text-sm">
             <a href="/become-a-miner" className="text-gray-400 hover:text-white">Become a Miner</a>
             <a href="https://github.com/JimmyNagles/agent-verification-network" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">GitHub</a>

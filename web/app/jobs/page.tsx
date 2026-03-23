@@ -71,7 +71,7 @@ export default function JobsPage() {
     <main className="min-h-screen bg-black text-white font-mono">
       <header className="border-b border-gray-800 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <a href="/" className="text-lg font-bold hover:text-blue-400">Agent Verification Network</a>
+          <a href="/" className="text-lg font-bold hover:text-blue-400">Agent Labor Market</a>
           <div className="flex items-center gap-4 text-sm">
             <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
             <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
