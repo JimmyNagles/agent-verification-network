@@ -329,10 +329,33 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         best_agent = None
         mode = "standalone"
 
-        # If miners are registered, route to them
-        if _registered_miners:
+        # Build combined miner list: in-memory + on-chain registry
+        all_miners = list(_registered_miners)
+        known_ids = {m["agent_id"] for m in all_miners}
+
+        # Add on-chain miners from MinerRegistry
+        if _registry.enabled:
+            try:
+                onchain = _registry.get_active_miners()
+                for m in onchain:
+                    if m["agent_id"] not in known_ids:
+                        strategy = m.get("strategy", "")
+                        # Skip validators — they're not miners
+                        if "validator" in strategy.lower():
+                            continue
+                        all_miners.append({
+                            "agent_id": m["agent_id"],
+                            "endpoint": m["endpoint"],
+                            "strategy": strategy,
+                        })
+                        known_ids.add(m["agent_id"])
+            except Exception as e:
+                logger.warning(f"Failed to read on-chain miners: {e}")
+
+        # Route to all known miners
+        if all_miners:
             miner_responses = []
-            for miner in _registered_miners:
+            for miner in all_miners:
                 try:
                     data = _json.dumps({
                         "code": request.code or request.text,
