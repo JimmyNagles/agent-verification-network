@@ -251,8 +251,14 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         if request_key:
             key_info = _keys.validate_key(request_key)
             if key_info and key_info.get("valid"):
-                # Valid key — proceed with verification (no credit limit)
-                _keys.use_credit(request_key, "/verify")
+                if key_info.get("credits_remaining", 0) > 0:
+                    _keys.use_credit(request_key, "/verify")
+                else:
+                    return JSONResponse(status_code=402, content={
+                        "error": "Credits exhausted",
+                        "message": "You've used all 20 free credits. Claim AVNC from the faucet and fund an on-chain job to continue.",
+                        "credits_remaining": 0,
+                    })
             elif not key_info:
                 return JSONResponse(status_code=401, content={"error": "Invalid API key"})
 
@@ -618,6 +624,8 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         key_info = _keys.validate_key(request_key)
         if not key_info or not key_info.get("valid"):
             return JSONResponse(status_code=401, content={"error": "Invalid API key"})
+        if key_info.get("credits_remaining", 0) <= 0:
+            return JSONResponse(status_code=402, content={"error": "Credits exhausted. Claim AVNC from faucet to continue."})
         _keys.use_credit(request_key, "/jobs/create")
 
     import hashlib
@@ -990,7 +998,7 @@ async def register_client(request: Request):
     Register as a client and get an API key.
 
     Send your agent name (unique) and optionally a wallet address.
-    You get 10 free verifications. After that, pay with AVNC or x402.
+    You get 20 free verifications. After that, pay with AVNC or x402.
     Rate limited: 1 registration per IP per hour.
     """
     import time as _time
