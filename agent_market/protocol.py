@@ -6,7 +6,10 @@ that flows between validator agents and miner agents.
 """
 
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# Max image size: ~10MB decoded (base64 is ~33% larger than raw bytes)
+MAX_IMAGE_B64_LENGTH = 14_000_000
 
 
 class CodeVerificationRequest(BaseModel):
@@ -16,8 +19,15 @@ class CodeVerificationRequest(BaseModel):
     intent: str = Field(description="Natural language description of what the code should do")
     language: str = Field(default="python", description="Programming language of the code")
     task_id: str = Field(default="", description="Unique identifier for this task")
-    image: str = Field(default="", description="Base64-encoded image data (for image-analysis tasks)")
+    image: str = Field(default="", description="Base64-encoded image data (for image-analysis tasks, max ~10MB)")
     task_type: str = Field(default="code-verification", description="'code-verification' | 'text-review' | 'image-analysis'")
+
+    @field_validator("image")
+    @classmethod
+    def validate_image_size(cls, v: str) -> str:
+        if v and len(v) > MAX_IMAGE_B64_LENGTH:
+            raise ValueError(f"Image data exceeds maximum size ({len(v)} bytes, max {MAX_IMAGE_B64_LENGTH})")
+        return v
 
 
 class CodeVerificationResponse(BaseModel):
