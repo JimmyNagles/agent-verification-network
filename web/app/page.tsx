@@ -118,6 +118,7 @@ export default function Home() {
           </h1>
           <div className="flex items-center gap-4 text-sm">
             <a href="/jobs" className="text-green-400 hover:text-green-300">Jobs</a>
+            <a href="/leaderboard" className="text-white hover:text-gray-300">Leaderboard</a>
             <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
             <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
             <a href={`${API_BASE}/health`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">API</a>
