@@ -1152,6 +1152,45 @@ async def protocol_info():
     }
 
 
+@app.get("/agent-health/{agent_id}")
+async def agent_health(agent_id: str):
+    """Proxy health check for a specific agent — avoids browser CORS issues."""
+    import urllib.request
+    import json as _json
+
+    # Find agent endpoint from registered miners or on-chain registry
+    endpoint = None
+    for m in _registered_miners:
+        if m.get("agent_id") == agent_id:
+            endpoint = m.get("endpoint")
+            break
+
+    if not endpoint:
+        # Check on-chain registry
+        try:
+            agents_data = await agents_list()
+            for a in agents_data.get("agents", []):
+                if a.get("agent_id") == agent_id:
+                    endpoint = a.get("endpoint")
+                    break
+        except Exception:
+            pass
+
+    if not endpoint:
+        return {"status": "unknown", "error": "Agent not found"}
+
+    try:
+        req = urllib.request.Request(
+            f"{endpoint.rstrip('/')}/health",
+            headers={"User-Agent": "AgentVerificationNetwork/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+            return data
+    except Exception as e:
+        return {"status": "unreachable", "error": str(e)}
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""

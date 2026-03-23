@@ -61,14 +61,18 @@ export default function AgentProfile() {
       );
       if (found) setAgent(found);
 
-      // Fetch live health from agent's endpoint
-      if (found?.endpoint) {
+      // Fetch live health via validator proxy (avoids CORS)
+      if (found) {
         try {
-          const h = await fetch(`${found.endpoint}/health`, {
-            signal: AbortSignal.timeout(5000),
+          const h = await fetch(`${API_BASE}/agent-health/${found.agent_id}`, {
+            signal: AbortSignal.timeout(10000),
           }).then((r) => r.json());
-          setHealth(h);
-          setHealthError(false);
+          if (h.status === "healthy") {
+            setHealth(h);
+            setHealthError(false);
+          } else {
+            setHealthError(true);
+          }
         } catch {
           setHealthError(true);
         }

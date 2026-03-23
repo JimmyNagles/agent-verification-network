@@ -1,4 +1,4 @@
-name: Agent Verification Network — Code Review
+name: Agent Labor Market — Code Review
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ jobs:
           API_URL="https://agent-verification-network-production.up.railway.app"
 
           # Get changed Python/JS/TS/Sol files
-          git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(py|js|ts|sol)$' | head -5 > /tmp/changed_files.txt
+          git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '\.(py|js|jsx|ts|tsx|sol)$' | head -10 > /tmp/changed_files.txt
 
           echo "Changed files:"
           cat /tmp/changed_files.txt
@@ -118,12 +118,12 @@ jobs:
             const critical = parseInt('${{ steps.verify.outputs.critical }}') || 0;
 
             const header = critical > 0
-              ? `## 🔴 Agent Verification Network — ${totalIssues} issue(s) found (${critical} critical)`
+              ? `## 🔴 Agent Labor Market — ${totalIssues} issue(s) found (${critical} critical)`
               : totalIssues > 0
-              ? `## 🟡 Agent Verification Network — ${totalIssues} issue(s) found`
-              : `## ✅ Agent Verification Network — Code looks good`;
+              ? `## 🟡 Agent Labor Market — ${totalIssues} issue(s) found`
+              : `## ✅ Agent Labor Market — Code looks good`;
 
-            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Verification Network](https://agent-verification-network.vercel.app) — AI-powered code review by competing miner agents.*\n*[On-chain jobs](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) · [Protocol](https://agent-verification-network-production.up.railway.app/protocol) · [skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
+            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Labor Market](https://agent-verification-network.vercel.app) — AI-powered code review by competing miner agents.*\n*[On-chain jobs](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) · [Protocol](https://agent-verification-network-production.up.railway.app/protocol) · [skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
