@@ -81,6 +81,25 @@ _registered_miners: list[dict] = []
 _registered_validators: list[dict] = []
 _total_verifications: int = 0
 
+# Load persisted miners from Supabase on startup
+def _load_miners_from_supabase():
+    """Load previously registered miners from Supabase so they survive restarts."""
+    try:
+        from agent_market.keys import _supabase_get
+        rows = _supabase_get("registered_miners?is_active=eq.true&select=agent_id,endpoint,strategy")
+        if rows:
+            for row in rows:
+                _registered_miners.append({
+                    "agent_id": row["agent_id"],
+                    "endpoint": row["endpoint"],
+                    "strategy": row.get("strategy", "default"),
+                })
+            logger.info(f"Loaded {len(rows)} miners from Supabase")
+    except Exception as e:
+        logger.warning(f"Failed to load miners from Supabase: {e}")
+
+_load_miners_from_supabase()
+
 
 async def _store_filecoin_background(task_id: str, response):
     """Fire-and-forget Filecoin storage so it doesn't block the API response."""
@@ -329,10 +348,33 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         best_agent = None
         mode = "standalone"
 
-        # If miners are registered, route to them
-        if _registered_miners:
+        # Build combined miner list: in-memory + on-chain registry
+        all_miners = list(_registered_miners)
+        known_ids = {m["agent_id"] for m in all_miners}
+
+        # Add on-chain miners from MinerRegistry
+        if _registry.enabled:
+            try:
+                onchain = _registry.get_active_miners()
+                for m in onchain:
+                    if m["agent_id"] not in known_ids:
+                        strategy = m.get("strategy", "")
+                        # Skip validators — they're not miners
+                        if "validator" in strategy.lower():
+                            continue
+                        all_miners.append({
+                            "agent_id": m["agent_id"],
+                            "endpoint": m["endpoint"],
+                            "strategy": strategy,
+                        })
+                        known_ids.add(m["agent_id"])
+            except Exception as e:
+                logger.warning(f"Failed to read on-chain miners: {e}")
+
+        # Route to all known miners
+        if all_miners:
             miner_responses = []
-            for miner in _registered_miners:
+            for miner in all_miners:
                 try:
                     data = _json.dumps({
                         "code": request.code or request.text,
@@ -496,7 +538,30 @@ async def register_miner(request: RegisterMinerRequest):
         "endpoint": request.endpoint,
         "strategy": request.strategy,
     }
+    # Deduplicate
+    _registered_miners[:] = [m for m in _registered_miners if m["agent_id"] != request.agent_id]
     _registered_miners.append(entry)
+
+    # Persist to Supabase (survives validator restarts)
+    try:
+        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+        import urllib.request as _urllib_req
+        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_miners"
+        upsert_data = json.dumps({
+            "agent_id": request.agent_id,
+            "endpoint": request.endpoint,
+            "strategy": request.strategy or "default",
+            "is_active": True,
+        }).encode("utf-8")
+        upsert_req = _urllib_req.Request(upsert_url, data=upsert_data, method="POST", headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        })
+        _urllib_req.urlopen(upsert_req, timeout=5)
+    except Exception as e:
+        logger.warning(f"Failed to persist miner to Supabase: {e}")
 
     # Also register on-chain (fire-and-forget)
     import threading
