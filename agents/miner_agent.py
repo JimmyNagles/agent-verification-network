@@ -123,11 +123,21 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
 
     @app.get("/health")
     async def health():
+        if _strategy == "venice-vision":
+            task_types = ["image-analysis"]
+        elif _strategy == "intent-focused":
+            task_types = ["code-verification", "text-review"]
+        elif _strategy == "security-focused":
+            task_types = ["code-verification"]
+        else:
+            task_types = ["code-verification", "text-review", "image-analysis"]
+
         return {
             "status": "healthy",
             "agent_id": agent_id,
             "role": "miner",
             "strategy": _strategy,
+            "task_types": task_types,
             "uptime": round(time.time() - stats["started_at"], 1),
             "tasks_completed": stats["tasks_completed"],
             "issues_found": stats["issues_found"],
