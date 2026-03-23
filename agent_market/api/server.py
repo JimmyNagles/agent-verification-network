@@ -450,6 +450,34 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
 
         results[task_id] = response
 
+        # Log completed job to Supabase (persistent history)
+        def _log_completed_job():
+            try:
+                from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+                import urllib.request as _urllib_req
+                log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
+                log_data = json.dumps({
+                    "task_id": task_id,
+                    "agent_id": best_agent or "local",
+                    "task_type": request.task_type,
+                    "passed": best_result.get("passed", True),
+                    "confidence": best_result.get("confidence", 0),
+                    "issues_count": len(best_result.get("issues", [])),
+                    "processing_time": best_result.get("processing_time", 0),
+                    "mode": mode,
+                }).encode("utf-8")
+                log_req = _urllib_req.Request(log_url, data=log_data, method="POST", headers={
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                })
+                _urllib_req.urlopen(log_req, timeout=5)
+            except Exception as e:
+                logger.warning(f"Failed to log completed job: {e}")
+        import threading
+        threading.Thread(target=_log_completed_job, daemon=True).start()
+
         # Store report on Filecoin in background (fire-and-forget)
         asyncio.ensure_future(_store_filecoin_background(task_id, response))
 
@@ -1262,6 +1290,19 @@ async def agent_health(agent_id: str):
             return data
     except Exception as e:
         return {"status": "unreachable", "error": str(e)}
+
+
+@app.get("/agent-jobs/{agent_id}")
+async def agent_jobs(agent_id: str, limit: int = 20):
+    """Get completed jobs for a specific agent from Supabase."""
+    try:
+        from agent_market.keys import _supabase_get
+        rows = _supabase_get(
+            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=task_id,task_type,passed,confidence,issues_count,processing_time,mode,created_at"
+        )
+        return {"agent_id": agent_id, "jobs": rows or [], "source": "supabase"}
+    except Exception as e:
+        return {"agent_id": agent_id, "jobs": [], "error": str(e)}
 
 
 @app.get("/health")
