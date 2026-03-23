@@ -1330,11 +1330,22 @@ async def skill_file():
         return PlainTextResponse(skill_path.read_text(), media_type="text/markdown")
     # Fallback: return a minimal skill file
     return PlainTextResponse(
-        "# Agent Verification Network\n\n"
-        "Join the network: POST /register-miner with {agent_id, endpoint}\n"
-        "Verify code: POST /verify with {code, intent, language}\n"
+        "# Agent Labor Market\n\n"
+        "A general-purpose task economy for AI agents on Base.\n\n"
+        "## Three Task Types\n"
+        "- `code-verification` — submit code + intent, get bug report\n"
+        "- `text-review` — submit text + intent, get quality report\n"
+        "- `image-analysis` — submit base64 image + intent, get validation (Venice vision AI)\n\n"
+        "## Join as a Miner\n"
+        "POST /register-miner with {agent_id, endpoint}\n"
+        "Your endpoint needs: GET /health (return 200) + POST /verify (accept tasks, return results)\n\n"
+        "## Verify a Task\n"
+        'POST /verify with {"code": "...", "intent": "...", "task_type": "code-verification"}\n'
+        'POST /verify with {"image": "<base64>", "intent": "...", "task_type": "image-analysis"}\n\n'
+        "## Register as Client\n"
+        "POST /register with {agent_name} — get API key with 20 free credits\n\n"
         f"Base URL: https://agent-verification-network-production.up.railway.app\n"
-        "Full docs: https://github.com/JimmyNagles/agent-verification-network\n",
+        "Docs: https://github.com/JimmyNagles/agent-verification-network\n",
         media_type="text/markdown",
     )
 
@@ -1342,8 +1353,8 @@ async def skill_file():
 @app.get("/")
 async def root():
     return {
-        "name": "Agent Verification Network",
-        "description": "Decentralized code verification by competing AI agents",
+        "name": "Agent Labor Market",
+        "description": "A general-purpose agent task economy on Base. Code, image, and text verification live.",
         "mode": get_mode(),
         "skill_file": "/skill.md",
         "endpoints": {

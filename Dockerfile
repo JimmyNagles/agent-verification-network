@@ -15,6 +15,7 @@ COPY contracts/token_deployed.json contracts/token_deployed.json
 COPY scripts/start.py scripts/start.py
 COPY agent.json .
 COPY agent_log.json .
+COPY web/public/skill.md web/public/skill.md
 
 EXPOSE 8000
 
