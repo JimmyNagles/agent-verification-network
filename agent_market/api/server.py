@@ -910,8 +910,14 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
     """
     Submit result for a marketplace job. The validator runs the analysis
     (or accepts a pre-computed result) and records the score on-chain.
+    Credits the miner's earnings balance in Supabase.
     """
-    from agent_market.keys import _supabase_get
+    from agent_market.keys import _supabase_get, _supabase_patch
+
+    # Get the API key from the request (to credit earnings)
+    submitter_key = None
+    if raw_request:
+        submitter_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key")
 
     # Read from Supabase
     jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
@@ -992,12 +998,33 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
         except Exception as e:
             logger.warning(f"On-chain completion failed for job #{on_chain_id}: {e}")
 
+    # Credit miner earnings (85% of budget)
+    earnings_credited = 0
+    if submitter_key:
+        try:
+            import hashlib
+            key_hash = hashlib.sha256(submitter_key.encode()).hexdigest()
+            budget = float(job.get("budget_avnc", 0))
+            miner_share = budget * 0.85
+            if miner_share > 0:
+                # Read current earnings
+                rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=earnings")
+                if rows:
+                    current = float(rows[0].get("earnings", 0) or 0)
+                    _supabase_patch(f"api_keys?key_hash=eq.{key_hash}", {
+                        "earnings": current + miner_share,
+                    })
+                    earnings_credited = miner_share
+        except Exception as e:
+            logger.warning(f"Failed to credit earnings: {e}")
+
     return {
         "success": True,
         "task_id": task_id,
         "on_chain_job_id": on_chain_id,
         "on_chain_tx": on_chain_tx,
         "status": "completed",
+        "earnings_credited": earnings_credited,
         "result": result,
     }
 
@@ -1377,6 +1404,98 @@ async def agent_jobs(agent_id: str, limit: int = 20):
         return {"agent_id": agent_id, "jobs": rows or [], "source": "supabase"}
     except Exception as e:
         return {"agent_id": agent_id, "jobs": [], "error": str(e)}
+
+
+@app.get("/earnings")
+async def check_earnings(raw_request: Request):
+    """Check your AVNC earnings balance. Requires API key."""
+    from agent_market.keys import _supabase_get
+    import hashlib
+
+    api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key")
+    if not api_key:
+        return JSONResponse(status_code=401, content={"error": "API key required"})
+
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=agent_name,earnings,withdraw_address")
+    if not rows:
+        return JSONResponse(status_code=401, content={"error": "Invalid API key"})
+
+    row = rows[0]
+    return {
+        "agent_name": row.get("agent_name"),
+        "earnings": float(row.get("earnings", 0) or 0),
+        "withdraw_address": row.get("withdraw_address"),
+        "currency": "AVNC",
+        "note": "Use POST /withdraw to send earnings to your wallet",
+    }
+
+
+@app.post("/withdraw")
+async def withdraw_earnings(raw_request: Request):
+    """Withdraw AVNC earnings to a wallet address. Requires API key."""
+    from agent_market.keys import _supabase_get, _supabase_patch
+    import hashlib
+
+    api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key")
+    if not api_key:
+        return JSONResponse(status_code=401, content={"error": "API key required"})
+
+    try:
+        body = await raw_request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Send JSON with {wallet_address}"})
+
+    wallet = body.get("wallet_address")
+    if not wallet or not wallet.startswith("0x") or len(wallet) != 42:
+        return JSONResponse(status_code=400, content={"error": "Invalid wallet address. Send {wallet_address: '0x...'}"})
+
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=agent_name,earnings")
+    if not rows:
+        return JSONResponse(status_code=401, content={"error": "Invalid API key"})
+
+    balance = float(rows[0].get("earnings", 0) or 0)
+    if balance <= 0:
+        return JSONResponse(status_code=400, content={"error": "No earnings to withdraw", "balance": 0})
+
+    # Send AVNC tokens from validator wallet to miner wallet
+    tx_hash = None
+    try:
+        if _token.enabled:
+            from web3 import Web3
+            w3 = _token.w3
+            amount_wei = w3.to_wei(balance, 'ether')
+            result = _token.transfer(wallet, amount_wei)
+            if result:
+                tx_hash = result.get("tx_hash")
+    except Exception as e:
+        logger.warning(f"Withdraw transfer failed: {e}")
+        return JSONResponse(status_code=500, content={
+            "error": "Transfer failed — try again or contact validator",
+            "balance": balance,
+        })
+
+    if not tx_hash:
+        return JSONResponse(status_code=500, content={
+            "error": "Token transfer not available — validator may not have AVNC or transfer function",
+            "balance": balance,
+        })
+
+    # Zero out the balance and save withdraw address
+    _supabase_patch(f"api_keys?key_hash=eq.{key_hash}", {
+        "earnings": 0,
+        "withdraw_address": wallet,
+    })
+
+    return {
+        "success": True,
+        "withdrawn": balance,
+        "currency": "AVNC",
+        "wallet": wallet,
+        "tx_hash": tx_hash,
+        "message": f"Sent {balance} AVNC to {wallet}",
+    }
 
 
 @app.get("/health")
