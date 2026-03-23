@@ -777,7 +777,6 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         "task_type": request.task_type,
         "code": request.code,
         "text_content": request.text,
-        "image": request.image,
         "intent": request.intent,
         "budget_avnc": float(request.budget_avnc),
     })
@@ -953,10 +952,51 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
         },
     )
 
+    # Log to completed_jobs in Supabase
+    import threading
+    def _log_marketplace_completion():
+        try:
+            import json as _jlog
+            from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+            import urllib.request as _ureq
+            log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
+            log_data = _jlog.dumps({
+                "task_id": task_id,
+                "agent_id": "marketplace-submitter",
+                "task_type": job.get("task_type", "code-verification"),
+                "passed": result.get("passed", True),
+                "confidence": result.get("confidence", 0),
+                "issues_count": len(result.get("issues", [])),
+                "mode": "marketplace",
+            }).encode("utf-8")
+            req = _ureq.Request(log_url, data=log_data, method="POST", headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            })
+            _ureq.urlopen(req, timeout=5)
+        except Exception as e:
+            logger.warning(f"Failed to log marketplace job completion: {e}")
+    threading.Thread(target=_log_marketplace_completion, daemon=True).start()
+
+    # Complete on-chain if job has an on-chain ID (triggers 85/15 payment)
+    on_chain_id = job.get("on_chain_job_id")
+    on_chain_tx = None
+    if on_chain_id and _commerce.enabled:
+        try:
+            complete_result = _commerce.complete_job(on_chain_id)
+            if complete_result:
+                on_chain_tx = complete_result.get("tx_hash")
+                logger.info(f"On-chain job #{on_chain_id} completed: {on_chain_tx}")
+        except Exception as e:
+            logger.warning(f"On-chain completion failed for job #{on_chain_id}: {e}")
+
     return {
         "success": True,
         "task_id": task_id,
-        "on_chain_job_id": job.get("on_chain_job_id"),
+        "on_chain_job_id": on_chain_id,
+        "on_chain_tx": on_chain_tx,
         "status": "completed",
         "result": result,
     }
