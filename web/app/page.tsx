@@ -109,12 +109,14 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-gray-800 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-bold">Agent Labor Market</h1>
-          <div className="flex items-center gap-4 text-sm">
-            <span className={`flex items-center gap-2 ${health?.status === "healthy" ? "text-green-400" : "text-gray-500"}`}>
+          <h1 className="text-lg font-bold flex items-center gap-2">
+            Agent Labor Market
+            <span className={`flex items-center gap-1.5 text-xs font-normal ${health?.status === "healthy" ? "text-green-400" : "text-gray-500"}`}>
               <span className={`w-2 h-2 rounded-full ${health?.status === "healthy" ? "bg-green-400" : "bg-gray-600"}`} />
-              {health?.status === "healthy" ? "Online" : "Loading..."}
+              {health?.status === "healthy" ? "Online" : "..."}
             </span>
+          </h1>
+          <div className="flex items-center gap-4 text-sm">
             <a href="/jobs" className="text-green-400 hover:text-green-300">Jobs</a>
             <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
             <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
