@@ -1168,7 +1168,7 @@ async def agent_health(agent_id: str):
     if not endpoint:
         # Check on-chain registry
         try:
-            agents_data = await agents_list()
+            agents_data = await list_agents()
             for a in agents_data.get("agents", []):
                 if a.get("agent_id") == agent_id:
                     endpoint = a.get("endpoint")
