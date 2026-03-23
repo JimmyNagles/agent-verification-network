@@ -50,6 +50,16 @@ export default function AgentProfile() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [healthError, setHealthError] = useState(false);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [completedJobs, setCompletedJobs] = useState<Array<{
+    task_id: string;
+    task_type: string;
+    passed: boolean;
+    confidence: number;
+    issues_count: number;
+    processing_time: number;
+    mode: string;
+    created_at: string;
+  }>>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -78,7 +88,15 @@ export default function AgentProfile() {
         }
       }
 
-      // Fetch activity and filter for this agent
+      // Fetch completed jobs from Supabase (persistent history)
+      const jobsRes = await fetch(`${API_BASE}/agent-jobs/${agentId}`)
+        .then((r) => r.json())
+        .catch(() => null);
+      if (jobsRes?.jobs) {
+        setCompletedJobs(jobsRes.jobs);
+      }
+
+      // Also fetch in-memory activity as fallback
       const actRes = await fetch(`${API_BASE}/activity`)
         .then((r) => r.json())
         .catch(() => null);
@@ -332,30 +350,42 @@ export default function AgentProfile() {
           </div>
         </section>
 
-        {/* Recent Activity */}
+        {/* Completed Jobs (Supabase — persistent) */}
         <section className="py-8 border-b border-gray-800">
-          <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-4">Recent Activity</h3>
-          {activity.length > 0 ? (
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm text-gray-500 uppercase tracking-wider">Job History</h3>
+            <span className="text-xs text-gray-600">{completedJobs.length} jobs · from Supabase (persistent)</span>
+          </div>
+          {completedJobs.length > 0 ? (
             <div className="space-y-2">
-              {activity.slice(0, 10).map((item, i) => (
+              {completedJobs.map((job, i) => (
                 <div key={i} className="p-3 rounded border border-gray-800 bg-gray-950 flex items-center justify-between text-sm">
                   <div className="flex items-center gap-3">
-                    <span className={item.passed ? "text-green-400" : "text-red-400"}>
-                      {item.passed ? "PASS" : "FAIL"}
+                    <span className={job.passed ? "text-green-400" : "text-red-400"}>
+                      {job.passed ? "PASS" : "FAIL"}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      job.task_type === "image-analysis" ? "bg-green-500/10 text-green-400" :
+                      job.task_type === "text-review" ? "bg-purple-500/10 text-purple-400" :
+                      "bg-blue-500/10 text-blue-400"
+                    }`}>
+                      {job.task_type}
                     </span>
                     <span className="text-gray-400">
-                      {item.issues ?? 0} issues found
+                      {job.issues_count} issues
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-xs">
-                    <span className="text-gray-500">{((item.confidence || 0) * 100).toFixed(0)}% confidence</span>
-                    <span className="text-gray-600">{item.task_id?.slice(0, 8)}...</span>
+                    <span className="text-gray-500">{(job.confidence * 100).toFixed(0)}%</span>
+                    <span className="text-gray-500">{job.mode}</span>
+                    <span className="text-gray-600">{new Date(job.created_at).toLocaleTimeString()}</span>
+                    <span className="text-gray-700">{job.task_id?.slice(0, 8)}...</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No recent activity recorded for this agent.</p>
+            <p className="text-gray-500 text-sm">No completed jobs yet. Jobs are logged when this agent processes tasks through the validator API.</p>
           )}
         </section>
 
