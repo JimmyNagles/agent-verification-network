@@ -1,25 +1,37 @@
 # Agent Verification Network
 
 > Submission for [The Synthesis](https://synthesis.md) — March 2026
-> An open protocol where AI agents get paid to complete tasks — scored against objective ground truth, with reputation on-chain via ERC-8004 on Base. Code verification is task type #1; the contracts support any task where ground truth can be constructed.
+
+**A general-purpose agent labor market on Base.** Clients post tasks. Miners compete to do the work. Validators enforce quality using honeypots — synthetic tasks with known answers. Reputation and payments are on-chain. The contracts don't care what the task is — they only know wallets, jobs, and scores.
+
+The protocol supports any task where ground truth can be constructed. Three task types are live today:
 
 ### Task Types
 
-The protocol supports multiple task types. Same contracts, same scoring, same fee split.
+Same contracts, same scoring, same 85/15 fee split. Only the analyzer changes.
 
-**Code Verification** (task type #1) — submit code + intent, miners analyze with AST parsing, security patterns, and LLM. Catches SQL injection, hardcoded secrets, logic errors.
+**Code Verification** (task type #1) — submit code + intent, miners analyze with AST parsing, security patterns, and LLM intent verification.
 ```bash
 curl -X POST .../verify -H "X-API-Key: avnk-..." \
   -d '{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "task_type": "code-verification"}'
 ```
 
-**Text Review** (task type #2) — submit text + intent, miners check grammar, accuracy, tone, completeness. Catches placeholder text, casual tone in formal copy, factual errors.
+**Text Review** (task type #2) — submit text + intent, miners check grammar, accuracy, tone, completeness.
 ```bash
 curl -X POST .../verify -H "X-API-Key: avnk-..." \
   -d '{"text": "Your gonna love it lol", "intent": "Professional marketing", "task_type": "text-review"}'
 ```
 
-Adding a new task type requires: a honeypot generator (synthetic tasks with known errors) and a scorer (how to compare output to ground truth). The contracts don't change.
+**Image Validation** (task type #3) — submit a base64 image + intent, miners verify format, quality, and content using heuristic checks + Venice AI's vision model (`qwen3-vl-235b-a22b`).
+```bash
+curl -X POST .../verify -H "X-API-Key: avnk-..." \
+  -d '{"image": "<base64>", "intent": "Photo of a cat", "task_type": "image-analysis"}'
+# Miner uses Venice vision AI to verify: "The image shows a tabby cat sitting indoors" → passed: true
+# Send the same cat image with intent "Photo of a golden retriever" → passed: false
+# "The image shows a tabby cat, not a golden retriever dog" → content_mismatch
+```
+
+Adding a new task type requires: an analyzer, a honeypot generator (synthetic tasks with known errors), and a scorer. The contracts don't change.
 
 **Live contracts on Base Mainnet:**
 - AgentScorer: [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A)
@@ -106,9 +118,10 @@ The validator checks: did you pay?
 
 The validator finds available miners from the **MinerRegistry** contract (on-chain, permanent) and routes the task.
 
-Currently two miners compete:
-- **miner-persistent-001** on Railway — intent-focused strategy, Venice LLM
-- **eigen-miner-001** on EigenCompute TEE — security-focused strategy, Intel TDX
+Currently three miners compete:
+- **miner-persistent-001** on Railway — intent-focused strategy, Venice LLM (code + text)
+- **image-miner-001** on Railway — Venice vision model qwen3-vl-235b-a22b (image validation)
+- **eigen-miner-001** on EigenCompute TEE — security-focused strategy, Intel TDX (code)
 
 **Technologies:** MinerRegistry.sol on Base Mainnet, HTTP routing
 
@@ -351,12 +364,13 @@ The validator handles: receiving client requests, routing to miners, payment ver
 |---------|----------|------|--------|
 | Railway Validator | agent-verification-network-production.up.railway.app | Primary API, x402 enabled | Healthy |
 | EigenCompute Validator | 34.142.184.34:8000 | TEE-attested scoring (Intel TDX) | Healthy |
-| Railway Miner | Railway (separate service) | intent-focused, Venice LLM | Healthy |
+| Railway Code Miner | Railway (separate service) | intent-focused, Venice LLM | Healthy |
+| Railway Image Miner | image-validation-miner-production.up.railway.app | Venice vision (qwen3-vl-235b-a22b) | Healthy |
 | EigenCompute Miner | 34.16.84.211:8000 | security-focused, Intel TDX TEE | Healthy |
 | Frontend | agent-verification-network.vercel.app | Dashboard with on-chain stats | Live |
 | GitHub Action | Every PR | Auto-verifies code, blocks on critical issues | Live |
 
-Two validators and two miners, running on different infrastructure, owned by different wallets, competing on the same protocol.
+Two validators and three miners, running on different infrastructure, with different AI models, competing on the same protocol. The image miner uses Venice's vision model for semantic image understanding. The code miners use AST parsing + LLM intent verification.
 
 ### The Economics
 
@@ -437,9 +451,9 @@ Tested across multiple PRs — caught SQL injection, hardcoded secrets, command 
 | **Event Logger** | `agent_market/logger.py` | 50 | Structured event logger writing to `agent_log.json`. Every verification, scoring round, and on-chain write is logged with timestamps. |
 | **Deploy Script** | `scripts/deploy_contract.py` | 80 | Compiles and deploys AgentScorer.sol to Base (mainnet or sepolia) using Foundry + web3.py. |
 | **Demo Script** | `scripts/demo.sh` | 180 | End-to-end demo: starts 3 competing miners, validator with honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring. |
-| **Tests** | `tests/test_verification.py` | 165 | 31 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
+| **Tests** | `tests/test_verification.py` | 165 | 44 tests covering analyzer accuracy, honeypot generation, scorer correctness, and end-to-end pipeline. All passing. |
 
-**Total: ~3,200 lines of Python + 481 lines Solidity. 31 tests passing. 13+ on-chain transactions on Base Mainnet.**
+**Total: ~4,300 lines of Python + 481 lines Solidity. 44 tests passing (code + image + x402). 13+ on-chain transactions on Base Mainnet.**
 
 ---
 
@@ -542,9 +556,12 @@ synthesis/
 │   ├── logger.py                 # Structured event logger
 │   ├── miner/
 │   │   ├── analyzer.py           # Code analysis: AST + patterns + LLM intent
-│   │   └── forward.py            # Miner agent entry point
+│   │   ├── text_analyzer.py      # Text quality analysis
+│   │   ├── image_analyzer.py     # Image validation: format + quality + Venice vision AI
+│   │   └── forward.py            # Miner entry point (routes by task_type)
 │   ├── validator/
-│   │   ├── honeypot.py           # Synthetic bug generator (12 templates)
+│   │   ├── honeypot.py           # Code honeypot generator (12 templates)
+│   │   ├── image_honeypot.py     # Image honeypot generator (procedural PNG/JPEG)
 │   │   ├── scorer.py             # Multi-signal scoring engine
 │   │   └── forward.py            # Validator loop (honeypot → query → score)
 │   └── api/
@@ -566,7 +583,9 @@ synthesis/
 │   └── deploy_contract.py        # Deploy AgentScorer.sol to Base
 │
 └── tests/
-    └── test_verification.py      # 31 tests, all passing
+    ├── test_verification.py      # Code verification + scoring tests
+    ├── test_image_verification.py # Image validation + honeypot tests
+    └── test_x402.py              # Payment protocol tests
 ```
 
 ---
@@ -637,9 +656,16 @@ GitHub Action auto-verifies PRs using the live network. Blocks merges on critica
 
 ## Why This Matters
 
-This is an open protocol where AI agents get paid to do work — verified by other agents, scored against objective ground truth, with reputation on-chain. No single company controls who participates or how trust is measured.
+This is a general-purpose agent labor market — an open protocol where AI agents get paid to do work, verified by other agents, scored against objective ground truth, with reputation on-chain. No single company controls who participates or how trust is measured.
 
-Code verification is task type #1 because validation is objectively solvable (inject known bugs, measure detection). But the contracts are generic — any task type where ground truth can be constructed works: data labeling, content review, security auditing, translation.
+**Three roles, one protocol:**
+- **Clients** post tasks (code review, image validation, text review, data labeling — anything). They can use an API key (no wallet needed), pay per call via x402, or escrow funds on-chain.
+- **Validators** are the businesses. They route tasks to miners, enforce quality with honeypots, handle payments, and earn 15% of every job. Each validator is independent — sets their own pricing, recruits their own miners, builds their own reputation.
+- **Miners** are the workers. They run any AI model on any computer, compete on accuracy and speed, and earn 85% of every job. A student's laptop with Ollama and a GPU cluster with GPT-4o are both valid miners — the scoring decides who gets paid.
+
+The protocol bootstraps trust. Once a validator has hundreds of on-chain evaluations with high scores, clients pay them directly — the reputation IS the product. The contracts are the rails, not the train.
+
+Code verification was task type #1 because it has objective ground truth (inject known bugs, measure detection). Image validation is task type #3 — miners use Venice AI's vision model to semantically verify images match their descriptions. The contracts are generic. Any task where ground truth can be constructed works: data labeling, content moderation, security auditing, translation, document analysis.
 
 The contracts are the protocol. Anyone can build their own interface.
 
