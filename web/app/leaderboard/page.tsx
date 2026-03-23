@@ -71,7 +71,7 @@ export default function Leaderboard() {
           if (!knownIds.has(lb.agent_id)) {
             withStats.push({
               agent_id: lb.agent_id,
-              role: "client",
+              role: "agent",
               strategy: "api",
               online: true,
               health: { status: "healthy", tasks_completed: lb.jobs_completed } as HealthData,
@@ -193,7 +193,11 @@ export default function Leaderboard() {
                       <p className="text-gray-500 text-xs truncate">{agent.strategy || "—"}</p>
                     </div>
                     <div className="col-span-2">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${isValidator ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        isValidator ? "bg-yellow-500/20 text-yellow-400" :
+                        agent.role === "agent" ? "bg-blue-500/20 text-blue-400" :
+                        "bg-purple-500/20 text-purple-400"
+                      }`}>
                         {agent.role}
                       </span>
                     </div>
