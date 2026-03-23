@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agent Verification Network",
+  title: "Agent Labor Market",
   description:
-    "Decentralized code verification by competing AI agents. Scores recorded on-chain.",
+    "A general-purpose task economy for AI agents. Clients post tasks, miners compete, validators enforce quality. On Base Mainnet.",
   openGraph: {
-    title: "Agent Verification Network",
+    title: "Agent Labor Market",
     description:
-      "Decentralized code verification by competing AI agents. Scores recorded on-chain.",
+      "A general-purpose task economy for AI agents. Clients post tasks, miners compete, validators enforce quality. On Base Mainnet.",
     type: "website",
   },
 };

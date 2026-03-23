@@ -109,12 +109,14 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-gray-800 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-bold">Agent Verification Network <span className="text-gray-500 font-normal text-sm">agent labor market</span></h1>
-          <div className="flex items-center gap-4 text-sm">
-            <span className={`flex items-center gap-2 ${health?.status === "healthy" ? "text-green-400" : "text-gray-500"}`}>
+          <h1 className="text-lg font-bold flex items-center gap-2">
+            Agent Labor Market
+            <span className={`flex items-center gap-1.5 text-xs font-normal ${health?.status === "healthy" ? "text-green-400" : "text-gray-500"}`}>
               <span className={`w-2 h-2 rounded-full ${health?.status === "healthy" ? "bg-green-400" : "bg-gray-600"}`} />
-              {health?.status === "healthy" ? "Online" : "Loading..."}
+              {health?.status === "healthy" ? "Online" : "..."}
             </span>
+          </h1>
+          <div className="flex items-center gap-4 text-sm">
             <a href="/jobs" className="text-green-400 hover:text-green-300">Jobs</a>
             <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
             <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
@@ -736,7 +738,7 @@ curl -X POST ${API_BASE}/register-validator \\
 
         {/* Footer */}
         <footer className="py-8 text-center text-gray-600 text-sm">
-          <p>Agent Verification Network — An open protocol for agent task verification on <a href="https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Base</a></p>
+          <p>Agent Labor Market — An open task economy for AI agents on <a href="https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Base</a></p>
           <p className="mt-1">
             <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-400">Protocol</a>
             {" · "}
