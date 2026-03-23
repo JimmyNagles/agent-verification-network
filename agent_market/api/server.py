@@ -173,9 +173,10 @@ def get_mode():
 class VerifyRequest(BaseModel):
     code: str = Field(default="", description="Source code to verify (for code-verification tasks)")
     text: str = Field(default="", description="Text to review (for text-review tasks)")
-    intent: str = Field(description="What the code/text should do or convey")
+    image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
+    intent: str = Field(description="What the code/text/image should do or convey")
     language: str = Field(default="python", description="Programming language (code tasks only)")
-    task_type: str = Field(default="code-verification", description="Task type: 'code-verification' or 'text-review'")
+    task_type: str = Field(default="code-verification", description="Task type: 'code-verification' | 'text-review' | 'image-analysis'")
     job_id: Optional[int] = Field(default=None, description="Pre-funded job ID on AgenticCommerceV2 (direct payment mode)")
 
 
@@ -336,6 +337,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                     data = _json.dumps({
                         "code": request.code or request.text,
                         "text": request.text,
+                        "image": request.image,
                         "intent": request.intent,
                         "language": request.language,
                         "task_type": request.task_type,
@@ -371,7 +373,14 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         # Fallback to local analysis if no miners responded
         if best_result is None:
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-            if request.task_type == "text-review":
+            if request.task_type == "image-analysis":
+                from agent_market.miner.image_analyzer import analyze_image
+                best_result = analyze_image(
+                    image_data=request.image or request.code,
+                    intent=request.intent,
+                    use_llm=use_llm,
+                )
+            elif request.task_type == "text-review":
                 from agent_market.miner.text_analyzer import analyze_text
                 best_result = analyze_text(
                     text=request.text or request.code,
@@ -590,10 +599,11 @@ async def get_jobs():
 class CreateJobRequest(BaseModel):
     title: str = Field(description="Short description of the task")
     description: str = Field(default="", description="Detailed description of what needs to be done")
-    task_type: str = Field(default="code-verification", description="Task type: code-verification or text-review")
+    task_type: str = Field(default="code-verification", description="Task type: code-verification | text-review | image-analysis")
     code: str = Field(default="", description="Code to verify (for code-verification tasks)")
     text: str = Field(default="", description="Text to review (for text-review tasks)")
-    intent: str = Field(description="What the code/text should do or convey")
+    image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
+    intent: str = Field(description="What the code/text/image should do or convey")
     budget_avnc: float = Field(default=5.0, description="Budget in AVNC tokens")
 
 
@@ -641,6 +651,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         "task_type": request.task_type,
         "code": request.code,
         "text_content": request.text,
+        "image": request.image,
         "intent": request.intent,
         "budget_avnc": float(request.budget_avnc),
     })
@@ -793,7 +804,10 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
     result = body.get("result")
     if not result:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-        if job["task_type"] == "text-review":
+        if job["task_type"] == "image-analysis":
+            from agent_market.miner.image_analyzer import analyze_image
+            result = analyze_image(image_data=job.get("image", "") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
+        elif job["task_type"] == "text-review":
             from agent_market.miner.text_analyzer import analyze_text
             result = analyze_text(text=job.get("text_content") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
         else:
@@ -1147,7 +1161,7 @@ async def health_check():
         "version": "1.0.0",
         "mode": get_mode(),
         "commerce_enabled": _commerce.enabled,
-        "task_types": ["code_verification"],
+        "task_types": ["code-verification", "text-review", "image-analysis"],
         "tasks_completed": len(results),
     }
 

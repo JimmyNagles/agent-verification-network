@@ -196,6 +196,7 @@ class MinerScorer:
             {"security", "sql_injection", "hardcoded", "injection"},
             {"missing_edge_case", "null_check", "type_error", "edge_case", "intent_mismatch"},
             {"code_quality", "bad_practice", "reliability"},
+            {"content", "quality", "format", "blank", "truncated", "intent_mismatch", "content_mismatch", "missing_element"},
         ]
         for group in related_groups:
             a_match = any(t in type_a for t in group)

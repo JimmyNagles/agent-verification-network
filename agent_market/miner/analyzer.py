@@ -133,6 +133,44 @@ class LLMClient:
         resp = self._http_post(url, headers, body)
         return resp["message"]["content"]
 
+    def chat_vision(self, system_prompt: str, user_prompt: str,
+                    image_b64: str, mime_type: str = "image/jpeg",
+                    temperature: float = 0.2) -> Optional[str]:
+        """
+        Send an image + text to a vision-capable model (OpenAI-compatible only).
+        Works with Venice AI (qwen3-vl-235b-a22b) via LLM_BASE_URL.
+        Returns assistant response text, or None on failure.
+        """
+        try:
+            if self.provider not in ("openai",):
+                logger.warning(f"Vision not supported for provider: {self.provider}")
+                return None
+
+            base = self.base_url or "https://api.openai.com/v1"
+            url = f"{base}/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            body = {
+                "model": self.model,
+                "temperature": temperature,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": [
+                        {"type": "text", "text": user_prompt},
+                        {"type": "image_url", "image_url": {
+                            "url": f"data:{mime_type};base64,{image_b64}"
+                        }},
+                    ]},
+                ],
+            }
+            resp = self._http_post(url, headers, body, timeout=60)
+            return resp["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.warning(f"Vision LLM call failed ({self.provider}): {e}")
+            return None
+
 
 # Singleton — created once, reused across calls
 _llm_client: Optional[LLMClient] = None

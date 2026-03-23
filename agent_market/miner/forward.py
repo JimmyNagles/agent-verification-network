@@ -24,16 +24,38 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
     """
     start_time = time.time()
 
-    logger.info(f"Received task {request.task_id}: analyzing {request.language} code")
+    task_type = getattr(request, "task_type", "code-verification")
+    valid_task_types = ("code-verification", "text-review", "image-analysis")
+    if task_type not in valid_task_types:
+        logger.warning(f"Unknown task_type '{task_type}', defaulting to code-verification")
+        task_type = "code-verification"
+
+    logger.info(f"Received task {request.task_id}: task_type={task_type}")
 
     try:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-        result = analyze_code(
-            code=request.code,
-            intent=request.intent,
-            language=request.language,
-            use_llm=use_llm,
-        )
+
+        if task_type == "image-analysis":
+            from agent_market.miner.image_analyzer import analyze_image
+            result = analyze_image(
+                image_data=getattr(request, "image", "") or request.code,
+                intent=request.intent,
+                use_llm=use_llm,
+            )
+        elif task_type == "text-review":
+            from agent_market.miner.text_analyzer import analyze_text
+            result = analyze_text(
+                text=getattr(request, "text", "") or request.code,
+                intent=request.intent,
+                use_llm=use_llm,
+            )
+        else:
+            result = analyze_code(
+                code=request.code,
+                intent=request.intent,
+                language=request.language,
+                use_llm=use_llm,
+            )
 
         response = CodeVerificationResponse(
             task_id=request.task_id,
