@@ -215,16 +215,16 @@ export default function AgentProfile() {
               </p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Tasks Completed</p>
+              <p className="text-xs text-gray-500">Jobs Completed</p>
               <p className="text-lg text-white">{health?.tasks_completed ?? "—"}</p>
-            </div>
-            <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Issues Found</p>
-              <p className="text-lg text-white">{health?.issues_found ?? "—"}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
               <p className="text-xs text-gray-500">Uptime</p>
               <p className="text-lg text-white">{health?.uptime ? formatUptime(health.uptime) : "—"}</p>
+            </div>
+            <div className="p-4 rounded border border-gray-800 bg-gray-950">
+              <p className="text-xs text-gray-500">Mode</p>
+              <p className="text-lg text-white">{health?.mode ?? health?.strategy ?? "—"}</p>
             </div>
           </div>
         </section>
