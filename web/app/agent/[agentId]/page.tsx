@@ -64,15 +64,29 @@ export default function AgentProfile() {
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch agent info from /agents
+      // Fetch agent info from /agents (on-chain registry)
       const agentsRes = await fetch(`${API_BASE}/agents`).then((r) => r.json());
-      const found = agentsRes.agents?.find(
+      let found = agentsRes.agents?.find(
         (a: AgentInfo) => a.agent_id === agentId
       );
+
+      // If not on-chain, check if it's an API agent with completed jobs
+      if (!found) {
+        const jobsRes = await fetch(`${API_BASE}/agent-jobs/${agentId}`).then((r) => r.json()).catch(() => null);
+        if (jobsRes?.jobs?.length > 0) {
+          found = {
+            agent_id: agentId,
+            role: "agent",
+            strategy: "api",
+            source: "API (Supabase)",
+          };
+        }
+      }
+
       if (found) setAgent(found);
 
       // Fetch live health via validator proxy (avoids CORS)
-      if (found) {
+      if (found && found.role !== "agent") {
         try {
           const h = await fetch(`${API_BASE}/agent-health/${found.agent_id}`, {
             signal: AbortSignal.timeout(10000),
