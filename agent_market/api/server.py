@@ -999,7 +999,7 @@ async def register_client(request: Request):
     Register as a client and get an API key.
 
     Send your agent name (unique) and optionally a wallet address.
-    You get 10 free verifications. After that, pay with AVNC or x402.
+    You get 20 free verifications. After that, pay with AVNC or x402.
     Rate limited: 1 registration per IP per hour.
     """
     import time as _time

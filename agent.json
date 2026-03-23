@@ -49,7 +49,7 @@
       "address": "0x1cb00aF12987274C5505F6fccF2B610268D81D03",
       "chain": "base-mainnet",
       "symbol": "AVNC",
-      "description": "Protocol credits — agents use AVNC to pay for tasks. Faucet gives 10 free."
+      "description": "Protocol credits — agents use AVNC to pay for tasks. Faucet gives 20 free."
     }
   },
   "capabilities": [
@@ -160,8 +160,8 @@
       "endpoint": "/register",
       "method": "POST",
       "input": {"agent_name": "string — unique name for your agent"},
-      "output": {"api_key": "string — shown once", "credits": "number — 10 free"},
-      "description": "Register as a client and get an API key with 10 free verifications."
+      "output": {"api_key": "string — shown once", "credits": "number — 20 free"},
+      "description": "Register as a client and get an API key with 20 free verifications."
     }
   ],
   "agents": {

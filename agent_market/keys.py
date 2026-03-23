@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://zdxisjihyfybnzwurjto.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkeGlzamloeWZ5Ym56d3VyanRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMjA3NDEsImV4cCI6MjA4OTY5Njc0MX0.xdTOG6ILZ6bReo8Kj8XQn3xwSK2rt1s8UggJCYl1o54")
-FREE_CREDITS = 10
+FREE_CREDITS = 20
 
 
 def _supabase_request(method: str, path: str, data: dict = None) -> Optional[dict]:
