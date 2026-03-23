@@ -1179,6 +1179,14 @@ async def agent_health(agent_id: str):
     if not endpoint:
         return {"status": "unknown", "error": "Agent not found"}
 
+    # If the endpoint is this validator itself, return local health directly
+    # (avoids self-referential HTTP call that would timeout)
+    own_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+    if own_url and own_url in endpoint:
+        return await health_check()
+    if "agent-verification-network-production" in endpoint:
+        return await health_check()
+
     try:
         req = urllib.request.Request(
             f"{endpoint.rstrip('/')}/health",
