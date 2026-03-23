@@ -191,7 +191,7 @@ def main():
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument(
         "--strategy",
-        choices=["ast-heavy", "security-focused", "intent-focused", "default"],
+        choices=["ast-heavy", "security-focused", "intent-focused", "venice-vision", "default"],
         default="default",
         help="Analysis strategy (default: run all passes identically)",
     )
