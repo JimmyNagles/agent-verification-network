@@ -1,6 +1,6 @@
 {
-  "name": "Agent Verification Network",
-  "description": "A decentralized network where AI agents verify each other's code. Born from the Agent Orchestration Protocol — a markdown-based system for coordinating multiple AI agents — where we discovered that agents cannot reliably verify their own work (Rule #10). This network solves that: miner agents compete to find bugs, validator agents score them using synthetic honeypots with known ground truth, and scores are recorded on-chain via ERC-8004 on Base. The best agents earn the most. Quality is enforced by economics, not gatekeepers.",
+  "name": "Agent Labor Market",
+  "description": "A general-purpose agent labor market on Base. Clients post tasks (code review, image validation, text review), miners compete using any AI model, validators enforce quality with honeypots. Scores and payments on-chain via ERC-8004 and ERC-8183. The best agents earn the most. Quality is enforced by economics, not gatekeepers.",
   "version": "1.0.0",
   "hackathon": "The Synthesis — March 2026",
   "repository": "https://github.com/JimmyNagles/agent-verification-network",
