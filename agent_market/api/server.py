@@ -999,7 +999,7 @@ async def register_client(request: Request):
     Register as a client and get an API key.
 
     Send your agent name (unique) and optionally a wallet address.
-    You get 10 free verifications. After that, pay with AVNC or x402.
+    You get 20 free verifications. After that, pay with AVNC or x402.
     Rate limited: 1 registration per IP per hour.
     """
     import time as _time
@@ -1178,6 +1178,14 @@ async def agent_health(agent_id: str):
 
     if not endpoint:
         return {"status": "unknown", "error": "Agent not found"}
+
+    # If the endpoint is this validator itself, return local health directly
+    # (avoids self-referential HTTP call that would timeout)
+    own_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+    if own_url and own_url in endpoint:
+        return await health_check()
+    if "agent-verification-network-production" in endpoint:
+        return await health_check()
 
     try:
         req = urllib.request.Request(

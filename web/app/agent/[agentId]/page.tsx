@@ -223,8 +223,8 @@ export default function AgentProfile() {
               <p className="text-lg text-white">{health?.uptime ? formatUptime(health.uptime) : "—"}</p>
             </div>
             <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500">Mode</p>
-              <p className="text-lg text-white">{health?.mode ?? health?.strategy ?? "—"}</p>
+              <p className="text-xs text-gray-500">Task Types</p>
+              <p className="text-lg text-white">{(health?.task_types as string[])?.length ?? 1}</p>
             </div>
           </div>
         </section>

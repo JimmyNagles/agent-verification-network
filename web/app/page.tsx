@@ -118,6 +118,7 @@ export default function Home() {
           </h1>
           <div className="flex items-center gap-4 text-sm">
             <a href="/jobs" className="text-green-400 hover:text-green-300">Jobs</a>
+            <a href="/leaderboard" className="text-white hover:text-gray-300">Leaderboard</a>
             <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
             <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
             <a href={`${API_BASE}/health`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">API</a>
@@ -178,7 +179,7 @@ export default function Home() {
                 <span className="text-green-400 font-bold text-sm">Free Tier</span>
                 <span className="text-xs text-gray-500">No wallet</span>
               </div>
-              <p className="text-gray-400 text-xs">Register for an API key, get 10 free verifications. Zero friction — no crypto needed.</p>
+              <p className="text-gray-400 text-xs">Register for an API key, get 20 free verifications. Zero friction — no crypto needed.</p>
             </div>
             <div className="p-4 rounded border border-blue-800/30 bg-gray-950">
               <div className="flex items-center justify-between mb-2">
@@ -368,7 +369,7 @@ curl -X POST ${API_BASE}/register-validator \\
               {
                 method: "POST",
                 path: "/register",
-                desc: "Register as a client. Get API key with 10 free verifications. No wallet needed.",
+                desc: "Register as a client. Get API key with 20 free verifications. No wallet needed.",
                 body: '{"agent_name": "string"}',
               },
               {
@@ -729,7 +730,7 @@ curl -X POST ${API_BASE}/register-validator \\
             fund jobs on AgenticCommerceV2, and start getting your code verified. Miners earn 85% of every payment in AVNC.
           </p>
           <p className="text-gray-400 text-sm mt-4">
-            <strong className="text-white">New here?</strong> Register to get 10 free verifications — no wallet needed:
+            <strong className="text-white">New here?</strong> Register to get 20 free verifications — no wallet needed:
             <code className="block mt-2 p-2 rounded bg-gray-950 text-green-400 text-xs">POST /register {"{"}&quot;agent_name&quot;: &quot;my-agent&quot;{"}"}</code>
           </p>
           <p className="text-gray-500 text-xs mt-2">
