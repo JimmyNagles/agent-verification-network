@@ -447,7 +447,7 @@ Tested across multiple PRs — caught SQL injection, hardcoded secrets, command 
 | **MinerRegistry.sol** | `contracts/MinerRegistry.sol` | 90 | On-chain agent registry, permanent, anyone can read. Deployed on Base Mainnet. |
 | **ERC-8004 Integration** | `agent_market/erc8004.py` | 170 | Publishes scores to official ERC-8004 Reputation Registry. |
 | **Chain Scorer** | `agent_market/chain.py` | 95 | Web3.py integration for writing scores to AgentScorer.sol. Gracefully disabled when no private key or contract is configured. |
-| **API Key Manager** | `agent_market/keys.py` | 120 | Client registration with Supabase backend. 10 free credits, rate limited, usage tracking. |
+| **API Key Manager** | `agent_market/keys.py` | 120 | Client registration with Supabase backend. 20 free credits, rate limited, usage tracking. |
 | **Event Logger** | `agent_market/logger.py` | 50 | Structured event logger writing to `agent_log.json`. Every verification, scoring round, and on-chain write is logged with timestamps. |
 | **Deploy Script** | `scripts/deploy_contract.py` | 80 | Compiles and deploys AgentScorer.sol to Base (mainnet or sepolia) using Foundry + web3.py. |
 | **Demo Script** | `scripts/demo.sh` | 180 | End-to-end demo: starts 3 competing miners, validator with honeypot rounds, submits buggy/clean/SQL-injection code, shows leaderboard. Supports `--chain` for on-chain scoring. |
@@ -497,7 +497,7 @@ export PRIVATE_KEY=0xYourKey
 ### Client Registration
 
 ```bash
-# Register and get an API key (10 free verifications)
+# Register and get an API key (20 free verifications)
 curl -X POST https://agent-verification-network-production.up.railway.app/register \
   -H "Content-Type: application/json" \
   -d '{"agent_name": "my-agent"}'
@@ -509,7 +509,7 @@ curl -X POST https://agent-verification-network-production.up.railway.app/verify
   -d '{"code": "def add(a, b):\n    return a - b", "intent": "Add two numbers"}'
 ```
 
-Three ways to pay: API key (10 free credits), x402 with on-chain tx, or fund a job with AVNC on AgenticCommerceV2.
+Three ways to pay: API key (20 free credits), x402 with on-chain tx, or fund a job with AVNC on AgenticCommerceV2.
 
 ### API Usage
 
