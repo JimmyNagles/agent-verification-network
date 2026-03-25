@@ -174,10 +174,8 @@ class ValidatorForward:
         responses = {}
 
         if not self.miner_agents:
-            # Demo mode — run local miner
-            from agent_market.miner.forward import forward
-            response = await forward(request)
-            responses["local-miner"] = response
+            # No miners registered — validator never does analysis itself
+            logger.warning("No miners registered — cannot process task")
             return responses
 
         # Production mode — HTTP calls to miner endpoints

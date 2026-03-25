@@ -1,11 +1,13 @@
 """
 Agent Labor Market — API Server
 
-FastAPI endpoint for submitting code for verification by competing AI agents.
+FastAPI endpoint for submitting tasks to competing AI miner agents.
 
 Two modes:
-  - Standalone (default): Runs analysis directly using the local analyzer.
-  - Connected: Routes tasks through the validator to competing miner agents.
+  - Network: Routes tasks directly to registered miners, picks best response.
+  - Connected: Routes tasks through a validator that mixes in honeypots for scoring.
+
+The server never performs analysis itself — miners do all the work.
 
 Usage:
     uvicorn agent_market.api.server:app --host 0.0.0.0 --port 8000
@@ -118,38 +120,21 @@ async def _store_filecoin_background(task_id: str, response):
 
 
 def _process_onchain_background(task_id: str, response):
-    """After verification: record score + create job on-chain. Serialized to prevent nonce conflicts."""
+    """After verification: create job on-chain. Serialized to prevent nonce conflicts.
+
+    Note: On-chain SCORE recording only happens in connected mode via the validator
+    loop (validator_agent.py), which uses the objective honeypot-based score.
+    Network mode does NOT record scores on-chain because only the miner's
+    self-reported confidence is available — not an objective quality metric.
+    """
     import hashlib
+
+    validator_id = os.environ.get("VALIDATOR_ID", "validator")
 
     def _do():
         with _onchain_lock:  # Serialize all on-chain txs to prevent nonce conflicts
             try:
-                import time
-
-                # 1. Record score on AgentScorer
-                if _scorer.enabled and response.confidence and response.confidence > 0:
-                    score_result = _scorer.record_score(
-                        agent_id=response.agent_id or "local",
-                        task_id=task_id,
-                        score=response.confidence,
-                        round_num=0,
-                    )
-                    if score_result:
-                        log_event(
-                            event_type="score_recorded",
-                            agent_role="validator",
-                            agent_id="railway-validator",
-                            details={
-                                "task_id": task_id,
-                                "miner": response.agent_id or "local",
-                                "score": response.confidence,
-                                "tx_hash": score_result.get("tx_hash"),
-                                "chain": score_result.get("chain"),
-                            },
-                        )
-                    time.sleep(2)  # Wait for nonce to update
-
-                # 2. Create job on AgenticCommerceV2
+                # Create job on AgenticCommerceV2 (records that work was done)
                 if _commerce.enabled:
                     desc_hash = hashlib.sha256(task_id.encode()).digest()
                     job_result = _commerce.create_job(description_hash=desc_hash)
@@ -161,7 +146,7 @@ def _process_onchain_background(task_id: str, response):
                         log_event(
                             event_type="job_created",
                             agent_role="system",
-                            agent_id="commerce",
+                            agent_id=validator_id,
                             details={
                                 "task_id": task_id,
                                 "job_id": job_result["job_id"],
@@ -173,7 +158,7 @@ def _process_onchain_background(task_id: str, response):
             except Exception as e:
                 logger.warning(f"Background on-chain processing failed: {e}")
 
-    if _commerce.enabled or _scorer.enabled:
+    if _commerce.enabled:
         threading.Thread(target=_do, daemon=True).start()
 
 
@@ -196,7 +181,7 @@ def get_mode():
                 return "network"
         except Exception:
             pass
-    return "standalone"
+    return "no_miners"
 
 
 # ── Request/Response Models ──────────────────────────────────────
@@ -266,13 +251,15 @@ class NetworkStatus(BaseModel):
 @app.post("/verify")
 async def verify_code(request: VerifyRequest, raw_request: Request = None):
     """
-    Submit code for verification by the agent network.
+    Submit a task for verification by the agent network.
 
-    When x402 is enabled (X402_ENABLED=true), a valid payment is required.
+    Payment is required via API key, on-chain job_id, or x402 header.
     In connected mode, the task is routed through the validator to
-    competing miner agents. In standalone mode, analysis runs locally.
+    competing miner agents. In network mode, the task is broadcast
+    directly to registered miners. Returns 503 if no miners are available.
     """
-    # Payment gate: API key → x402 → job_id → 402
+    # Payment gate: API key → job_id → x402 → reject
+    authenticated = False
     if raw_request:
         # Path 1: API key (registered clients + internal services)
         request_key = (
@@ -284,7 +271,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             if key_info and key_info.get("valid"):
                 if key_info.get("credits_remaining", 0) > 0:
                     _keys.use_credit(request_key, "/verify")
-                    # Proceed with verification
+                    authenticated = True
                 else:
                     return JSONResponse(status_code=402, content={
                         "error": "Credits exhausted",
@@ -299,12 +286,25 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             valid, msg = verify_onchain_job(request.job_id, _commerce)
             if not valid:
                 return JSONResponse(status_code=402, content={"error": "Payment Required", "message": msg})
+            authenticated = True
 
         # Path 3: x402 payment header
         else:
             payment_response = await check_x402_payment(raw_request)
             if payment_response is not None:
                 return payment_response
+            else:
+                # x402 returned None — either payment valid or x402 disabled
+                # If x402 is disabled and no other auth, reject
+                from agent_market.x402 import _is_enabled as _x402_enabled
+                if _x402_enabled():
+                    authenticated = True  # x402 payment was validated
+                else:
+                    return JSONResponse(status_code=401, content={
+                        "error": "Authentication required",
+                        "message": "Include an API key (X-API-Key header), a funded job_id, or enable x402 payment.",
+                        "register": "POST /register to get an API key with 20 free credits",
+                    })
 
     if _validator is not None:
         task_id = _validator.add_task(
@@ -321,20 +321,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             await asyncio.sleep(1)
 
         if result is None:
-            from agent_market.miner.analyzer import analyze_code
-            local_result = analyze_code(
-                code=request.code,
-                intent=request.intent,
-                language=request.language,
-            )
-            response = VerifyResponse(
-                task_id=task_id,
-                passed=local_result["passed"],
-                confidence=local_result["confidence"],
-                issues=local_result["issues"],
-                suggestions=local_result["suggestions"],
-                mode="standalone_fallback",
-            )
+            return JSONResponse(status_code=503, content={
+                "error": "No miners available",
+                "task_id": task_id,
+                "message": "Task was queued but no miners responded in time. Try again or register as a miner at POST /register-miner.",
+            })
         else:
             response = VerifyResponse(
                 task_id=task_id,
@@ -424,35 +415,17 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 mode = "network"
                 logger.info(f"Best response from {best_agent} (confidence: {best_result.get('confidence')})")
 
-        # Fallback to local analysis if no miners responded
+        # No miners available — return error instead of doing the work ourselves
         if best_result is None:
-            use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-            if request.task_type == "image-analysis":
-                from agent_market.miner.image_analyzer import analyze_image
-                best_result = analyze_image(
-                    image_data=request.image or request.code,
-                    intent=request.intent,
-                    use_llm=use_llm,
-                )
-            elif request.task_type == "text-review":
-                from agent_market.miner.text_analyzer import analyze_text
-                best_result = analyze_text(
-                    text=request.text or request.code,
-                    intent=request.intent,
-                    use_llm=use_llm,
-                )
-            else:
-                from agent_market.miner.analyzer import analyze_code
-                best_result = analyze_code(
-                    code=request.code,
-                    intent=request.intent,
-                    language=request.language,
-                    use_llm=use_llm,
-                )
+            return JSONResponse(status_code=503, content={
+                "error": "No miners available",
+                "task_id": task_id,
+                "message": "No miners responded. Register as a miner at POST /register-miner.",
+            })
 
         response = VerifyResponse(
             task_id=task_id,
-            passed=best_result.get("passed", best_result.get("passed", True)),
+            passed=best_result.get("passed", True),
             confidence=best_result.get("confidence", 0),
             issues=best_result.get("issues", []),
             suggestions=best_result.get("suggestions", []),
@@ -532,7 +505,8 @@ async def get_leaderboard():
             from collections import Counter
             counts = Counter(r["agent_id"] for r in rows)
             for agent_id, count in counts.most_common(20):
-                if agent_id == "local":
+                # Filter out placeholder/system agent IDs
+                if agent_id in ("local", "api-submitter", "marketplace-submitter", "internal-service", "unknown"):
                     continue
                 # Get pass rate
                 agent_rows = [r for r in rows if r["agent_id"] == agent_id]
@@ -731,7 +705,7 @@ class CreateJobRequest(BaseModel):
     text: str = Field(default="", description="Text to review (for text-review tasks)")
     image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
     intent: str = Field(description="What the code/text/image should do or convey")
-    budget_avnc: float = Field(default=5.0, description="Budget in AVNC tokens")
+    budget_avnc: float = Field(default=5.0, ge=0.1, le=10.0, description="Budget in AVNC tokens (0.1–10.0)")
 
 
 @app.post("/jobs/create")
@@ -741,7 +715,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
 
     1. Job created on-chain via AgenticCommerceV2 (permanent, source of truth)
     2. Metadata stored in Supabase (title, code, intent — persistent across restarts)
-    3. Miners browse, claim on-chain via submit(), and get paid automatically
+    3. Miners browse, claim via POST /jobs/{id}/submit, and get paid 85% of budget
     """
     # Check API key
     request_key = None
@@ -909,9 +883,9 @@ async def claim_marketplace_job(task_id: str):
 @app.post("/jobs/{task_id}/submit")
 async def submit_marketplace_job(task_id: str, raw_request: Request = None):
     """
-    Submit result for a marketplace job. The validator runs the analysis
-    (or accepts a pre-computed result) and records the score on-chain.
-    Credits the miner's earnings balance in Supabase.
+    Submit result for a marketplace job. The miner provides their analysis
+    (passed, issues, confidence). Credits the miner's earnings balance in Supabase.
+    Each job can only be completed once.
     """
     from agent_market.keys import _supabase_get, _supabase_patch
 
@@ -934,29 +908,56 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
 
     job = jobs[0]
 
+    # Prevent double-submit — check if already completed
+    existing = _supabase_get(f"completed_jobs?task_id=eq.{task_id}&select=task_id") or []
+    if existing:
+        return JSONResponse(status_code=400, content={
+            "error": "Job already completed",
+            "task_id": task_id,
+            "message": "This job has already been submitted. Each job can only be completed once.",
+        })
+
+    # Also check on-chain status if available
+    on_chain_id = job.get("on_chain_job_id")
+    if on_chain_id is not None and _commerce.enabled:
+        try:
+            job_data = _commerce.contract.functions.getJob(on_chain_id).call()
+            states = ["Open", "Funded", "Submitted", "Completed", "Rejected", "Expired"]
+            state = states[job_data[6]].lower() if job_data[6] < len(states) else "unknown"
+            if state in ("completed", "submitted", "rejected"):
+                return JSONResponse(status_code=400, content={
+                    "error": f"Job is already {state} on-chain",
+                    "task_id": task_id,
+                })
+        except Exception:
+            pass
+
     try:
         body = await raw_request.json() if raw_request else {}
     except Exception:
         body = {}
 
-    # Run analysis if no result provided
+    # Accept miner's submitted result — check both nested "result" and top-level fields
     result = body.get("result")
+    if not result and any(k in body for k in ("passed", "issues", "confidence")):
+        result = {
+            "passed": body.get("passed"),
+            "confidence": body.get("confidence", 0),
+            "issues": body.get("issues", []),
+            "suggestions": body.get("suggestions", []),
+        }
+
+    # Miner must submit their own work — validator never does analysis
     if not result:
-        use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-        if job["task_type"] == "image-analysis":
-            from agent_market.miner.image_analyzer import analyze_image
-            result = analyze_image(image_data=job.get("image", "") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
-        elif job["task_type"] == "text-review":
-            from agent_market.miner.text_analyzer import analyze_text
-            result = analyze_text(text=job.get("text_content") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
-        else:
-            from agent_market.miner.analyzer import analyze_code
-            result = analyze_code(code=job.get("code", ""), intent=job["intent"], use_llm=use_llm)
+        return JSONResponse(status_code=400, content={
+            "error": "No analysis provided",
+            "message": "Submit your analysis as {passed, issues, confidence} or nested under 'result'. The validator does not perform analysis.",
+        })
 
     log_event(
         event_type="marketplace_job_completed",
         agent_role="miner",
-        agent_id="api-submitter",
+        agent_id=submitter_name or body.get("agent_id") or "api-submitter",
         details={
             "task_id": task_id,
             "on_chain_job_id": job.get("on_chain_job_id"),
@@ -976,7 +977,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
             log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
             log_data = _jlog.dumps({
                 "task_id": task_id,
-                "agent_id": submitter_name or "marketplace-submitter",
+                "agent_id": submitter_name or body.get("agent_id") or "marketplace-submitter",
                 "task_type": job.get("task_type", "code-verification"),
                 "passed": result.get("passed", True),
                 "confidence": result.get("confidence", 0),
