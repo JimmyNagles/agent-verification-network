@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useTheme } from "../ThemeProvider";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
 export default function BecomeWorker() {
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") return (localStorage.getItem("theme") as "dark" | "light") || "dark";
-    return "dark";
-  });
-  const toggleTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.setAttribute("data-theme", next); localStorage.setItem("theme", next); };
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <main className="min-h-screen">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "./ThemeProvider";
 
 const API_BASE =
   "https://agent-verification-network-production.up.railway.app";
@@ -64,16 +65,12 @@ interface AgentsData {
 }
 
 export default function Home() {
+  const { theme, toggleTheme } = useTheme();
   const [health, setHealth] = useState<HealthData | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [agents, setAgents] = useState<AgentsData | null>(null);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("theme") as "dark" | "light") || "dark";
-    }
-    return "dark";
-  });
+
 
   const fetchData = useCallback(async () => {
     try {
@@ -96,12 +93,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("theme", next);
-  };
 
   return (
     <main className="min-h-screen">

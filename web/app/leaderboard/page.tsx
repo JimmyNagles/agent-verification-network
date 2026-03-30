@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "../ThemeProvider";
 
 const API_BASE =
   "https://agent-verification-network-production.up.railway.app";
@@ -33,14 +34,10 @@ interface AgentWithStats extends AgentInfo {
 }
 
 export default function Leaderboard() {
+  const { theme, toggleTheme } = useTheme();
   const [agents, setAgents] = useState<AgentWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "workers" | "managers">("all");
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") return (localStorage.getItem("theme") as "dark" | "light") || "dark";
-    return "dark";
-  });
-  const toggleTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.setAttribute("data-theme", next); localStorage.setItem("theme", next); };
 
   const fetchData = useCallback(async () => {
     try {

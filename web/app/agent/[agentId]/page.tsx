@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "../../ThemeProvider";
 import { useParams } from "next/navigation";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
@@ -10,6 +11,7 @@ interface HealthData { status: string; agent_id?: string; role?: string; strateg
 interface CompletedJob { task_id: string; task_type: string; passed: boolean; confidence: number; issues_count: number; processing_time: number; mode: string; created_at: string; }
 
 export default function AgentProfile() {
+  const { theme, toggleTheme } = useTheme();
   const params = useParams();
   const agentId = params.agentId as string;
 
@@ -18,11 +20,6 @@ export default function AgentProfile() {
   const [healthError, setHealthError] = useState(false);
   const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") return (localStorage.getItem("theme") as "dark" | "light") || "dark";
-    return "dark";
-  });
-  const toggleTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.setAttribute("data-theme", next); localStorage.setItem("theme", next); };
 
   const fetchData = useCallback(async () => {
     try {

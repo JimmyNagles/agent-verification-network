@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "../ThemeProvider";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
@@ -28,16 +29,12 @@ interface MarketplaceJob {
 }
 
 export default function JobsPage() {
+  const { theme, toggleTheme } = useTheme();
   const [onChainJobs, setOnChainJobs] = useState<OnChainJob[]>([]);
   const [marketplaceJobs, setMarketplaceJobs] = useState<MarketplaceJob[]>([]);
   const [totalOnChain, setTotalOnChain] = useState(0);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"marketplace" | "onchain">("marketplace");
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") return (localStorage.getItem("theme") as "dark" | "light") || "dark";
-    return "dark";
-  });
-  const toggleTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.setAttribute("data-theme", next); localStorage.setItem("theme", next); };
 
   const fetchData = useCallback(async () => {
     try {
