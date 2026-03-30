@@ -76,7 +76,7 @@ _onchain_lock = threading.Lock()
 # API key manager
 _keys = KeyManager()
 
-# In-memory task storage
+# In-memory job storage
 results = {}
 
 # In-memory registries for open network registration
@@ -251,11 +251,11 @@ class NetworkStatus(BaseModel):
 @app.post("/verify")
 async def verify_code(request: VerifyRequest, raw_request: Request = None):
     """
-    Submit a task for verification by the agent network.
+    Submit a job for verification by the agent network.
 
     Payment is required via API key, on-chain job_id, or x402 header.
-    In connected mode, the task is routed through the manager to
-    competing worker agents. In network mode, the task is broadcast
+    In connected mode, the job is routed through the manager to
+    competing worker agents. In network mode, the job is broadcast
     directly to registered workers. Returns 503 if no workers are available.
     """
     # Payment gate: API key → job_id → x402 → reject
@@ -475,7 +475,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
 
 @app.get("/status/{task_id}", response_model=TaskStatus)
 async def get_task_status(task_id: str):
-    """Check the status of a submitted verification task."""
+    """Check the status of a submitted verification job."""
     if task_id in results:
         return TaskStatus(
             task_id=task_id,
@@ -540,7 +540,7 @@ async def register_worker(request: RegisterWorkerRequest):
 
     The worker's endpoint must expose a /health route that returns HTTP 200.
     If a manager is attached, the worker is also registered with it for
-    task distribution. Otherwise the worker is tracked in standalone mode.
+    job distribution. Otherwise the worker is tracked in standalone mode.
     """
     # Validate that the worker endpoint is reachable
     health_url = request.endpoint.rstrip("/") + "/health"
@@ -698,7 +698,7 @@ async def get_jobs():
 
 
 class CreateJobRequest(BaseModel):
-    title: str = Field(description="Short description of the task")
+    title: str = Field(description="Short description of the job")
     description: str = Field(default="", description="Detailed description of what needs to be done")
     task_type: str = Field(default="code-verification", description="Task type: code-verification | text-review | image-analysis")
     code: str = Field(default="", description="Code to verify (for code-verification tasks)")
@@ -711,7 +711,7 @@ class CreateJobRequest(BaseModel):
 @app.post("/jobs/create")
 async def create_marketplace_job(request: CreateJobRequest, raw_request: Request = None):
     """
-    Create a task on the marketplace.
+    Create a job on the marketplace.
 
     1. Job created on-chain via AgenticCommerceV2 (permanent, source of truth)
     2. Metadata stored in Supabase (title, code, intent — persistent across restarts)
@@ -1367,7 +1367,7 @@ async def protocol_info():
     contract_files = {
         "AgenticCommerceV2": ("commerce_v2_deployed.json", "Job marketplace (ERC-8183) — escrow + 85/15 fee split. This is the active version."),
         "WorkerRegistry": ("registry_deployed.json", "On-chain agent discovery — workers and managers register permanently."),
-        "AgentScorer": ("deployed.json", "On-chain worker quality scores per task."),
+        "AgentScorer": ("deployed.json", "On-chain worker quality scores per job."),
         "ProtocolCredits": ("token_deployed.json", "AVNC token (ERC-20) — protocol credits with faucet. Agents use AVNC to pay for tasks."),
         "AgenticCommerce": ("commerce_deployed.json", "Job marketplace V1 (legacy, no fee split)."),
     }
@@ -1576,7 +1576,7 @@ async def skill_file():
     # Fallback: return a minimal skill file
     return PlainTextResponse(
         "# Agent Labor Market\n\n"
-        "A general-purpose task economy for AI agents on Base.\n\n"
+        "A general-purpose job economy for AI agents on Base.\n\n"
         "## Three Task Types\n"
         "- `code-verification` — submit code + intent, get bug report\n"
         "- `text-review` — submit text + intent, get quality report\n"
@@ -1599,7 +1599,7 @@ async def skill_file():
 async def root():
     return {
         "name": "Agent Labor Market",
-        "description": "A general-purpose agent task economy on Base. Code, image, and text verification live.",
+        "description": "A general-purpose agent job economy on Base. Code, image, and text verification live.",
         "mode": get_mode(),
         "skill_file": "/skill.md",
         "endpoints": {
