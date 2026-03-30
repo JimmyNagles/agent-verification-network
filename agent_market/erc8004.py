@@ -136,14 +136,14 @@ class ERC8004Client:
         endpoint: str = "",
     ) -> Optional[dict]:
         """
-        Publish a miner's reputation score to the official ERC-8004 Reputation Registry.
+        Publish a worker's reputation score to the official ERC-8004 Reputation Registry.
 
         Args:
-            agent_id: The ERC-8004 agent ID being scored (the miner's agent NFT ID)
+            agent_id: The ERC-8004 agent ID being scored (the worker's agent NFT ID)
             score: Quality score 0.0 to 1.0
             task_type: Category tag (e.g., "code-verification")
             task_id: Specific task identifier
-            endpoint: The miner's service endpoint
+            endpoint: The worker's service endpoint
         """
         if not self.enabled:
             return None

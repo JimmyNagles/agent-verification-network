@@ -1,8 +1,8 @@
 """
-Image Honeypot Generator — Creates synthetic images with known issues for testing miners.
+Image Spot Check Generator — Creates synthetic images with known issues for testing workers.
 
-Validators use this to generate images with KNOWN problems, then test whether
-miners correctly identify them. This is the ground truth for scoring image analysis.
+Managers use this to generate images with KNOWN problems, then test whether
+workers correctly identify them. This is the ground truth for scoring image analysis.
 
 All images are generated procedurally using only stdlib (struct + zlib).
 No Pillow or external image libraries required.
@@ -15,15 +15,15 @@ import zlib
 from typing import Tuple, List, Dict
 
 
-class ImageHoneypotGenerator:
-    """Generate images with known issues for miner testing."""
+class ImageSpotCheckGenerator:
+    """Generate images with known issues for worker testing."""
 
     def __init__(self):
         self.templates = self._build_templates()
 
     def generate(self) -> Tuple[str, str, List[Dict]]:
         """
-        Generate an image honeypot: base64 image + intent + known bugs.
+        Generate an image spot check: base64 image + intent + known bugs.
 
         Returns:
             (image_b64, intent, known_bugs)
@@ -35,7 +35,7 @@ class ImageHoneypotGenerator:
         return variant["image_b64"], template["intent"], variant["bugs"]
 
     def _build_templates(self) -> list:
-        """Build the bank of image honeypot templates."""
+        """Build the bank of image spot check templates."""
         return [
             # ── Template 1: Blank/solid-color image ──────────────────
             {
@@ -156,7 +156,7 @@ class ImageHoneypotGenerator:
                 ],
             },
             # ── Template 6: Clean image (no bugs) ────────────────────
-            # Tests false positive rate — miners should NOT flag these
+            # Tests false positive rate — workers should NOT flag these
             {
                 "intent": "A simple test image for verification purposes",
                 "variants": [
@@ -244,3 +244,6 @@ def _make_truncated_jpeg() -> str:
     jpeg_bytes = soi + app0 + app0_length + app0_data + fake_data
     # Deliberately NOT adding \xff\xd9 (EOI)
     return base64.b64encode(jpeg_bytes).decode()
+
+# Backward-compatible alias
+ImageHoneypotGenerator = ImageSpotCheckGenerator

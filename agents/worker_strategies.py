@@ -1,9 +1,9 @@
 """
-Miner Strategies — Different analysis approaches for competing miners.
+Worker Strategies — Different analysis approaches for competing workers.
 
 Each strategy wraps the base analyze_code() function but tweaks which
 passes run, how severity is weighted, and what extra checks are performed.
-This makes miners produce genuinely different results for the same code,
+This makes workers produce genuinely different results for the same job,
 so the leaderboard reflects real competition.
 
 Strategies:
@@ -17,7 +17,7 @@ import re
 import logging
 from typing import Dict, List
 
-from agent_market.miner.analyzer import (
+from agent_market.worker.analyzer import (
     analyze_code,
     analyze_syntax,
     analyze_patterns,

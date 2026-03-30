@@ -3,18 +3,18 @@ Tests for the core verification pipeline.
 
 Validates that:
 1. The analyzer catches known bug types
-2. The honeypot generator produces valid test cases
-3. The scorer grades miner responses correctly
+2. The spot_check generator produces valid test cases
+3. The scorer grades worker responses correctly
 4. The full pipeline works end-to-end
 """
 
 import asyncio
 import pytest
-from agent_market.miner.analyzer import analyze_code
-from agent_market.validator.honeypot import HoneypotGenerator
-from agent_market.validator.scorer import MinerScorer
-from agent_market.protocol import CodeVerificationRequest
-from agent_market.miner.forward import forward
+from agent_market.worker.analyzer import analyze_code
+from agent_market.manager.spot_check import SpotCheckGenerator
+from agent_market.manager.scorer import WorkerScorer
+from agent_market.protocol import JobRequest
+from agent_market.worker.forward import forward
 
 
 # ── Analyzer Tests ───────────────────────────────────────────────
@@ -62,13 +62,13 @@ class TestAnalyzer:
         assert len(security) > 0
 
 
-# ── Honeypot Tests ───────────────────────────────────────────────
+# ── Spot Check Tests ───────────────────────────────────────────────
 
 class TestHoneypot:
     def setup_method(self):
-        self.gen = HoneypotGenerator()
+        self.gen = SpotCheckGenerator()
 
-    def test_generates_valid_honeypot(self):
+    def test_generates_valid_spot_check(self):
         code, intent, bugs = self.gen.generate()
         assert isinstance(code, str) and len(code) > 0
         assert isinstance(intent, str) and len(intent) > 0
@@ -81,8 +81,8 @@ class TestHoneypot:
             seen.add(intent)
         assert len(seen) >= 3  # At least 3 different templates
 
-    def test_clean_honeypots_exist(self):
-        """Some honeypots should have no bugs (test false positive rate)."""
+    def test_clean_spot_checks_exist(self):
+        """Some spot_checks should have no bugs (test false positive rate)."""
         found_clean = False
         for _ in range(50):
             _, _, bugs = self.gen.generate()
@@ -96,7 +96,7 @@ class TestHoneypot:
 
 class TestScorer:
     def setup_method(self):
-        self.scorer = MinerScorer()
+        self.scorer = WorkerScorer()
 
     def test_perfect_detection_scores_high(self):
         known_bugs = [{"type": "logic_error", "severity": "critical", "line": 2, "description": "wrong operator subtraction instead of addition"}]
@@ -106,7 +106,7 @@ class TestScorer:
             response_passed=False,
             response_confidence=0.9,
             response_time=1.0,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=known_bugs,
         )
         assert score > 0.5
@@ -118,19 +118,19 @@ class TestScorer:
             response_passed=True,
             response_confidence=0.9,
             response_time=1.0,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=known_bugs,
         )
         assert score < 0.4
 
     def test_false_positives_penalized(self):
-        # Clean code honeypot — should find nothing
+        # Clean code spot_check — should find nothing
         score_clean = self.scorer.score(
             response_issues=[],
             response_passed=True,
             response_confidence=0.9,
             response_time=1.0,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=[],
         )
         score_noisy = self.scorer.score(
@@ -138,7 +138,7 @@ class TestScorer:
             response_passed=False,
             response_confidence=0.9,
             response_time=1.0,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=[],
         )
         assert score_clean > score_noisy
@@ -149,8 +149,8 @@ class TestScorer:
 class TestEndToEnd:
     def test_full_pipeline_buggy_code(self):
         """Submit buggy code → analyzer finds the bug → scorer gives high score."""
-        gen = HoneypotGenerator()
-        scorer = MinerScorer()
+        gen = SpotCheckGenerator()
+        scorer = WorkerScorer()
 
         code, intent, known_bugs = gen.generate()
 
@@ -163,7 +163,7 @@ class TestEndToEnd:
             response_passed=result["passed"],
             response_confidence=result["confidence"],
             response_time=0.5,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=known_bugs,
         )
 
@@ -173,8 +173,8 @@ class TestEndToEnd:
 
     @pytest.mark.asyncio
     async def test_forward_returns_response(self):
-        """Miner forward function returns a valid response."""
-        request = CodeVerificationRequest(
+        """Worker forward function returns a valid response."""
+        request = JobRequest(
             code="def add(a, b):\n    return a - b",
             intent="Add two numbers",
             language="python",

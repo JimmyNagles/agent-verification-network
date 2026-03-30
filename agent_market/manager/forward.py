@@ -1,8 +1,8 @@
 """
-Validator Forward — The validator agent's main loop.
+Manager Forward — The manager agent's main loop.
 
-Generates honeypot tasks, sends them to miner agents, scores responses,
-and records scores on-chain. This replaces the Bittensor validator loop
+Generates spot check jobs, sends them to worker agents, scores responses,
+and records ratings on-chain. This replaces the Bittensor manager loop
 with a chain-agnostic design that can write to Base via standard web3.
 """
 
@@ -13,41 +13,41 @@ import time
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-from agent_market.protocol import CodeVerificationRequest, CodeVerificationResponse
-from agent_market.validator.honeypot import HoneypotGenerator
-from agent_market.validator.image_honeypot import ImageHoneypotGenerator
-from agent_market.validator.scorer import MinerScorer
+from agent_market.protocol import JobRequest, JobResponse
+from agent_market.manager.spot_check import SpotCheckGenerator
+from agent_market.manager.image_spot_check import ImageSpotCheckGenerator
+from agent_market.manager.scorer import WorkerScorer
 
 logger = logging.getLogger(__name__)
 
 
-class ValidatorForward:
+class ManagerForward:
     """
-    Validator agent that:
-    1. Generates honeypot code with known bugs
-    2. Sends verification tasks to registered miner agents
-    3. Scores miner responses against ground truth
-    4. Records scores (in-memory for now, on-chain when connected)
+    Manager agent that:
+    1. Generates spot check jobs with known bugs
+    2. Sends jobs to registered worker agents
+    3. Scores worker responses against ground truth
+    4. Records ratings (in-memory for now, on-chain when connected)
     """
 
     def __init__(self):
-        self.honeypot_gen = HoneypotGenerator()
-        self.image_honeypot_gen = ImageHoneypotGenerator()
-        self.scorer = MinerScorer()
+        self.spot_check_gen = SpotCheckGenerator()
+        self.image_spot_check_gen = ImageSpotCheckGenerator()
+        self.scorer = WorkerScorer()
         self.scores: Dict[str, float] = {}  # agent_id -> running score
         self.task_queue: List[dict] = []
         self.results: Dict[str, dict] = {}  # task_id -> result
-        self.miner_agents: List[dict] = []  # registered miner endpoints
+        self.worker_agents: List[dict] = []  # registered worker endpoints
         self.round_count = 0
 
-    def register_miner(self, agent_id: str, endpoint: str):
-        """Register a miner agent to receive tasks."""
-        self.miner_agents.append({
+    def register_worker(self, agent_id: str, endpoint: str):
+        """Register a worker agent to receive jobs."""
+        self.worker_agents.append({
             "agent_id": agent_id,
             "endpoint": endpoint,
         })
         self.scores[agent_id] = 0.0
-        logger.info(f"Registered miner: {agent_id} at {endpoint}")
+        logger.info(f"Registered worker: {agent_id} at {endpoint}")
 
     def add_task(self, code: str, intent: str, language: str = "python") -> str:
         """Add an external task to the queue. Returns task_id."""
@@ -57,7 +57,7 @@ class ValidatorForward:
             "code": code,
             "intent": intent,
             "language": language,
-            "is_honeypot": False,
+            "is_spot_check": False,
             "known_bugs": None,
         })
         return task_id
@@ -69,21 +69,21 @@ class ValidatorForward:
     async def run_round(self):
         """
         Run one validation round:
-        1. Pick a task (honeypot or real)
-        2. Send to all miners
+        1. Pick a task (spot check or real)
+        2. Send to all workers
         3. Score responses
         4. Update scores
         """
         self.round_count += 1
         logger.info(f"=== Validation round {self.round_count} ===")
 
-        # Decide: honeypot or real task
+        # Decide: spot check or real task
         if self.task_queue and random.random() > 0.3:
             task = self.task_queue.pop(0)
         else:
-            # Generate honeypot — 85% code, 15% image
+            # Generate spot check — 85% code, 15% image
             if random.random() < 0.15:
-                image_b64, intent, known_bugs = self.image_honeypot_gen.generate()
+                image_b64, intent, known_bugs = self.image_spot_check_gen.generate()
                 task = {
                     "task_id": str(uuid4()),
                     "code": "",
@@ -91,22 +91,22 @@ class ValidatorForward:
                     "intent": intent,
                     "language": "python",
                     "task_type": "image-analysis",
-                    "is_honeypot": True,
+                    "is_spot_check": True,
                     "known_bugs": known_bugs,
                 }
             else:
-                code, intent, known_bugs = self.honeypot_gen.generate()
+                code, intent, known_bugs = self.spot_check_gen.generate()
                 task = {
                     "task_id": str(uuid4()),
                     "code": code,
                     "intent": intent,
                     "language": "python",
                     "task_type": "code-verification",
-                    "is_honeypot": True,
+                    "is_spot_check": True,
                     "known_bugs": known_bugs,
                 }
 
-        request = CodeVerificationRequest(
+        request = JobRequest(
             code=task.get("code", ""),
             image=task.get("image", ""),
             intent=task["intent"],
@@ -115,13 +115,30 @@ class ValidatorForward:
             task_type=task.get("task_type", "code-verification"),
         )
 
-        # Collect responses from all miners
-        responses = await self._query_miners(request)
+        # Collect ALL responses from workers first (needed for consensus)
+        responses = await self._query_workers(request)
 
-        # Score each response
+        if not responses:
+            return {
+                "round": self.round_count,
+                "task_id": task["task_id"],
+                "is_spot_check": task["is_spot_check"],
+                "responses": 0,
+                "best_agent": None,
+                "best_score": None,
+                "scores": {},
+                "gate_results": {},
+            }
+
+        # Convert responses to list for consensus scoring
+        all_response_list = list(responses.values())
+
+        # Score each response WITH consensus (all_responses passed in)
         best_score = -1
         best_response = None
         best_agent = None
+        round_scores = {}
+        gate_results = {}
 
         for agent_id, response in responses.items():
             score = self.scorer.score(
@@ -129,15 +146,25 @@ class ValidatorForward:
                 response_passed=response.passed,
                 response_confidence=response.confidence,
                 response_time=response.processing_time,
-                is_honeypot=task["is_honeypot"],
+                is_spot_check=task["is_spot_check"],
                 known_bugs=task["known_bugs"],
+                all_responses=all_response_list,
             )
+
+            # Quality gate check
+            passed_gate = self.scorer.passes_gate(score)
+            gate_results[agent_id] = passed_gate
 
             # Exponential moving average
             old_score = self.scores.get(agent_id, 0.0)
             self.scores[agent_id] = 0.9 * old_score + 0.1 * score
+            round_scores[agent_id] = score
 
-            logger.info(f"  {agent_id}: score={score:.3f} (running={self.scores[agent_id]:.3f})")
+            logger.info(
+                f"  {agent_id}: score={score:.3f} "
+                f"(running={self.scores[agent_id]:.3f}) "
+                f"gate={'PASS' if passed_gate else 'FAIL'}"
+            )
 
             if score > best_score:
                 best_score = score
@@ -145,7 +172,7 @@ class ValidatorForward:
                 best_agent = agent_id
 
         # Store result for real tasks
-        if not task["is_honeypot"] and best_response:
+        if not task["is_spot_check"] and best_response:
             self.results[task["task_id"]] = {
                 "passed": best_response.passed,
                 "confidence": best_response.confidence,
@@ -153,36 +180,40 @@ class ValidatorForward:
                 "suggestions": best_response.suggestions,
                 "agent_id": best_agent,
                 "score": best_score,
+                "gate_passed": gate_results.get(best_agent, False),
+                "all_scores": round_scores,
+                "all_gate_results": gate_results,
             }
 
         return {
             "round": self.round_count,
             "task_id": task["task_id"],
-            "is_honeypot": task["is_honeypot"],
+            "is_spot_check": task["is_spot_check"],
             "responses": len(responses),
             "best_agent": best_agent,
             "best_score": best_score,
+            "scores": round_scores,
+            "gate_results": gate_results,
         }
 
-    async def _query_miners(self, request: CodeVerificationRequest) -> Dict[str, CodeVerificationResponse]:
+    async def _query_workers(self, request: JobRequest) -> Dict[str, JobResponse]:
         """
-        Send a verification request to all registered miners.
+        Send a job request to all registered workers.
 
-        For local/demo mode, this imports and calls the miner forward directly.
-        In production, this would make HTTP calls to miner endpoints.
+        In production, this makes HTTP calls to worker endpoints.
         """
         responses = {}
 
-        if not self.miner_agents:
-            # No miners registered — validator never does analysis itself
-            logger.warning("No miners registered — cannot process task")
+        if not self.worker_agents:
+            # No workers registered — manager never does analysis itself
+            logger.warning("No workers registered — cannot process job")
             return responses
 
-        # Production mode — HTTP calls to miner endpoints
+        # Production mode — HTTP calls to worker endpoints
         import urllib.request
         import json
 
-        for miner in self.miner_agents:
+        for worker in self.worker_agents:
             try:
                 data = json.dumps({
                     "code": request.code,
@@ -194,7 +225,7 @@ class ValidatorForward:
                 }).encode("utf-8")
 
                 req = urllib.request.Request(
-                    f"{miner['endpoint']}/verify",
+                    f"{worker['endpoint']}/verify",
                     data=data,
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -202,22 +233,22 @@ class ValidatorForward:
                 with urllib.request.urlopen(req, timeout=30) as resp:
                     result = json.loads(resp.read().decode("utf-8"))
 
-                responses[miner["agent_id"]] = CodeVerificationResponse(
+                responses[worker["agent_id"]] = JobResponse(
                     task_id=result.get("task_id", request.task_id),
                     issues=result.get("issues", []),
                     confidence=result.get("confidence", 0.0),
                     passed=result.get("passed", True),
                     suggestions=result.get("suggestions", []),
                     processing_time=result.get("processing_time", 0.0),
-                    agent_id=miner["agent_id"],
+                    agent_id=worker["agent_id"],
                 )
             except Exception as e:
-                logger.warning(f"Miner {miner['agent_id']} failed: {e}")
+                logger.warning(f"Worker {worker['agent_id']} failed: {e}")
 
         return responses
 
     async def run_loop(self, interval: int = 30, rounds: Optional[int] = None):
-        """Run the validator loop continuously or for N rounds."""
+        """Run the manager loop continuously or for N rounds."""
         count = 0
         while rounds is None or count < rounds:
             try:

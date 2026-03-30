@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Miner Agent — Standalone runner for the code verification miner.
+Worker Agent — Standalone runner for the job worker.
 
-Starts a FastAPI server that accepts verification tasks from validators,
+Starts a FastAPI server that accepts jobs from managers,
 runs the analysis pipeline, and logs all activity to agent_log.json.
 
 Usage:
-    python -m agents.miner_agent [--port 8001] [--agent-id miner-001]
-    python -m agents.miner_agent [--port 8001] [--agent-id miner-001] [--strategy ast-heavy]
+    python -m agents.worker_agent [--port 8001] [--agent-id worker-001]
+    python -m agents.worker_agent [--port 8001] [--agent-id worker-001] [--strategy ast-heavy]
 """
 
 import argparse
@@ -22,19 +22,19 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from agent_market.miner.analyzer import analyze_code
+from agent_market.worker.analyzer import analyze_code
 from agent_market.logger import log_event
-from agents.miner_strategies import run_strategy
+from agents.worker_strategies import run_strategy
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(name)s | %(message)s",
 )
-logger = logging.getLogger("miner-agent")
+logger = logging.getLogger("worker-agent")
 
 
 def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
-    app = FastAPI(title=f"Miner Agent ({agent_id})")
+    app = FastAPI(title=f"Worker Agent ({agent_id})")
     _strategy = strategy
 
     class VerifyRequest(BaseModel):
@@ -66,7 +66,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         logger.info(f"Task {task_id}: analyzing {request.task_type}")
 
         if request.task_type == "image-analysis":
-            from agent_market.miner.image_analyzer import analyze_image
+            from agent_market.worker.image_analyzer import analyze_image
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
             result = analyze_image(
                 image_data=request.image or request.code,
@@ -74,7 +74,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
                 use_llm=use_llm,
             )
         elif request.task_type == "text-review":
-            from agent_market.miner.text_analyzer import analyze_text
+            from agent_market.worker.text_analyzer import analyze_text
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
             result = analyze_text(
                 text=request.text or request.code,
@@ -95,7 +95,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
 
         log_event(
             event_type="verification_completed",
-            agent_role="miner",
+            agent_role="worker",
             agent_id=agent_id,
             details={
                 "task_id": task_id,
@@ -135,7 +135,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         return {
             "status": "healthy",
             "agent_id": agent_id,
-            "role": "miner",
+            "role": "worker",
             "strategy": _strategy,
             "task_types": task_types,
             "uptime": round(time.time() - stats["started_at"], 1),
@@ -146,7 +146,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
     # Log startup
     log_event(
         event_type="agent_started",
-        agent_role="miner",
+        agent_role="worker",
         agent_id=agent_id,
         details={
             "capabilities": ["ast_parsing", "pattern_detection", "security_analysis"],
@@ -158,7 +158,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
 
 
 def auto_register(validator_url: str, agent_id: str, my_url: str, strategy: str):
-    """Auto-register with the validator after startup."""
+    """Auto-register with the manager after startup."""
     import urllib.request
     import json as _json
     import threading
@@ -174,7 +174,7 @@ def auto_register(validator_url: str, agent_id: str, my_url: str, strategy: str)
                     "strategy": strategy,
                 }).encode("utf-8")
                 req = urllib.request.Request(
-                    f"{validator_url.rstrip('/')}/register-miner",
+                    f"{validator_url.rstrip('/')}/register-worker",
                     data=data,
                     headers={
                         "Content-Type": "application/json",
@@ -184,7 +184,7 @@ def auto_register(validator_url: str, agent_id: str, my_url: str, strategy: str)
                 )
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     result = _json.loads(resp.read().decode("utf-8"))
-                    logger.info(f"Registered with validator: {result}")
+                    logger.info(f"Registered with manager: {result}")
                     registered = True
             except Exception as e:
                 logger.warning(f"Auto-registration failed: {e} — retrying in 30s")
@@ -195,9 +195,9 @@ def auto_register(validator_url: str, agent_id: str, my_url: str, strategy: str)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run a miner agent")
+    parser = argparse.ArgumentParser(description="Run a worker agent")
     parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
-    parser.add_argument("--agent-id", default=f"miner-{uuid4().hex[:8]}", help="Agent identifier")
+    parser.add_argument("--agent-id", default=f"worker-{uuid4().hex[:8]}", help="Agent identifier")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument(
         "--strategy",
@@ -208,16 +208,16 @@ def main():
     args = parser.parse_args()
 
     # Check for auto-registration env vars
-    validator_url = os.environ.get("VALIDATOR_URL", "")
-    my_url = os.environ.get("MINER_PUBLIC_URL", "")
+    validator_url = os.environ.get("MANAGER_URL", os.environ.get("VALIDATOR_URL", ""))
+    my_url = os.environ.get("WORKER_PUBLIC_URL", os.environ.get("MINER_PUBLIC_URL", ""))
 
-    logger.info(f"Starting miner agent: {args.agent_id} on port {args.port} (strategy={args.strategy})")
+    logger.info(f"Starting worker agent: {args.agent_id} on port {args.port} (strategy={args.strategy})")
 
     app = create_app(args.agent_id, strategy=args.strategy)
 
-    # Auto-register with validator if configured
+    # Auto-register with manager if configured
     if validator_url and my_url:
-        logger.info(f"Will auto-register with validator at {validator_url}")
+        logger.info(f"Will auto-register with manager at {validator_url}")
         auto_register(validator_url, args.agent_id, my_url, args.strategy)
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

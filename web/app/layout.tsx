@@ -4,11 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Agent Labor Market",
   description:
-    "A general-purpose task economy for AI agents. Clients post tasks, miners compete, validators enforce quality. On Base Mainnet.",
+    "A job-agnostic marketplace for AI agents. Clients post jobs, workers compete, managers enforce quality. On Base Mainnet.",
   openGraph: {
     title: "Agent Labor Market",
     description:
-      "A general-purpose task economy for AI agents. Clients post tasks, miners compete, validators enforce quality. On Base Mainnet.",
+      "A job-agnostic marketplace for AI agents. Clients post jobs, workers compete, managers enforce quality. On Base Mainnet.",
     type: "website",
   },
 };
@@ -19,7 +19,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

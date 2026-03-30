@@ -1,7 +1,7 @@
 """
 Tests for image verification — task type #3.
 
-Tests the image analyzer, image honeypot generator, and scorer integration.
+Tests the image analyzer, image spot_check generator, and scorer integration.
 """
 
 import base64
@@ -58,7 +58,7 @@ class TestImageAnalyzer:
 
     def test_detects_invalid_base64(self):
         """Garbage string should produce a critical format issue."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         result = analyze_image("not-valid-base64!!!", "A product photo")
         assert result["passed"] is False
@@ -67,7 +67,7 @@ class TestImageAnalyzer:
 
     def test_detects_blank_image(self):
         """Solid-color PNG should be flagged as blank/uniform."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         blank_png = make_solid_png(50, 50, (0, 0, 0))
         b64 = base64.b64encode(blank_png).decode()
@@ -76,7 +76,7 @@ class TestImageAnalyzer:
 
     def test_detects_truncated_jpeg(self):
         """Truncated JPEG (no EOI) should be flagged."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         # Minimal JPEG header without EOI
         jpeg_bytes = b"\xff\xd8\xff\xe0" + b"\x00\x10" + b"JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00" + b"\x00" * 100
@@ -87,7 +87,7 @@ class TestImageAnalyzer:
 
     def test_detects_tiny_image(self):
         """1x1 PNG with detailed-content intent should flag size mismatch."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         tiny_png = make_solid_png(1, 1, (128, 128, 128))
         b64 = base64.b64encode(tiny_png).decode()
@@ -97,7 +97,7 @@ class TestImageAnalyzer:
 
     def test_detects_unrecognized_format(self):
         """Random bytes should be flagged as unrecognized format."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         garbage = base64.b64encode(b"This is not an image file").decode()
         result = analyze_image(garbage, "Professional photo")
@@ -105,7 +105,7 @@ class TestImageAnalyzer:
 
     def test_accepts_data_uri_prefix(self):
         """data:image/png;base64,... prefix should be handled correctly."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         valid_png = make_valid_png(100, 80)
         b64 = base64.b64encode(valid_png).decode()
@@ -118,7 +118,7 @@ class TestImageAnalyzer:
 
     def test_valid_image_passes(self):
         """A reasonable PNG with matching intent should pass."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         valid_png = make_valid_png(200, 150)
         b64 = base64.b64encode(valid_png).decode()
@@ -129,7 +129,7 @@ class TestImageAnalyzer:
 
     def test_intent_mismatch_highres(self):
         """Small image with high-res intent should flag mismatch."""
-        from agent_market.miner.image_analyzer import analyze_image
+        from agent_market.worker.image_analyzer import analyze_image
 
         small_png = make_solid_png(20, 20, (100, 150, 200))
         b64 = base64.b64encode(small_png).decode()
@@ -138,15 +138,15 @@ class TestImageAnalyzer:
         assert len(mismatch_issues) > 0
 
 
-# ─── Image Honeypot Tests ───────────────────────────────────────────────────
+# ─── Image SpotCheck Tests ───────────────────────────────────────────────────
 
-class TestImageHoneypot:
+class TestImageSpotCheck:
 
     def test_generates_valid_output(self):
-        """Honeypot generator should return (image_b64, intent, known_bugs) tuples."""
-        from agent_market.validator.image_honeypot import ImageHoneypotGenerator
+        """SpotCheck generator should return (image_b64, intent, known_bugs) tuples."""
+        from agent_market.manager.image_spot_check import ImageSpotCheckGenerator
 
-        gen = ImageHoneypotGenerator()
+        gen = ImageSpotCheckGenerator()
         for _ in range(20):
             image_b64, intent, known_bugs = gen.generate()
             assert isinstance(image_b64, str)
@@ -155,10 +155,10 @@ class TestImageHoneypot:
             assert len(intent) > 0
             assert isinstance(known_bugs, list)
 
-    def test_honeypot_blank_detectable(self):
-        """Blank image honeypot should be caught by the analyzer."""
-        from agent_market.miner.image_analyzer import analyze_image
-        from agent_market.validator.image_honeypot import _make_solid_png
+    def test_spot_check_blank_detectable(self):
+        """Blank image spot_check should be caught by the analyzer."""
+        from agent_market.worker.image_analyzer import analyze_image
+        from agent_market.manager.image_spot_check import _make_solid_png
 
         blank_b64 = _make_solid_png(50, 50, (0, 0, 0))
         result = analyze_image(blank_b64, "Product photograph showing the item")
@@ -166,10 +166,10 @@ class TestImageHoneypot:
         content_issues = [i for i in result["issues"] if i["type"] in ("content", "quality")]
         assert len(content_issues) > 0
 
-    def test_honeypot_clean_no_false_positives(self):
-        """Clean honeypot (no bugs) should pass without critical issues."""
-        from agent_market.miner.image_analyzer import analyze_image
-        from agent_market.validator.image_honeypot import _make_noise_png
+    def test_spot_check_clean_no_false_positives(self):
+        """Clean spot_check (no bugs) should pass without critical issues."""
+        from agent_market.worker.image_analyzer import analyze_image
+        from agent_market.manager.image_spot_check import _make_noise_png
 
         clean_b64 = _make_noise_png(100, 100)
         result = analyze_image(clean_b64, "A simple test image for verification purposes")
@@ -182,12 +182,12 @@ class TestImageHoneypot:
 class TestScorerImageIntegration:
 
     def test_scorer_works_with_image_bugs(self):
-        """Scorer should evaluate image honeypot bugs correctly."""
-        from agent_market.validator.scorer import MinerScorer
+        """Scorer should evaluate image spot_check bugs correctly."""
+        from agent_market.manager.scorer import WorkerScorer
 
-        scorer = MinerScorer()
+        scorer = WorkerScorer()
 
-        # Simulate: miner found a content issue that matches the known bug
+        # Simulate: worker found a content issue that matches the known bug
         known_bugs = [
             {"type": "content", "severity": "critical", "line": 0, "description": "Image is blank solid black no product visible"}
         ]
@@ -200,21 +200,21 @@ class TestScorerImageIntegration:
             response_passed=False,
             response_confidence=0.8,
             response_time=0.5,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=known_bugs,
         )
         assert score > 0.3  # Should get a decent score for detecting the bug
 
     def test_scorer_penalizes_missed_image_bugs(self):
         """Missing image bugs should result in low score."""
-        from agent_market.validator.scorer import MinerScorer
+        from agent_market.manager.scorer import WorkerScorer
 
-        scorer = MinerScorer()
+        scorer = WorkerScorer()
 
         known_bugs = [
             {"type": "format", "severity": "critical", "line": 0, "description": "JPEG file is truncated missing end of image marker"}
         ]
-        # Miner found nothing
+        # Worker found nothing
         found_issues = []
 
         score = scorer.score(
@@ -222,7 +222,7 @@ class TestScorerImageIntegration:
             response_passed=True,
             response_confidence=0.9,
             response_time=0.3,
-            is_honeypot=True,
+            is_spot_check=True,
             known_bugs=known_bugs,
         )
         assert score < 0.5  # Should be penalized for missing the bug

@@ -1,23 +1,23 @@
 """
-Honeypot Generator — Creates synthetic buggy code for testing miners.
+Spot Check Generator — Creates synthetic buggy code for testing workers.
 
-Validators use this to generate code with KNOWN bugs, then test whether
-miners correctly identify them. This is the ground truth for scoring.
+Managers use this to generate code with KNOWN bugs, then test whether
+workers correctly identify them. This is the ground truth for scoring.
 """
 
 import random
 from typing import Tuple, List, Dict
 
 
-class HoneypotGenerator:
-    """Generate code snippets with known injected bugs for miner testing."""
+class SpotCheckGenerator:
+    """Generate code snippets with known injected bugs for worker testing."""
 
     def __init__(self):
         self.templates = self._build_templates()
 
     def generate(self) -> Tuple[str, str, List[Dict]]:
         """
-        Generate a honeypot: buggy code + intent + known bugs.
+        Generate a spot check: buggy code + intent + known bugs.
 
         Returns:
             (buggy_code, intent, known_bugs)
@@ -29,7 +29,7 @@ class HoneypotGenerator:
         return variant["code"], template["intent"], variant["bugs"]
 
     def _build_templates(self) -> list:
-        """Build the bank of honeypot templates."""
+        """Build the bank of spot check templates."""
         return [
             # ── Template 1: Off-by-one error ──────────────────────
             {
@@ -256,7 +256,7 @@ class HoneypotGenerator:
             },
 
             # ── Template 11: Clean code (no bugs) ─────────────────
-            # Important: some honeypots should have NO bugs to test false positive rate
+            # Important: some spot checks should have NO bugs to test false positive rate
             {
                 "intent": "Return the factorial of a non-negative integer",
                 "variants": [
@@ -276,3 +276,7 @@ class HoneypotGenerator:
                 ],
             },
         ]
+
+
+# Backward-compatible alias
+HoneypotGenerator = SpotCheckGenerator

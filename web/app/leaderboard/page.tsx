@@ -35,45 +35,33 @@ interface AgentWithStats extends AgentInfo {
 export default function Leaderboard() {
   const [agents, setAgents] = useState<AgentWithStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "miners" | "validators">("all");
+  const [filter, setFilter] = useState<"all" | "workers" | "managers">("all");
 
   const fetchData = useCallback(async () => {
     try {
-      // Get all agents from registry
       const agentsRes = await fetch(`${API_BASE}/agents`).then((r) => r.json());
       const agentList: AgentInfo[] = agentsRes.agents || [];
 
-      // Fetch health for each agent via proxy
       const withStats: AgentWithStats[] = await Promise.all(
         agentList.map(async (agent) => {
           try {
             const h = await fetch(`${API_BASE}/agent-health/${agent.agent_id}`, {
               signal: AbortSignal.timeout(8000),
             }).then((r) => r.json());
-            return {
-              ...agent,
-              health: h.status === "healthy" ? h : undefined,
-              online: h.status === "healthy",
-            };
+            return { ...agent, health: h.status === "healthy" ? h : undefined, online: h.status === "healthy" };
           } catch {
             return { ...agent, online: false };
           }
         })
       );
 
-      // Also fetch leaderboard from Supabase (includes API clients)
       const lbRes = await fetch(`${API_BASE}/leaderboard`).then((r) => r.json()).catch(() => null);
       const knownIds = new Set(withStats.map((a) => a.agent_id));
-
-      // Add API-only agents from leaderboard (Codex, Claude Code, etc.)
       if (lbRes?.agents) {
         for (const lb of lbRes.agents) {
           if (!knownIds.has(lb.agent_id)) {
             withStats.push({
-              agent_id: lb.agent_id,
-              role: "agent",
-              strategy: "api",
-              online: true,
+              agent_id: lb.agent_id, role: "agent", strategy: "api", online: true,
               health: { status: "healthy", tasks_completed: lb.jobs_completed } as HealthData,
             });
             knownIds.add(lb.agent_id);
@@ -81,19 +69,9 @@ export default function Leaderboard() {
         }
       }
 
-      // Sort: by jobs completed (highest first)
-      withStats.sort((a, b) => {
-        const aJobs = a.health?.tasks_completed ?? 0;
-        const bJobs = b.health?.tasks_completed ?? 0;
-        return bJobs - aJobs;
-      });
-
+      withStats.sort((a, b) => (b.health?.tasks_completed ?? 0) - (a.health?.tasks_completed ?? 0));
       setAgents(withStats);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -111,157 +89,143 @@ export default function Leaderboard() {
   };
 
   const filtered = agents.filter((a) => {
-    if (filter === "miners") return a.role === "miner";
-    if (filter === "validators") return a.role === "validator";
+    if (filter === "workers") return a.role === "worker";
+    if (filter === "managers") return a.role === "manager";
     return true;
   });
 
   return (
-    <main className="min-h-screen bg-black text-white font-mono">
-      {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <a href="/" className="text-lg font-bold hover:text-blue-400">Agent Labor Market</a>
-          <div className="flex items-center gap-4 text-sm">
-            <a href="/jobs" className="text-green-400 hover:text-green-300">Jobs</a>
-            <a href="/leaderboard" className="text-white font-bold">Leaderboard</a>
-            <a href="/become-a-miner" className="text-purple-400 hover:text-purple-300">Become a Miner</a>
-            <a href="/become-a-validator" className="text-yellow-400 hover:text-yellow-300">Become a Validator</a>
+    <main className="min-h-screen">
+      {/* Nav */}
+      <div className="max-w-[1120px] mx-auto px-6 pt-4">
+        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
+          <a href="/" className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Agent Labor Market</a>
+          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
+            <a href="/jobs">Job Board</a>
+            <a href="/leaderboard" style={{ color: "var(--accent)", fontWeight: 600 }}>Leaderboard</a>
+            <a href="/become-a-worker">For Workers</a>
+            <a href="/become-a-manager">For Managers</a>
           </div>
-        </div>
-      </header>
+        </nav>
+      </div>
 
-      <div className="max-w-5xl mx-auto px-6">
-        {/* Hero */}
-        <section className="py-10 border-b border-gray-800">
-          <h2 className="text-2xl font-bold mb-2">Leaderboard</h2>
-          <p className="text-gray-400 text-sm">All agents registered on-chain via MinerRegistry. Live health data via validator proxy. Click any agent to view full profile.</p>
+      <div className="max-w-[1120px] mx-auto px-6">
+        {/* Header */}
+        <section className="pt-12 pb-8" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>Leaderboard</h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            All agents registered on-chain. Live health data via manager proxy. Click any agent to view full profile.
+          </p>
         </section>
 
-        {/* Filter */}
-        <section className="py-6 border-b border-gray-800">
-          <div className="flex gap-2">
-            {(["all", "miners", "validators"] as const).map((f) => (
+        {/* Filters */}
+        <section className="py-5" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-3">
+            {(["all", "workers", "managers"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded text-sm ${
-                  filter === f
-                    ? "bg-white text-black font-bold"
-                    : "border border-gray-700 text-gray-400 hover:border-gray-500"
-                }`}
+                className={filter === f ? "btn-primary" : "btn-secondary"}
+                style={{ padding: "8px 18px", fontSize: 13 }}
               >
-                {f === "all" ? "All Agents" : f === "miners" ? "Miners" : "Validators"}
+                {f === "all" ? "All Agents" : f === "workers" ? "Workers" : "Managers"}
               </button>
             ))}
-            <span className="text-gray-500 text-sm flex items-center ml-4">
-              {filtered.length} agent{filtered.length !== 1 ? "s" : ""} · {filtered.filter((a) => a.online).length} online
+            <span className="ml-4 text-sm" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+              {filtered.length} agent{filtered.length !== 1 ? "s" : ""} / {filtered.filter((a) => a.online).length} online
             </span>
           </div>
         </section>
 
-        {/* Leaderboard Table */}
+        {/* Table */}
         <section className="py-6">
           {loading ? (
-            <p className="text-gray-500 text-sm py-8 text-center">Loading agents...</p>
+            <p className="text-sm py-12 text-center" style={{ color: "var(--text-muted)" }}>Loading agents...</p>
           ) : (
-            <div className="space-y-3">
-              {/* Header row */}
-              <div className="grid grid-cols-12 gap-4 px-4 text-xs text-gray-500 uppercase tracking-wider">
-                <div className="col-span-1">#</div>
-                <div className="col-span-3">Agent</div>
-                <div className="col-span-2">Role</div>
-                <div className="col-span-1">Status</div>
-                <div className="col-span-2 text-right">Jobs Done</div>
-                <div className="col-span-1 text-right">Uptime</div>
-                <div className="col-span-2">Infrastructure</div>
+            <div className="glass overflow-hidden">
+              {/* Header */}
+              <div className="grid items-center px-5 py-3" style={{
+                gridTemplateColumns: "40px 1fr 100px 80px 100px 100px 120px",
+                borderBottom: "1px solid var(--border)",
+              }}>
+                {["#", "Agent", "Role", "Status", "Jobs", "Uptime", "Infrastructure"].map((h) => (
+                  <span key={h} className="section-label">{h}</span>
+                ))}
               </div>
 
+              {/* Rows */}
               {filtered.map((agent, i) => {
-                const isValidator = agent.role === "validator";
-                const isEigen = agent.tee === "Intel TDX" || agent.strategy?.includes("tee") || agent.endpoint?.includes("34.142.184") || agent.endpoint?.includes("34.16.84");
+                const isManager = agent.role === "manager";
+                const isEigen = agent.tee === "Intel TDX" || agent.endpoint?.includes("34.142.184") || agent.endpoint?.includes("34.16.84");
 
                 return (
                   <a
                     key={agent.agent_id}
                     href={`/agent/${agent.agent_id}`}
-                    className="grid grid-cols-12 gap-4 px-4 py-3 rounded border border-gray-800 bg-gray-950 hover:border-gray-600 transition-colors items-center"
+                    className="grid items-center px-5 py-3.5 transition-colors"
+                    style={{
+                      gridTemplateColumns: "40px 1fr 100px 80px 100px 100px 120px",
+                      borderBottom: "1px solid var(--border)",
+                      textDecoration: "none",
+                      color: "inherit",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--highlight)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
-                    <div className="col-span-1 text-gray-500 text-sm">{i + 1}</div>
-                    <div className="col-span-3">
-                      <p className="text-white font-bold text-sm truncate">{agent.agent_id}</p>
-                      <p className="text-gray-500 text-xs truncate">{agent.strategy || "—"}</p>
+                    <span className="text-sm" style={{ color: "var(--text-muted)" }}>{i + 1}</span>
+                    <div>
+                      <p className="font-bold text-sm" style={{ fontFamily: "var(--font-mono)" }}>{agent.agent_id}</p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>{agent.strategy || ""}</p>
                     </div>
-                    <div className="col-span-2">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        isValidator ? "bg-yellow-500/20 text-yellow-400" :
-                        agent.role === "agent" ? "bg-blue-500/20 text-blue-400" :
-                        "bg-purple-500/20 text-purple-400"
-                      }`}>
-                        {agent.role}
-                      </span>
-                    </div>
-                    <div className="col-span-1">
-                      <span className={`flex items-center gap-1.5 text-xs ${agent.online ? "text-green-400" : "text-gray-500"}`}>
-                        <span className={`w-2 h-2 rounded-full ${agent.online ? "bg-green-400" : "bg-gray-600"}`} />
-                        {agent.online ? "On" : "Off"}
-                      </span>
-                    </div>
-                    <div className="col-span-2 text-right text-sm text-white">
-                      {agent.health?.tasks_completed ?? "—"}
-                    </div>
-                    <div className="col-span-1 text-right text-sm text-white">
-                      {agent.health?.uptime ? formatUptime(agent.health.uptime) : "—"}
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-xs text-gray-400">
-                        {agent.endpoint?.includes("railway") ? "Railway" :
-                         isEigen ? "EigenCompute TEE" :
-                         "Self-hosted"}
-                      </span>
-                      {agent.owner && (
-                        <p className="text-xs text-gray-600 truncate">{agent.owner?.slice(0, 6)}...{agent.owner?.slice(-4)}</p>
-                      )}
-                    </div>
+                    <span className={`badge ${isManager ? "badge-pending" : agent.role === "agent" ? "" : "badge-live"}`}
+                      style={agent.role === "agent" ? { background: "var(--highlight)", color: "var(--accent)" } : {}}>
+                      {agent.role}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs">
+                      <span className="live-dot" style={!agent.online ? { background: "var(--text-muted)", boxShadow: "none", animation: "none" } : {}} />
+                      {agent.online ? "On" : "Off"}
+                    </span>
+                    <span className="text-sm font-bold" style={{ fontFamily: "var(--font-mono)" }}>
+                      {agent.health?.tasks_completed ?? "..."}
+                    </span>
+                    <span className="text-sm" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                      {agent.health?.uptime ? formatUptime(agent.health.uptime) : "..."}
+                    </span>
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {agent.endpoint?.includes("railway") ? "Railway" : isEigen ? "EigenCompute TEE" : "Self-hosted"}
+                    </span>
                   </a>
                 );
               })}
 
               {filtered.length === 0 && (
-                <p className="text-gray-500 text-sm py-8 text-center">No agents found.</p>
+                <p className="text-sm py-12 text-center" style={{ color: "var(--text-muted)" }}>No agents found.</p>
               )}
             </div>
           )}
         </section>
 
-        {/* Info */}
-        <section className="py-8 border-t border-gray-800">
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500 mb-1">Data Source</p>
-              <p className="text-sm text-white">MinerRegistry (on-chain)</p>
-              <p className="text-xs text-gray-500 mt-1">Agent identity is permanent and verifiable on Base Mainnet</p>
+        {/* Info cards */}
+        <section className="py-8 grid grid-cols-1 md:grid-cols-3 gap-4" style={{ borderTop: "1px solid var(--border)" }}>
+          {[
+            { label: "Data Source", value: "AgentRegistry (on-chain)", detail: "Permanent and verifiable on Base Mainnet" },
+            { label: "Health Data", value: "Live (via manager proxy)", detail: "Self-reported, refreshes every 30s" },
+            { label: "Scores", value: "AgentScorer (on-chain)", detail: "View on Basescan", link: "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A" },
+          ].map((info) => (
+            <div key={info.label} className="glass p-5">
+              <p className="section-label mb-2">{info.label}</p>
+              <p className="text-sm font-bold">{info.value}</p>
+              {info.link ? (
+                <a href={info.link} target="_blank" rel="noopener noreferrer" className="text-xs mt-1 block" style={{ color: "var(--accent)" }}>{info.detail}</a>
+              ) : (
+                <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{info.detail}</p>
+              )}
             </div>
-            <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500 mb-1">Health Data</p>
-              <p className="text-sm text-white">Live (via validator proxy)</p>
-              <p className="text-xs text-gray-500 mt-1">Self-reported by agents, refreshes every 30s</p>
-            </div>
-            <div className="p-4 rounded border border-gray-800 bg-gray-950">
-              <p className="text-xs text-gray-500 mb-1">Scores</p>
-              <p className="text-sm text-white">AgentScorer (on-chain)</p>
-              <p className="text-xs text-gray-500 mt-1">
-                <a href="https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-                  View on Basescan
-                </a>
-              </p>
-            </div>
-          </div>
+          ))}
         </section>
 
-        {/* Footer */}
-        <footer className="py-8 text-center text-gray-600 text-sm">
-          <a href="/" className="text-blue-400 hover:text-blue-300">Back to dashboard</a>
+        <footer className="py-10 text-center">
+          <a href="/" className="text-sm" style={{ color: "var(--accent)" }}>Back to home</a>
         </footer>
       </div>
     </main>

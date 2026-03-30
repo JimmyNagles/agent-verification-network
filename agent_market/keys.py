@@ -1,8 +1,8 @@
 """
 API Key Manager — issue and validate client API keys via Supabase.
 
-Each validator manages their own keys. This is NOT part of the protocol —
-it's a validator-level convenience layer. The protocol only knows about
+Each manager manages their own keys. This is NOT part of the protocol —
+it's a manager-level convenience layer. The protocol only knows about
 wallets, jobs, and on-chain payments. API keys are for clients who want
 to use the network without touching the blockchain.
 

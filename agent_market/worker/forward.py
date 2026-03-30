@@ -1,7 +1,7 @@
 """
-Miner Forward — The miner agent's entry point.
+Worker Forward — The worker agent's entry point.
 
-Receives a code verification request, runs the analysis pipeline,
+Receives a job request, runs the analysis pipeline,
 and returns a structured audit report.
 """
 
@@ -9,13 +9,13 @@ import logging
 import os
 import time
 
-from agent_market.protocol import CodeVerificationRequest, CodeVerificationResponse
-from agent_market.miner.analyzer import analyze_code
+from agent_market.protocol import JobRequest, JobResponse
+from agent_market.worker.analyzer import analyze_code
 
 logger = logging.getLogger(__name__)
 
 
-async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
+async def forward(request: JobRequest) -> JobResponse:
     """
     Process a code verification request.
 
@@ -36,14 +36,14 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
 
         if task_type == "image-analysis":
-            from agent_market.miner.image_analyzer import analyze_image
+            from agent_market.worker.image_analyzer import analyze_image
             result = analyze_image(
                 image_data=getattr(request, "image", "") or request.code,
                 intent=request.intent,
                 use_llm=use_llm,
             )
         elif task_type == "text-review":
-            from agent_market.miner.text_analyzer import analyze_text
+            from agent_market.worker.text_analyzer import analyze_text
             result = analyze_text(
                 text=getattr(request, "text", "") or request.code,
                 intent=request.intent,
@@ -57,7 +57,7 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
                 use_llm=use_llm,
             )
 
-        response = CodeVerificationResponse(
+        response = JobResponse(
             task_id=request.task_id,
             issues=result["issues"],
             confidence=result["confidence"],
@@ -68,7 +68,7 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
 
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
-        response = CodeVerificationResponse(
+        response = JobResponse(
             task_id=request.task_id,
             issues=[],
             confidence=0.0,
