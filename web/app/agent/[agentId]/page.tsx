@@ -18,6 +18,11 @@ export default function AgentProfile() {
   const [healthError, setHealthError] = useState(false);
   const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") return (localStorage.getItem("theme") as "dark" | "light") || "dark";
+    return "dark";
+  });
+  const toggleTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.setAttribute("data-theme", next); localStorage.setItem("theme", next); };
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,6 +84,7 @@ export default function AgentProfile() {
             <a href="/leaderboard">Leaderboard</a>
             <a href="/become-a-worker">For Workers</a>
             <a href="/become-a-manager">For Managers</a>
+            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
           </div>
         </nav>
       </div>

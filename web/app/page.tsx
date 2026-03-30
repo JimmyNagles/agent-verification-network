@@ -68,7 +68,12 @@ export default function Home() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [agents, setAgents] = useState<AgentsData | null>(null);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("theme") as "dark" | "light") || "dark";
+    }
+    return "dark";
+  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -95,6 +100,7 @@ export default function Home() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
   };
 
   return (
