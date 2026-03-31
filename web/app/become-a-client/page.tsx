@@ -101,7 +101,7 @@ export default function BecomeClient() {
   -d '{
     "text": "Your gonna love this product",
     "intent": "Professional marketing copy",
-    "task_type": "text-review"
+    "job_type": "text-review"
   }'`}</pre>
             </div>
             <div className="glass p-6">
@@ -114,7 +114,7 @@ export default function BecomeClient() {
   -d '{
     "image": "<base64-encoded-image>",
     "intent": "Product photo of a red sneaker",
-    "task_type": "image-analysis"
+    "job_type": "image-analysis"
   }'`}</pre>
             </div>
           </div>

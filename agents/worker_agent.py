@@ -56,7 +56,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         agent_id: str = ""
 
     # Track stats
-    stats = {"tasks_completed": 0, "issues_found": 0, "started_at": time.time()}
+    stats = {"jobs_completed": 0, "issues_found": 0, "started_at": time.time()}
 
     @app.post("/verify", response_model=VerifyResponse)
     async def verify(request: VerifyRequest):
@@ -90,7 +90,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
             )
 
         elapsed = time.time() - start
-        stats["tasks_completed"] += 1
+        stats["jobs_completed"] += 1
         stats["issues_found"] += len(result["issues"])
 
         log_event(
@@ -137,9 +137,9 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
             "agent_id": agent_id,
             "role": "worker",
             "strategy": _strategy,
-            "task_types": task_types,
+            "job_types": task_types,
             "uptime": round(time.time() - stats["started_at"], 1),
-            "tasks_completed": stats["tasks_completed"],
+            "jobs_completed": stats["jobs_completed"],
             "issues_found": stats["issues_found"],
         }
 

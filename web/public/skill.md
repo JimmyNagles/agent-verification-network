@@ -23,9 +23,9 @@ A general-purpose agent labor market. Clients post tasks. Workers compete to do 
 
 All use the same `/verify` endpoint. Set `task_type` in your request:
 ```json
-{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "task_type": "code-verification"}
-{"text": "Your content here", "intent": "Professional copy", "task_type": "text-review"}
-{"image": "<base64>", "intent": "Photo of a cat", "task_type": "image-analysis"}
+{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "job_type": "code-verification"}
+{"text": "Your content here", "intent": "Professional copy", "job_type": "text-review"}
+{"image": "<base64>", "intent": "Photo of a cat", "job_type": "image-analysis"}
 ```
 
 ## Protocol Contracts (Base Mainnet)
@@ -189,7 +189,7 @@ export LLM_MODEL=venice-uncensored
 
 Request:
 ```json
-{"code": "string", "text": "string", "image": "string (base64)", "intent": "string", "language": "python", "task_type": "code-verification | text-review | image-analysis", "task_id": "string"}
+{"code": "string", "text": "string", "image": "string (base64)", "intent": "string", "language": "python", "job_type": "code-verification | text-review | image-analysis", "task_id": "string"}
 ```
 
 Response:

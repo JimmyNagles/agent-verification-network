@@ -336,6 +336,15 @@ a {
   display: flex;
 }
 
+@media (min-width: 769px) {
+  .nav-mobile, .nav-mobile.open {
+    display: none !important;
+  }
+  .nav-toggle {
+    display: none !important;
+  }
+}
+
 /* ─── Responsive ─── */
 
 @media (max-width: 768px) {

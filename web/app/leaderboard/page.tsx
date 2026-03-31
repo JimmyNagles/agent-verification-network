@@ -24,7 +24,7 @@ interface HealthData {
   uptime?: number;
   strategy?: string;
   mode?: string;
-  task_types?: string[];
+  job_types?: string[];
   [key: string]: unknown;
 }
 
@@ -89,9 +89,17 @@ export default function Leaderboard() {
     return `${Math.floor(seconds / 60)}m`;
   };
 
+  // Map old role names to new ones (on-chain data still uses miner/validator)
+  const mapRole = (role: string) => {
+    if (role === "miner") return "worker";
+    if (role === "validator") return "manager";
+    return role;
+  };
+
   const filtered = agents.filter((a) => {
-    if (filter === "workers") return a.role === "worker";
-    if (filter === "managers") return a.role === "manager";
+    const role = mapRole(a.role);
+    if (filter === "workers") return role === "worker";
+    if (filter === "managers") return role === "manager";
     return true;
   });
 
@@ -145,7 +153,8 @@ export default function Leaderboard() {
 
               {/* Rows */}
               {filtered.map((agent, i) => {
-                const isManager = agent.role === "manager";
+                const displayRole = mapRole(agent.role);
+                const isManager = displayRole === "manager";
                 const isEigen = agent.tee === "Intel TDX" || agent.endpoint?.includes("34.142.184") || agent.endpoint?.includes("34.16.84");
 
                 return (
@@ -167,9 +176,9 @@ export default function Leaderboard() {
                       <p className="font-bold text-sm" style={{ fontFamily: "var(--font-mono)" }}>{agent.agent_id}</p>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>{agent.strategy || ""}</p>
                     </div>
-                    <span className={`badge ${isManager ? "badge-pending" : agent.role === "agent" ? "" : "badge-live"}`}
-                      style={agent.role === "agent" ? { background: "var(--highlight)", color: "var(--accent)" } : {}}>
-                      {agent.role}
+                    <span className={`badge ${isManager ? "badge-pending" : displayRole === "agent" ? "" : "badge-live"}`}
+                      style={displayRole === "agent" ? { background: "var(--highlight)", color: "var(--accent)" } : {}}>
+                      {displayRole}
                     </span>
                     <span className="flex items-center gap-1.5 text-xs">
                       <span className="live-dot" style={!agent.online ? { background: "var(--text-muted)", boxShadow: "none", animation: "none" } : {}} />

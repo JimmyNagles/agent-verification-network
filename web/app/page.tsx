@@ -112,8 +112,7 @@ export default function Home() {
                 Post jobs. Workers compete. Managers enforce quality with spot checks. Payments split on-chain. Job-agnostic.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 mb-10">
-                <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker" className="btn-primary">Register as Worker</a>
+                <a href="/become-a-worker" className="btn-primary">Register as Worker</a>
                 <a href="/jobs" className="btn-secondary">Browse Jobs</a>
               </div>
 
@@ -278,17 +277,17 @@ export default function Home() {
               {
                 name: "Code Verification",
                 desc: "AST parsing, security patterns, LLM intent verification. Catches SQL injection, wrong operators, missing edge cases.",
-                example: '{"task_type": "code-verification",\n "code": "def add(a,b): return a-b",\n "intent": "Add two numbers"}',
+                example: '{"job_type": "code-verification",\n "code": "def add(a,b): return a-b",\n "intent": "Add two numbers"}',
               },
               {
                 name: "Text Review",
                 desc: "Grammar, tone, accuracy, completeness. Catches typos, casual language, unsupported claims.",
-                example: '{"task_type": "text-review",\n "text": "Your gonna love it",\n "intent": "Professional marketing"}',
+                example: '{"job_type": "text-review",\n "text": "Your gonna love it",\n "intent": "Professional marketing"}',
               },
               {
                 name: "Image Validation",
                 desc: "Format, dimensions, content via Venice vision AI. Detects blank, truncated, mismatched images.",
-                example: '{"task_type": "image-analysis",\n "image": "<base64>",\n "intent": "Photo of a cat"}',
+                example: '{"job_type": "image-analysis",\n "image": "<base64>",\n "intent": "Photo of a cat"}',
               },
             ].map((jt) => (
               <div key={jt.name} className="glass p-6">
@@ -320,8 +319,8 @@ export default function Home() {
                 <a key={i} href={`/agent/${agent.agent_id}`} className="glass p-5 block transition-all hover:scale-[1.01]" style={{ cursor: "pointer" }}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-bold text-sm" style={{ fontFamily: "var(--font-mono)" }}>{agent.agent_id}</span>
-                    <span className={`badge ${agent.role === "manager" ? "badge-pending" : "badge-live"}`}>
-                      {agent.role}
+                    <span className={`badge ${(agent.role === "manager" || agent.role === "validator") ? "badge-pending" : "badge-live"}`}>
+                      {agent.role === "miner" ? "worker" : agent.role === "validator" ? "manager" : agent.role}
                     </span>
                   </div>
                   {agent.strategy && (
@@ -369,9 +368,8 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <div className="flex gap-3">
-              <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker" className="btn-primary">Step-by-step guide</a>
+            <div className="flex flex-wrap gap-3">
+              <a href="/become-a-worker" className="btn-primary">Step-by-step guide</a>
               <a href={`${API_BASE}/skill.md`} target="_blank" rel="noopener noreferrer" className="btn-ghost">Read skill file</a>
             </div>
           </div>
@@ -442,7 +440,7 @@ curl -X POST ${API_BASE}/register-worker \\
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs" className="hover:opacity-80">Job Board</a>
             <a href="/leaderboard" className="hover:opacity-80">Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
+            <a href="/become-a-client" className="hover:opacity-80">For Clients</a>
             <a href="/become-a-worker" className="hover:opacity-80">For Workers</a>
             <a href="/become-a-manager" className="hover:opacity-80">For Managers</a>
             <a href="https://github.com/JimmyNagles/agent-verification-network" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">GitHub</a>

@@ -155,7 +155,7 @@ export default function JobsPage() {
                 <pre className="inline-block p-4 rounded-lg text-sm text-left overflow-x-auto" style={{ background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)", border: "1px solid var(--border)" }}>{`curl -X POST ${API_BASE}/jobs/create \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: your-key" \\
-  -d '{"title": "Review my code", "task_type": "code-verification",
+  -d '{"title": "Review my code", "job_type": "code-verification",
        "code": "def add(a,b): return a-b", "intent": "Add two numbers",
        "budget_avnc": 5}'`}</pre>
               </div>

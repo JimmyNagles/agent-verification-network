@@ -77,7 +77,7 @@
         "image": "string — base64-encoded image (image-analysis tasks)",
         "intent": "string — natural language description of what the code/text/image should do",
         "language": "string — programming language (default: python)",
-        "task_type": "string — 'code-verification' | 'text-review' | 'image-analysis' (default: code-verification)"
+        "job_type": "string — 'code-verification' | 'text-review' | 'image-analysis' (default: code-verification)"
       },
       "output": {
         "task_id": "string",

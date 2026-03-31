@@ -7,8 +7,8 @@ import { useParams } from "next/navigation";
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
 interface AgentInfo { agent_id: string; role: string; endpoint?: string; strategy?: string; owner?: string; registered_at?: number; tee?: string; source?: string; }
-interface HealthData { status: string; agent_id?: string; role?: string; strategy?: string; uptime?: number; tasks_completed?: number; issues_found?: number; mode?: string; service?: string; commerce_enabled?: boolean; task_types?: string[]; [key: string]: unknown; }
-interface CompletedJob { task_id: string; task_type: string; passed: boolean; confidence: number; issues_count: number; processing_time: number; mode: string; created_at: string; }
+interface HealthData { status: string; agent_id?: string; role?: string; strategy?: string; uptime?: number; jobs_completed?: number; issues_found?: number; mode?: string; service?: string; commerce_enabled?: boolean; job_types?: string[]; [key: string]: unknown; }
+interface CompletedJob { task_id: string; job_type: string; passed: boolean; confidence: number; issues_count: number; processing_time: number; mode: string; created_at: string; }
 
 export default function AgentProfile() {
   const params = useParams();
@@ -108,9 +108,9 @@ export default function AgentProfile() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Status", value: health && !healthError ? "Healthy" : "Unreachable", color: health && !healthError ? "var(--success)" : "var(--critical)" },
-              { label: "Jobs Completed", value: health?.tasks_completed ?? "...", color: "var(--text)" },
+              { label: "Jobs Completed", value: health?.jobs_completed ?? "...", color: "var(--text)" },
               { label: "Uptime", value: health?.uptime ? formatUptime(health.uptime) : "...", color: "var(--text)" },
-              { label: "Job Types", value: (health?.task_types as string[])?.length ?? 1, color: "var(--text)" },
+              { label: "Job Types", value: (health?.job_types as string[])?.length ?? 1, color: "var(--text)" },
             ].map((s) => (
               <div key={s.label} className="glass p-4">
                 <p className="section-label mb-1">{s.label}</p>
@@ -145,7 +145,7 @@ export default function AgentProfile() {
             <div className="glass p-4">
               <p className="section-label mb-1">Job Types</p>
               <div className="flex flex-wrap gap-2 mt-1">
-                {(health?.task_types || ["code-verification"]).map((t: string) => (
+                {(health?.job_types || ["code-verification"]).map((t: string) => (
                   <span key={t} className="badge" style={{ background: "var(--highlight)", color: "var(--accent)" }}>{t}</span>
                 ))}
               </div>
@@ -185,8 +185,8 @@ export default function AgentProfile() {
                   onMouseEnter={(e) => (e.currentTarget.style.background = "var(--highlight)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                   <div className="flex items-center gap-3">
-                    <span className={`badge ${job.passed ? "badge-live" : "badge-failed"}`}>{job.passed ? "PASS" : "FAIL"}</span>
-                    <span className="badge" style={{ background: "var(--highlight)", color: "var(--accent)" }}>{job.task_type}</span>
+                    <span className={`badge ${job.passed ? "badge-live" : "badge-failed"}`}>{job.passed ? "Clean" : "Issues Found"}</span>
+                    <span className="badge" style={{ background: "var(--highlight)", color: "var(--accent)" }}>{job.job_type}</span>
                     <span style={{ color: "var(--text-muted)" }}>{job.issues_count} issues</span>
                   </div>
                   <div className="flex items-center gap-4 text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>

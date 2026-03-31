@@ -375,10 +375,28 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             except Exception as e:
                 logger.warning(f"Failed to read on-chain workers: {e}")
 
-        # Route to all known workers
+        # Route to workers that support this job type
         if all_workers:
+            # Filter workers by job type capability
+            job_type = request.task_type or "code-verification"
+            eligible_workers = []
+            for w in all_workers:
+                strategy = (w.get("strategy") or "").lower()
+                # Image workers only get image jobs, and image jobs only go to image workers
+                is_image_worker = "vision" in strategy or "image" in strategy
+                is_image_job = job_type == "image-analysis"
+                if is_image_job and not is_image_worker:
+                    continue  # Skip non-image workers for image jobs
+                if not is_image_job and is_image_worker:
+                    continue  # Skip image workers for non-image jobs
+                eligible_workers.append(w)
+
+            # Fall back to all workers if no eligible ones found
+            if not eligible_workers:
+                eligible_workers = all_workers
+
             worker_responses = []
-            for worker in all_workers:
+            for worker in eligible_workers:
                 try:
                     data = _json.dumps({
                         "code": request.code or request.text,
@@ -1637,8 +1655,8 @@ async def health_check():
         "version": "1.0.0",
         "mode": get_mode(),
         "commerce_enabled": _commerce.enabled,
-        "task_types": ["code-verification", "text-review", "image-analysis"],
-        "tasks_completed": len(results),
+        "job_types": ["code-verification", "text-review", "image-analysis"],
+        "jobs_completed": len(results),
     }
 
 

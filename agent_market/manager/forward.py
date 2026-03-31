@@ -208,8 +208,9 @@ class ManagerForward:
 
     async def _query_workers(self, request: JobRequest) -> Dict[str, JobResponse]:
         """
-        Send a job request to all registered workers.
+        Send a job request to eligible registered workers.
 
+        Filters workers by job type capability before routing.
         In production, this makes HTTP calls to worker endpoints.
         """
         responses = {}
@@ -219,11 +220,29 @@ class ManagerForward:
             logger.warning("No workers registered — cannot process job")
             return responses
 
+        # Filter by job type capability
+        job_type = request.task_type or "code-verification"
+        eligible = []
+        for w in self.worker_agents:
+            agent_id = w.get("agent_id", "").lower()
+            # Image workers only get image jobs, image jobs only go to image workers
+            is_image_worker = "image" in agent_id or "vision" in agent_id
+            is_image_job = job_type == "image-analysis"
+            if is_image_job and not is_image_worker:
+                continue
+            if not is_image_job and is_image_worker:
+                continue
+            eligible.append(w)
+
+        # Fall back to all if no match
+        if not eligible:
+            eligible = self.worker_agents
+
         # Production mode — HTTP calls to worker endpoints
         import urllib.request
         import json
 
-        for worker in self.worker_agents:
+        for worker in eligible:
             try:
                 data = json.dumps({
                     "code": request.code,

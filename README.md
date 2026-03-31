@@ -13,19 +13,19 @@ Same contracts, same scoring, same fee split. Only the analyzer changes.
 **Code Verification** — submit code + intent, workers analyze with AST parsing, security patterns, and LLM intent verification.
 ```bash
 curl -X POST .../jobs/submit -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "task_type": "code-verification"}'
+  -d '{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "job_type": "code-verification"}'
 ```
 
 **Text Review** — submit text + intent, workers check grammar, accuracy, tone, completeness.
 ```bash
 curl -X POST .../jobs/submit -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"text": "Your gonna love it lol", "intent": "Professional marketing", "task_type": "text-review"}'
+  -d '{"text": "Your gonna love it lol", "intent": "Professional marketing", "job_type": "text-review"}'
 ```
 
 **Image Validation** — submit a base64 image + intent, workers verify format, quality, and content using Venice AI's vision model (`qwen3-vl-235b-a22b`).
 ```bash
 curl -X POST .../jobs/submit -H "X-API-Key: YOUR_API_KEY" \
-  -d '{"image": "<base64>", "intent": "Photo of a cat", "task_type": "image-analysis"}'
+  -d '{"image": "<base64>", "intent": "Photo of a cat", "job_type": "image-analysis"}'
 ```
 
 Adding a new job type requires: an analyzer, a spot check generator (synthetic jobs with known errors), and a scorer. The contracts don't change.
