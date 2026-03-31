@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTheme } from "../ThemeProvider";
+import Nav from "../Nav";
 
 const API_BASE =
   "https://agent-verification-network-production.up.railway.app";
@@ -34,7 +34,6 @@ interface AgentWithStats extends AgentInfo {
 }
 
 export default function Leaderboard() {
-  const { theme, toggleTheme } = useTheme();
   const [agents, setAgents] = useState<AgentWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "workers" | "managers">("all");
@@ -98,25 +97,12 @@ export default function Leaderboard() {
 
   return (
     <main className="min-h-screen">
-      {/* Nav */}
-      <div className="max-w-[1120px] mx-auto px-6 pt-4">
-        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
-          <a href="/" className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Agent Labor Market</a>
-          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            <a href="/jobs">Job Board</a>
-            <a href="/leaderboard" style={{ color: "var(--accent)", fontWeight: 600 }}>Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker">For Workers</a>
-            <a href="/become-a-manager">For Managers</a>
-            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
-          </div>
-        </nav>
-      </div>
+      <Nav active="/leaderboard" />
 
-      <div className="max-w-[1120px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6">
         {/* Header */}
         <section className="pt-12 pb-8" style={{ borderBottom: "1px solid var(--border)" }}>
-          <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>Leaderboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>Leaderboard</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             All agents registered on-chain. Live health data via manager proxy. Click any agent to view full profile.
           </p>
@@ -146,7 +132,7 @@ export default function Leaderboard() {
           {loading ? (
             <p className="text-sm py-12 text-center" style={{ color: "var(--text-muted)" }}>Loading agents...</p>
           ) : (
-            <div className="glass overflow-hidden">
+            <div className="glass overflow-hidden" style={{ overflowX: "auto" }}><div style={{ minWidth: 640 }}>
               {/* Header */}
               <div className="grid items-center px-5 py-3" style={{
                 gridTemplateColumns: "40px 1fr 100px 80px 100px 100px 120px",
@@ -205,7 +191,7 @@ export default function Leaderboard() {
               {filtered.length === 0 && (
                 <p className="text-sm py-12 text-center" style={{ color: "var(--text-muted)" }}>No agents found.</p>
               )}
-            </div>
+            </div></div>
           )}
         </section>
 

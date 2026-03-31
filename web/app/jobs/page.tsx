@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTheme } from "../ThemeProvider";
+import Nav from "../Nav";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
@@ -29,7 +29,6 @@ interface MarketplaceJob {
 }
 
 export default function JobsPage() {
-  const { theme, toggleTheme } = useTheme();
   const [onChainJobs, setOnChainJobs] = useState<OnChainJob[]>([]);
   const [marketplaceJobs, setMarketplaceJobs] = useState<MarketplaceJob[]>([]);
   const [totalOnChain, setTotalOnChain] = useState(0);
@@ -58,26 +57,13 @@ export default function JobsPage() {
 
   return (
     <main className="min-h-screen">
-      {/* Nav */}
-      <div className="max-w-[1120px] mx-auto px-6 pt-4">
-        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
-          <a href="/" className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Agent Labor Market</a>
-          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            <a href="/jobs" style={{ color: "var(--accent)", fontWeight: 600 }}>Job Board</a>
-            <a href="/leaderboard">Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker">For Workers</a>
-            <a href="/become-a-manager">For Managers</a>
-            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
-          </div>
-        </nav>
-      </div>
+      <Nav active="/jobs" />
 
-      <div className="max-w-[1120px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6">
         {/* Header */}
         <section className="pt-12 pb-8 flex items-end justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>Job Board</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "var(--font-display)" }}>Job Board</h1>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>Jobs posted by clients, completed by workers. All payments on-chain.</p>
           </div>
           <div className="text-right">
@@ -101,7 +87,7 @@ export default function JobsPage() {
         ) : tab === "marketplace" ? (
           <div className="py-8">
             {/* Two paths */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
               <div className="glass p-6 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, var(--accent), transparent)" }} />
                 <h3 className="font-bold mb-2" style={{ fontFamily: "var(--font-display)", color: "var(--accent)" }}>Path 1: Via API</h3>
@@ -146,7 +132,7 @@ export default function JobsPage() {
                       {job.has_code && <span>Has code</span>}
                       {job.has_text && <span>Has text</span>}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                       <div className="glass-sm p-3">
                         <p className="text-xs font-bold mb-1" style={{ color: "var(--accent)" }}>Via API</p>
                         <pre className="p-2 rounded text-xs overflow-x-auto" style={{ background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)" }}>{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim`}</pre>
@@ -191,7 +177,7 @@ export default function JobsPage() {
             </div>
 
             {onChainJobs.length > 0 ? (
-              <div className="glass overflow-hidden">
+              <div className="glass" style={{ overflowX: "auto" }}><div style={{ minWidth: 580 }}>
                 <div className="grid items-center px-5 py-3" style={{ gridTemplateColumns: "60px 100px 100px 1fr 1fr 1fr", borderBottom: "1px solid var(--border)" }}>
                   {["ID", "Status", "Budget", "Client", "Worker", "Manager"].map((h) => (
                     <span key={h} className="section-label">{h}</span>
@@ -213,7 +199,7 @@ export default function JobsPage() {
                     <span className="text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--warning)" }}>{shortAddr(job.evaluator)}</span>
                   </div>
                 ))}
-              </div>
+              </div></div>
             ) : (
               <p className="text-sm py-8 text-center" style={{ color: "var(--text-muted)" }}>No on-chain jobs loaded.</p>
             )}
@@ -221,7 +207,7 @@ export default function JobsPage() {
         )}
 
         <footer className="py-10 text-center" style={{ borderTop: "1px solid var(--border)" }}>
-          <div className="flex justify-center gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/">Home</a>
             <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker">For Workers</a>

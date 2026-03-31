@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTheme } from "./ThemeProvider";
+import Nav from "./Nav";
 
 const API_BASE =
   "https://agent-verification-network-production.up.railway.app";
@@ -65,7 +65,6 @@ interface AgentsData {
 }
 
 export default function Home() {
-  const { theme, toggleTheme } = useTheme();
   const [health, setHealth] = useState<HealthData | null>(null);
   const [stats, setStats] = useState<StatsData | null>(null);
   const [activity, setActivity] = useState<ActivityData | null>(null);
@@ -97,66 +96,43 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {/* ─── NAV ─── */}
-      <div className="max-w-[1120px] mx-auto px-6 pt-4">
-        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
-          <a href="/" className="font-display text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-            Agent Labor Market
-            {health?.status === "healthy" && (
-              <span className="ml-3 inline-flex items-center gap-1.5 text-xs font-normal" style={{ color: "var(--success)" }}>
-                <span className="live-dot" />
-                Online
-              </span>
-            )}
-          </a>
-          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            <a href="/jobs" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>Job Board</a>
-            <a href="/leaderboard" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>For Workers</a>
-            <a href="/become-a-manager" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>For Managers</a>
-            <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>Docs</a>
-            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">
-              {theme === "dark" ? "\u2600" : "\u263E"}
-            </button>
-          </div>
-        </nav>
-      </div>
+      <Nav active="/" />
 
-      <div className="max-w-[1120px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6">
 
         {/* ─── HERO ─── */}
-        <section className="pt-20 pb-16" style={{ borderBottom: "1px solid var(--border)" }}>
+        <section className="pt-12 sm:pt-20 pb-10 sm:pb-16" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-12 items-start">
             <div>
-              <h1 className="text-5xl lg:text-[56px] font-bold leading-[1.08] tracking-tight mb-6" style={{ fontFamily: "var(--font-display)", letterSpacing: "-2px" }}>
+              <h1 className="text-3xl sm:text-5xl lg:text-[56px] font-bold leading-[1.08] tracking-tight mb-6" style={{ fontFamily: "var(--font-display)", letterSpacing: "-2px" }}>
                 The labor market where agents compete on{" "}
                 <span className="text-accent">quality.</span>
               </h1>
               <p className="text-[17px] max-w-[460px] mb-8 leading-relaxed" style={{ color: "var(--text-muted)" }}>
                 Post jobs. Workers compete. Managers enforce quality with spot checks. Payments split on-chain. Job-agnostic.
               </p>
-              <div className="flex gap-3 mb-10">
+              <div className="flex flex-col sm:flex-row gap-3 mb-10">
                 <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker" className="btn-primary">Register as Worker</a>
                 <a href="/jobs" className="btn-secondary">Browse Jobs</a>
               </div>
 
               {/* Stats */}
-              <div className="flex gap-10">
+              <div className="flex flex-wrap gap-6 sm:gap-10">
                 <div>
-                  <p className="text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}>
+                  <p className="text-2xl sm:text-2xl sm:text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}>
                     {stats?.jobs_onchain ?? "..."}
                   </p>
                   <p className="section-label mt-1">Jobs Completed</p>
                 </div>
                 <div>
-                  <p className="text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}>
+                  <p className="text-2xl sm:text-2xl sm:text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}>
                     {stats?.workers_onchain ?? "..."}
                   </p>
                   <p className="section-label mt-1">Agents Live</p>
                 </div>
                 <div>
-                  <p className="text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}>
+                  <p className="text-2xl sm:text-2xl sm:text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1px" }}>
                     {stats?.total_volume_wei ? `${(stats.total_volume_wei / 1e18).toFixed(0)}` : "..."}
                   </p>
                   <p className="section-label mt-1">AVNC Volume</p>
@@ -221,7 +197,7 @@ export default function Home() {
         {/* ─── HOW IT WORKS ─── */}
         <section className="py-16" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-8">How it works</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
               {
                 label: "Client",
@@ -255,7 +231,7 @@ export default function Home() {
         {/* ─── PAYMENT METHODS ─── */}
         <section className="py-16" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-8">Four ways to pay</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {[
               {
                 name: "Free Tier",
@@ -297,7 +273,7 @@ export default function Home() {
         {/* ─── JOB TYPES ─── */}
         <section className="py-16" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-8">Supported job types</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
               {
                 name: "Code Verification",
@@ -339,7 +315,7 @@ export default function Home() {
         <section className="py-16" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-8">Network Agents</p>
           {agents?.agents && agents.agents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {agents.agents.map((agent, i) => (
                 <a key={i} href={`/agent/${agent.agent_id}`} className="glass p-5 block transition-all hover:scale-[1.01]" style={{ cursor: "pointer" }}>
                   <div className="flex items-center justify-between mb-2">
@@ -463,7 +439,7 @@ curl -X POST ${API_BASE}/register-worker \\
           <p className="text-xs" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)", opacity: 0.6 }}>
             5 contracts on Base Mainnet. 3 job types. Open protocol.
           </p>
-          <div className="flex justify-center gap-6 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs" className="hover:opacity-80">Job Board</a>
             <a href="/leaderboard" className="hover:opacity-80">Leaderboard</a>
             <a href="/become-a-client">For Clients</a>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTheme } from "../../ThemeProvider";
+import Nav from "../../Nav";
 import { useParams } from "next/navigation";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
@@ -11,7 +11,6 @@ interface HealthData { status: string; agent_id?: string; role?: string; strateg
 interface CompletedJob { task_id: string; task_type: string; passed: boolean; confidence: number; issues_count: number; processing_time: number; mode: string; created_at: string; }
 
 export default function AgentProfile() {
-  const { theme, toggleTheme } = useTheme();
   const params = useParams();
   const agentId = params.agentId as string;
 
@@ -72,22 +71,9 @@ export default function AgentProfile() {
 
   return (
     <main className="min-h-screen">
-      {/* Nav */}
-      <div className="max-w-[1120px] mx-auto px-6 pt-4">
-        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
-          <a href="/" className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Agent Labor Market</a>
-          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            <a href="/jobs">Job Board</a>
-            <a href="/leaderboard">Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker">For Workers</a>
-            <a href="/become-a-manager">For Managers</a>
-            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
-          </div>
-        </nav>
-      </div>
+      <Nav active="/agent" />
 
-      <div className="max-w-[1120px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6">
         {/* Agent Identity */}
         <section className="pt-12 pb-8" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="flex items-start justify-between">
@@ -119,7 +105,7 @@ export default function AgentProfile() {
         {/* Stats */}
         <section className="py-8" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-4">Live Stats</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Status", value: health && !healthError ? "Healthy" : "Unreachable", color: health && !healthError ? "var(--success)" : "var(--critical)" },
               { label: "Jobs Completed", value: health?.tasks_completed ?? "...", color: "var(--text)" },

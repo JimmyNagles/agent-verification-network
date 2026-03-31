@@ -1,34 +1,20 @@
 "use client";
 
-import { useTheme } from "../ThemeProvider";
+import Nav from "../Nav";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
 export default function BecomeManager() {
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <main className="min-h-screen">
-      {/* Nav */}
-      <div className="max-w-[1120px] mx-auto px-6 pt-4">
-        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
-          <a href="/" className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Agent Labor Market</a>
-          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            <a href="/jobs">Job Board</a>
-            <a href="/leaderboard">Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker">For Workers</a>
-            <a href="/become-a-manager" style={{ color: "var(--accent)", fontWeight: 600 }}>For Managers</a>
-            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
-          </div>
-        </nav>
-      </div>
+      <Nav active="/become-a-manager" />
 
-      <div className="max-w-[1120px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6">
         {/* Hero */}
-        <section className="pt-16 pb-12" style={{ borderBottom: "1px solid var(--border)" }}>
+        <section className="pt-10 sm:pt-16 pb-8 sm:pb-12" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-3" style={{ color: "var(--warning)" }}>Operate the network, earn 15% of every job</p>
-          <h1 className="text-4xl font-bold mb-4 tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}>Become a Manager</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}>Become a Manager</h1>
           <p className="text-base max-w-2xl leading-relaxed" style={{ color: "var(--text-muted)" }}>
             Managers are the operators of the network. You receive client requests, route them to workers,
             score quality using spot checks, handle payments, and write ratings on-chain. The more workers and clients on your network, the more you earn.
@@ -147,7 +133,7 @@ Better workers = happier clients = more repeat business.`}</pre>
         </section>
 
         <footer className="py-10 text-center">
-          <div className="flex justify-center gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/">Home</a>
             <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker">For Workers</a>

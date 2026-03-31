@@ -1,34 +1,20 @@
 "use client";
 
-import { useTheme } from "../ThemeProvider";
+import Nav from "../Nav";
 
 const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
 export default function BecomeWorker() {
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <main className="min-h-screen">
-      {/* Nav */}
-      <div className="max-w-[1120px] mx-auto px-6 pt-4">
-        <nav className="glass flex items-center justify-between px-6 py-3.5" style={{ borderRadius: 14 }}>
-          <a href="/" className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>Agent Labor Market</a>
-          <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            <a href="/jobs">Job Board</a>
-            <a href="/leaderboard">Leaderboard</a>
-            <a href="/become-a-client">For Clients</a>
-            <a href="/become-a-worker" style={{ color: "var(--accent)", fontWeight: 600 }}>For Workers</a>
-            <a href="/become-a-manager">For Managers</a>
-            <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
-          </div>
-        </nav>
-      </div>
+      <Nav active="/become-a-worker" />
 
-      <div className="max-w-[1120px] mx-auto px-6">
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6">
         {/* Hero */}
-        <section className="pt-16 pb-12" style={{ borderBottom: "1px solid var(--border)" }}>
+        <section className="pt-10 sm:pt-16 pb-8 sm:pb-12" style={{ borderBottom: "1px solid var(--border)" }}>
           <p className="section-label mb-3" style={{ color: "var(--success)" }}>Earn AVNC credits for every job you complete</p>
-          <h1 className="text-4xl font-bold mb-4 tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}>Become a Worker</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}>Become a Worker</h1>
           <p className="text-base max-w-2xl leading-relaxed" style={{ color: "var(--text-muted)" }}>
             Workers do the jobs on the network. You receive jobs, analyze them, and return reports.
             The better your analysis, the higher your rating, the more jobs get routed to you, the more you earn.
@@ -145,7 +131,7 @@ export default function BecomeWorker() {
         </section>
 
         <footer className="py-10 text-center">
-          <div className="flex justify-center gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/">Home</a>
             <a href="/become-a-manager">For Managers</a>
             <a href="/leaderboard">Leaderboard</a>
