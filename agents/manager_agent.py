@@ -80,12 +80,12 @@ class LoggingManager(ManagerForward):
         return result
 
 
-async def run_validator(agent_id: str, rounds: int, interval: int, miner_endpoints: list, use_chain: bool = False):
+async def run_manager(agent_id: str, rounds: int, interval: int, worker_endpoints: list, use_chain: bool = False):
     """Run the manager loop."""
     manager = LoggingManager(agent_id, use_chain=use_chain)
 
     # Register miners
-    for i, endpoint in enumerate(miner_endpoints):
+    for i, endpoint in enumerate(worker_endpoints):
         worker_id = f"worker-{i+1:03d}"
         manager.register_worker(worker_id, endpoint)
         log_event(
@@ -103,13 +103,13 @@ async def run_validator(agent_id: str, rounds: int, interval: int, miner_endpoin
         agent_role="manager",
         agent_id=agent_id,
         details={
-            "workers_registered": len(miner_endpoints),
+            "workers_registered": len(worker_endpoints),
             "rounds_planned": rounds,
-            "mode": "connected" if miner_endpoints else "demo",
+            "mode": "connected" if worker_endpoints else "demo",
         },
     )
 
-    logger.info(f"Manager {agent_id} starting: {rounds} rounds, {len(miner_endpoints)} workers")
+    logger.info(f"Manager {agent_id} starting: {rounds} rounds, {len(worker_endpoints)} workers")
 
     # Run validation rounds
     for i in range(rounds):
@@ -161,7 +161,7 @@ def main():
 
     if args.no_server:
         # Just run the validation loop
-        asyncio.run(run_validator(args.agent_id, args.rounds, args.interval, args.miners, use_chain=args.chain))
+        asyncio.run(run_manager(args.agent_id, args.rounds, args.interval, args.workers, use_chain=args.chain))
     else:
         # Run both API server and manager loop
         import threading
@@ -170,7 +170,7 @@ def main():
             # Give the server a moment to start
             import time
             time.sleep(2)
-            asyncio.run(run_validator(args.agent_id, args.rounds, args.interval, args.miners, use_chain=args.chain))
+            asyncio.run(run_manager(args.agent_id, args.rounds, args.interval, args.workers, use_chain=args.chain))
 
         thread = threading.Thread(target=start_validation, daemon=True)
         thread.start()

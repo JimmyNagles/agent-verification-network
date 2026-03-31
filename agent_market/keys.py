@@ -210,7 +210,7 @@ class KeyManager:
         if not self.enabled:
             return False
 
-        result = _supabase_get(f"api_keys?agent_name=eq.{agent_name}&is_active=eq.true&select=id")
+        result = _supabase_get(f"api_keys?agent_name=eq.{_sanitize_param(agent_name)}&is_active=eq.true&select=id")
         return result is not None and len(result) > 0
 
     def get_stats(self) -> dict:

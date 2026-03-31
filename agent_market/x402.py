@@ -161,7 +161,7 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
         if existing:
             return False, f"Transaction {tx_hash} has already been used for payment. Each tx can only be used once."
     except Exception:
-        pass  # If Supabase is down, continue with on-chain verification
+        return False, "Unable to verify tx hash uniqueness (Supabase unavailable). Try again."
 
     # Verify the transaction on-chain
     try:

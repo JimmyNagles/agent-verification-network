@@ -81,6 +81,11 @@ _onchain_lock = threading.Lock()
 # API key manager
 _keys = KeyManager()
 
+def _sanitize_param(value: str) -> str:
+    """Sanitize user-supplied values for Supabase PostgREST query params."""
+    import urllib.parse
+    return urllib.parse.quote(str(value), safe="")
+
 # In-memory job storage
 results = {}
 
@@ -947,7 +952,7 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
                 claimer_id = key_info.get("agent_name", "anonymous")
 
     # Read from Supabase
-    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
+    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{_sanitize_param(task_id)}&select=*") or []
     if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
@@ -987,16 +992,10 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
                 "message": "This job is reserved by another worker. Try a different job or wait for the claim to expire (10 min).",
             })
     except Exception as e:
-        logger.warning(f"Atomic claim failed, falling back: {e}")
-        # Fallback: try direct patch
-        try:
-            from datetime import datetime, timezone
-            _supabase_patch(f"marketplace_jobs?task_id=eq.{task_id}", {
-                "claimed_by": claimer_id,
-                "claimed_at": datetime.now(timezone.utc).isoformat(),
-            })
-        except Exception:
-            pass
+        logger.error(f"Atomic claim failed: {e}")
+        return JSONResponse(status_code=503, content={
+            "error": "Claim service temporarily unavailable. Try again.",
+        })
 
     return {
         "success": True,
@@ -1038,14 +1037,14 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
                 submitter_name = name_rows[0].get("agent_name")
 
     # Read from Supabase
-    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
+    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{_sanitize_param(task_id)}&select=*") or []
     if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
     job = jobs[0]
 
     # Prevent double-submit — check if already completed
-    existing = _supabase_get(f"completed_jobs?task_id=eq.{task_id}&select=task_id") or []
+    existing = _supabase_get(f"completed_jobs?task_id=eq.{_sanitize_param(task_id)}&select=task_id") or []
     if existing:
         return JSONResponse(status_code=400, content={
             "error": "Job already completed",
