@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 IDENTITY_REGISTRY = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
 REPUTATION_REGISTRY = "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
 OUR_AGENT_ID = 34655
-BASE_MAINNET_RPC = os.environ.get("BASE_RPC_URL", "https://base-mainnet.g.alchemy.com/v2/VkqT8RyCceRMz0G4PbTQYJjkG5KMFIQZ")
+BASE_MAINNET_RPC = os.environ.get("BASE_RPC_URL", "")
 CHAIN_ID = 8453
 
 # Minimal ABIs for the functions we need

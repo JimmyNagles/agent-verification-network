@@ -64,7 +64,7 @@ def deploy(abi, bytecode, network):
     net = NETWORKS[network]
     # Use Alchemy for mainnet
     if network == "mainnet":
-        rpc = os.environ.get("BASE_RPC_URL", "https://base-mainnet.g.alchemy.com/v2/VkqT8RyCceRMz0G4PbTQYJjkG5KMFIQZ")
+        rpc = os.environ.get("BASE_RPC_URL", "")
     else:
         rpc = net["rpc"]
 

@@ -70,9 +70,9 @@ async def forward(request: JobRequest) -> JobResponse:
         logger.error(f"Analysis failed: {e}")
         response = JobResponse(
             task_id=request.task_id,
-            issues=[],
+            issues=[{"type": "error", "severity": "critical", "line": 0, "description": f"Analysis failed: {str(e)}"}],
             confidence=0.0,
-            passed=True,
+            passed=False,  # Fail-closed: errors should not approve code
             suggestions=[],
             processing_time=time.time() - start_time,
         )

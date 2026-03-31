@@ -154,10 +154,19 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
     if not tx_hash:
         return False, "Missing txHash — submit a real transaction on Base and include the hash"
 
+    # Replay prevention — check if this tx hash was already consumed
+    try:
+        from agent_market.keys import _supabase_get, _supabase_post
+        existing = _supabase_get(f"consumed_tx_hashes?tx_hash=eq.{tx_hash}&select=tx_hash")
+        if existing:
+            return False, f"Transaction {tx_hash} has already been used for payment. Each tx can only be used once."
+    except Exception:
+        pass  # If Supabase is down, continue with on-chain verification
+
     # Verify the transaction on-chain
     try:
         from web3 import Web3
-        rpc_url = os.environ.get("BASE_RPC_URL", "https://base-mainnet.g.alchemy.com/v2/VkqT8RyCceRMz0G4PbTQYJjkG5KMFIQZ")
+        rpc_url = os.environ.get("BASE_RPC_URL", "")
         w3 = Web3(Web3.HTTPProvider(rpc_url))
 
         # Get the transaction receipt
@@ -181,6 +190,11 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
             min_wei = int(min_price * 1e18)
             if tx.value < min_wei:
                 return False, f"Payment too low: sent {w3.from_wei(tx.value, 'ether')} ETH, minimum is {min_price} ETH"
+            # Mark tx hash as consumed (replay prevention)
+            try:
+                _supabase_post("consumed_tx_hashes", {"tx_hash": tx_hash})
+            except Exception:
+                pass
             return True, f"ETH payment verified on-chain: tx {tx_hash}"
 
         # Check if this is an ERC-20 token transfer (AVNC or other)
@@ -189,12 +203,22 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
         if tx_to == avnc_address or tx_to == expected_recipient:
             # Check transfer events in the receipt for ERC-20 Transfer
             transfer_topic = w3.keccak(text="Transfer(address,address,uint256)")
+            min_price_eth = float(os.environ.get("VERIFY_PRICE_ETH", "0.0001"))
+            min_price_wei = int(min_price_eth * 1e18)
             for log_entry in receipt.logs:
                 if log_entry.topics and log_entry.topics[0] == transfer_topic:
-                    # Found a Transfer event — verify recipient in the event data
                     if len(log_entry.topics) >= 3:
                         to_addr = "0x" + log_entry.topics[2].hex()[-40:]
                         if to_addr.lower() == expected_recipient:
+                            # Verify amount — data field contains the uint256 amount
+                            amount = int(log_entry.data.hex(), 16) if log_entry.data else 0
+                            if amount < min_price_wei:
+                                return False, f"AVNC payment too low: sent {amount / 1e18:.6f}, minimum is {min_price_eth}"
+                            # Mark tx hash as consumed (replay prevention)
+                            try:
+                                _supabase_post("consumed_tx_hashes", {"tx_hash": tx_hash})
+                            except Exception:
+                                pass
                             return True, f"AVNC token payment verified on-chain: tx {tx_hash}"
 
         # If we got here, payment didn't match

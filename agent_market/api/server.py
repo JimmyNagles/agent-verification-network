@@ -45,7 +45,12 @@ app = FastAPI(
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://agent-verification-network.vercel.app",
+        "https://agentlabormarket.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -580,14 +585,22 @@ async def get_leaderboard():
 
 
 @app.post("/register-worker", response_model=RegisterWorkerResponse)
-async def register_worker(request: RegisterWorkerRequest):
+async def register_worker(request: RegisterWorkerRequest, raw_request: Request = None):
     """
     Register a worker agent to join the verification network.
 
+    Requires API key authentication to prevent sybil attacks.
     The worker's endpoint must expose a /health route that returns HTTP 200.
-    If a manager is attached, the worker is also registered with it for
-    job distribution. Otherwise the worker is tracked in standalone mode.
     """
+    # Require API key to prevent sybil registration
+    if raw_request:
+        api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
+        if api_key:
+            key_info = _keys.validate_key(api_key)
+            if not key_info or not key_info.get("valid"):
+                return JSONResponse(status_code=401, content={"error": "Invalid API key. Register at POST /register first."})
+        else:
+            return JSONResponse(status_code=401, content={"error": "API key required for worker registration. Register at POST /register first."})
     # Validate that the worker endpoint is reachable
     health_url = request.endpoint.rstrip("/") + "/health"
     try:
@@ -676,13 +689,21 @@ async def register_worker(request: RegisterWorkerRequest):
 
 
 @app.post("/register-manager", response_model=RegisterManagerResponse)
-async def register_manager(request: RegisterManagerRequest):
+async def register_manager(request: RegisterManagerRequest, raw_request: Request = None):
     """
     Register a manager agent in the network registry.
 
-    Managers are tracked in an in-memory list so the /network endpoint
-    can report who is participating.
+    Requires API key authentication to prevent sybil attacks.
     """
+    # Require API key to prevent sybil registration
+    if raw_request:
+        api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
+        if api_key:
+            key_info = _keys.validate_key(api_key)
+            if not key_info or not key_info.get("valid"):
+                return JSONResponse(status_code=401, content={"error": "Invalid API key. Register at POST /register first."})
+        else:
+            return JSONResponse(status_code=401, content={"error": "API key required for manager registration. Register at POST /register first."})
     entry = {
         "manager_id": request.manager_id,
         "endpoint": request.endpoint,
@@ -946,37 +967,36 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
     if status in ("submitted", "completed", "rejected"):
         return JSONResponse(status_code=400, content={"error": f"Job is already {status}"})
 
-    # Check if already claimed by another worker
-    claimed_by = job.get("claimed_by")
-    claimed_at = job.get("claimed_at")
-    claim_stale = False
-
-    if claimed_by and claimed_at:
-        # Check if claim is stale (>10 minutes old)
-        try:
-            from datetime import datetime
-            claim_time = datetime.fromisoformat(claimed_at.replace("Z", "+00:00"))
-            age_seconds = (datetime.now(claim_time.tzinfo) - claim_time).total_seconds()
-            claim_stale = age_seconds > 600  # 10 minutes
-        except Exception:
-            claim_stale = True  # Can't parse, treat as stale
-
-    if claimed_by and not claim_stale and claimed_by != claimer_id:
-        return JSONResponse(status_code=409, content={
-            "error": "Job already claimed",
-            "claimed_by": claimed_by,
-            "message": "This job is reserved by another worker. Try a different job or wait for the claim to expire (10 min).",
-        })
-
-    # Reserve the job
+    # Atomic claim — prevents race condition where two workers claim simultaneously
     try:
-        from datetime import datetime, timezone
-        _supabase_patch(f"marketplace_jobs?task_id=eq.{task_id}", {
-            "claimed_by": claimer_id,
-            "claimed_at": datetime.now(timezone.utc).isoformat(),
+        import urllib.request as _ureq
+        import json as _json
+        rpc_url = f"{SUPABASE_URL}/rest/v1/rpc/claim_job"
+        rpc_data = _json.dumps({"p_task_id": task_id, "p_claimer": claimer_id}).encode("utf-8")
+        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+        req = _ureq.Request(rpc_url, data=rpc_data, method="POST", headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
         })
+        resp = _ureq.urlopen(req, timeout=5)
+        claimed = _json.loads(resp.read().decode("utf-8"))
+        if not claimed:
+            return JSONResponse(status_code=409, content={
+                "error": "Job already claimed",
+                "message": "This job is reserved by another worker. Try a different job or wait for the claim to expire (10 min).",
+            })
     except Exception as e:
-        logger.warning(f"Failed to persist claim: {e}")
+        logger.warning(f"Atomic claim failed, falling back: {e}")
+        # Fallback: try direct patch
+        try:
+            from datetime import datetime, timezone
+            _supabase_patch(f"marketplace_jobs?task_id=eq.{task_id}", {
+                "claimed_by": claimer_id,
+                "claimed_at": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception:
+            pass
 
     return {
         "success": True,
