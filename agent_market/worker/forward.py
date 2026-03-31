@@ -30,7 +30,7 @@ async def forward(request: JobRequest) -> JobResponse:
         logger.warning(f"Unknown job_type '{job_type}', defaulting to code-verification")
         job_type = "code-verification"
 
-    logger.info(f"Received task {request.task_id}: job_type={job_type}")
+    logger.info(f"Received task {request.job_id}: job_type={job_type}")
 
     try:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
@@ -58,7 +58,7 @@ async def forward(request: JobRequest) -> JobResponse:
             )
 
         response = JobResponse(
-            task_id=request.task_id,
+            job_id=request.job_id,
             issues=result["issues"],
             confidence=result["confidence"],
             passed=result["passed"],
@@ -69,7 +69,7 @@ async def forward(request: JobRequest) -> JobResponse:
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
         response = JobResponse(
-            task_id=request.task_id,
+            job_id=request.job_id,
             issues=[{"type": "error", "severity": "critical", "line": 0, "description": f"Analysis failed: {str(e)}"}],
             confidence=0.0,
             passed=False,  # Fail-closed: errors should not approve code
@@ -78,7 +78,7 @@ async def forward(request: JobRequest) -> JobResponse:
         )
 
     logger.info(
-        f"Task {request.task_id} complete: "
+        f"Task {request.job_id} complete: "
         f"{len(response.issues)} issues found, "
         f"confidence={response.confidence:.2f}, "
         f"passed={response.passed}, "

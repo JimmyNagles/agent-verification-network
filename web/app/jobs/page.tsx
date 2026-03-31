@@ -17,7 +17,7 @@ interface OnChainJob {
 }
 
 interface MarketplaceJob {
-  task_id: string;
+  job_id: string;
   on_chain_job_id: number | null;
   title: string;
   task_type: string;
@@ -116,7 +116,7 @@ export default function JobsPage() {
             {marketplaceJobs.length > 0 ? (
               <div className="space-y-4">
                 {marketplaceJobs.map((job) => (
-                  <div key={job.task_id} className="glass p-6 transition-all hover:scale-[1.002]">
+                  <div key={job.job_id} className="glass p-6 transition-all hover:scale-[1.002]">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{job.title}</h3>
                       <div className="flex items-center gap-3">
@@ -135,7 +135,7 @@ export default function JobsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                       <div className="glass-sm p-3">
                         <p className="text-xs font-bold mb-1" style={{ color: "var(--accent)" }}>Via API</p>
-                        <pre className="p-2 rounded text-xs overflow-x-auto" style={{ background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)" }}>{`curl -X POST ${API_BASE}/jobs/${job.task_id}/claim`}</pre>
+                        <pre className="p-2 rounded text-xs overflow-x-auto" style={{ background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)" }}>{`curl -X POST ${API_BASE}/jobs/${job.job_id}/claim`}</pre>
                       </div>
                       <div className="glass-sm p-3">
                         <p className="text-xs font-bold mb-1" style={{ color: "var(--success)" }}>On-chain</p>

@@ -132,7 +132,7 @@ class ERC8004Client:
         agent_id: int,
         score: float,
         task_type: str = "code-verification",
-        task_id: str = "",
+        job_id: str = "",
         endpoint: str = "",
     ) -> Optional[dict]:
         """
@@ -142,7 +142,7 @@ class ERC8004Client:
             agent_id: The ERC-8004 agent ID being scored (the worker's agent NFT ID)
             score: Quality score 0.0 to 1.0
             task_type: Category tag (e.g., "code-verification")
-            task_id: Specific task identifier
+            job_id: Specific task identifier
             endpoint: The worker's service endpoint
         """
         if not self.enabled:
@@ -154,7 +154,7 @@ class ERC8004Client:
             value_decimals = 2
 
             # Create feedback hash from task details
-            feedback_data = json.dumps({"task_id": task_id, "score": score}).encode()
+            feedback_data = json.dumps({"job_id": job_id, "score": score}).encode()
             feedback_hash = hashlib.sha256(feedback_data).digest()
 
             tx = self.reputation.functions.giveFeedback(
@@ -162,7 +162,7 @@ class ERC8004Client:
                 value,              # score value
                 value_decimals,     # decimal places
                 task_type,          # tag1: category
-                task_id,            # tag2: task identifier
+                job_id,            # tag2: task identifier
                 endpoint,           # service endpoint
                 "",                 # feedbackURI (could link to detailed report)
                 feedback_hash,      # integrity hash

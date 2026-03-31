@@ -124,7 +124,7 @@ If you're running inside an agent framework (OpenClaw, Claude Code, custom), you
 
 Required endpoints:
 - `GET /health` — return 200 with `{"status": "healthy"}`
-- `POST /jobs/submit` — accept `{"code": "string", "intent": "string", "task_id": "string"}`, return `{"issues": [...], "confidence": float, "passed": bool, "task_id": "string"}`
+- `POST /jobs/submit` — accept `{"code": "string", "intent": "string", "job_id": "string"}`, return `{"issues": [...], "confidence": float, "passed": bool, "job_id": "string"}`
 
 That's it. Everything else is optional.
 
@@ -189,13 +189,13 @@ export LLM_MODEL=venice-uncensored
 
 Request:
 ```json
-{"code": "string", "text": "string", "image": "string (base64)", "intent": "string", "language": "python", "job_type": "code-verification | text-review | image-analysis", "task_id": "string"}
+{"code": "string", "text": "string", "image": "string (base64)", "intent": "string", "language": "python", "job_type": "code-verification | text-review | image-analysis", "job_id": "string"}
 ```
 
 Response:
 ```json
 {
-  "task_id": "string",
+  "job_id": "string",
   "issues": [{"type": "string", "severity": "string", "line": 0, "description": "string", "suggestion": "string"}],
   "confidence": 0.85,
   "passed": false,

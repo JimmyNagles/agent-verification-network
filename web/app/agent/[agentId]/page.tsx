@@ -8,7 +8,7 @@ const API_BASE = "https://agent-verification-network-production.up.railway.app";
 
 interface AgentInfo { agent_id: string; role: string; endpoint?: string; strategy?: string; owner?: string; registered_at?: number; tee?: string; source?: string; }
 interface HealthData { status: string; agent_id?: string; role?: string; strategy?: string; uptime?: number; jobs_completed?: number; issues_found?: number; mode?: string; service?: string; commerce_enabled?: boolean; job_types?: string[]; [key: string]: unknown; }
-interface CompletedJob { task_id: string; job_type: string; passed: boolean; confidence: number; issues_count: number; processing_time: number; mode: string; created_at: string; }
+interface CompletedJob { job_id: string; job_type: string; passed: boolean; confidence: number; issues_count: number; processing_time: number; mode: string; created_at: string; }
 
 export default function AgentProfile() {
   const params = useParams();

@@ -162,7 +162,7 @@ class KeyManager:
             "total_used": row["total_used"],
         }
 
-    def use_credit(self, raw_key: str, endpoint: str = "/verify", task_id: str = None) -> bool:
+    def use_credit(self, raw_key: str, endpoint: str = "/verify", job_id: str = None) -> bool:
         """
         Use one credit from an API key. Returns True if credit was available.
         """
@@ -200,7 +200,7 @@ class KeyManager:
         _supabase_post("usage_log", {
             "key_hash": key_hash,
             "endpoint": endpoint,
-            "task_id": task_id,
+            "job_id": job_id,
         })
 
         return True

@@ -178,9 +178,9 @@ class TestEndToEnd:
             code="def add(a, b):\n    return a - b",
             intent="Add two numbers",
             language="python",
-            task_id="test-001",
+            job_id="test-001",
         )
         response = await forward(request)
-        assert response.task_id == "test-001"
+        assert response.job_id == "test-001"
         assert response.processing_time > 0
         assert len(response.issues) > 0  # Should catch the wrong operator

@@ -114,22 +114,22 @@ def _load_workers_from_supabase():
 _load_workers_from_supabase()
 
 
-async def _store_filecoin_background(task_id: str, response):
+async def _store_filecoin_background(job_id: str, response):
     """Fire-and-forget Filecoin storage so it doesn't block the API response."""
     try:
         storage = await store_on_filecoin(
             data=response.model_dump(),
-            filename=f"verification_{task_id}.json",
+            filename=f"verification_{job_id}.json",
         )
         if storage:
             response.filecoin_cid = storage["cid"]
             response.filecoin_url = storage["url"]
-            results[task_id] = response  # Update with CID
+            results[job_id] = response  # Update with CID
     except Exception:
         pass
 
 
-def _process_onchain_background(task_id: str, response):
+def _process_onchain_background(job_id: str, response):
     """After verification: create job on-chain. Serialized to prevent nonce conflicts.
 
     Note: On-chain SCORE recording only happens in connected mode via the manager
@@ -146,19 +146,19 @@ def _process_onchain_background(task_id: str, response):
             try:
                 # Create job on AgenticCommerceV2 (records that work was done)
                 if _commerce.enabled:
-                    desc_hash = hashlib.sha256(task_id.encode()).digest()
+                    desc_hash = hashlib.sha256(job_id.encode()).digest()
                     job_result = _commerce.create_job(description_hash=desc_hash)
                     if job_result:
                         response.job_id = job_result["job_id"]
                         response.job_tx = job_result["tx_hash"]
-                        results[task_id] = response
+                        results[job_id] = response
 
                         log_event(
                             event_type="job_created",
                             agent_role="system",
                             agent_id=manager_id,
                             details={
-                                "task_id": task_id,
+                                "job_id": job_id,
                                 "job_id": job_result["job_id"],
                                 "tx_hash": job_result["tx_hash"],
                                 "chain": job_result["chain"],
@@ -207,7 +207,7 @@ class VerifyRequest(BaseModel):
 
 
 class VerifyResponse(BaseModel):
-    task_id: str
+    job_id: str
     passed: bool
     confidence: float
     issues: list
@@ -222,7 +222,7 @@ class VerifyResponse(BaseModel):
 
 
 class TaskStatus(BaseModel):
-    task_id: str
+    job_id: str
     status: str  # "queued", "processing", "complete"
     result: Optional[VerifyResponse] = None
 
@@ -318,7 +318,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                     })
 
     if _manager is not None:
-        task_id = _manager.add_task(
+        job_id = _manager.add_task(
             code=request.code,
             intent=request.intent,
             language=request.language,
@@ -326,7 +326,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
 
         result = None
         for _ in range(60):
-            result = _manager.get_result(task_id)
+            result = _manager.get_result(job_id)
             if result is not None:
                 break
             await asyncio.sleep(1)
@@ -334,12 +334,12 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         if result is None:
             return JSONResponse(status_code=503, content={
                 "error": "No workers available",
-                "task_id": task_id,
+                "job_id": job_id,
                 "message": "Task was queued but no workers responded in time. Try again or register as a worker at POST /register-worker.",
             })
         else:
             response = VerifyResponse(
-                task_id=task_id,
+                job_id=job_id,
                 passed=result["passed"],
                 confidence=result["confidence"],
                 issues=result["issues"],
@@ -349,11 +349,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 mode="connected",
             )
 
-        results[task_id] = response
+        results[job_id] = response
         return response
 
     else:
-        task_id = str(uuid4())
+        job_id = str(uuid4())
 
         import os
         import json as _json
@@ -415,7 +415,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                         "intent": request.intent,
                         "language": request.language,
                         "task_type": request.task_type,
-                        "task_id": task_id,
+                        "job_id": job_id,
                     }).encode("utf-8")
                     req = urllib.request.Request(
                         f"{worker['endpoint'].rstrip('/')}/verify",
@@ -475,12 +475,12 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         if best_result is None:
             return JSONResponse(status_code=503, content={
                 "error": "No workers available",
-                "task_id": task_id,
+                "job_id": job_id,
                 "message": "No workers responded. Register as a worker at POST /register-worker.",
             })
 
         response = VerifyResponse(
-            task_id=task_id,
+            job_id=job_id,
             passed=best_result.get("passed", True),
             confidence=best_result.get("confidence", 0),
             issues=best_result.get("issues", []),
@@ -489,7 +489,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             mode=mode,
         )
 
-        results[task_id] = response
+        results[job_id] = response
 
         # Log completed job to Supabase (persistent history)
         def _log_completed_job():
@@ -499,7 +499,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 import urllib.request as _urllib_req
                 log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
                 log_data = _json_log.dumps({
-                    "task_id": task_id,
+                    "job_id": job_id,
                     "agent_id": best_agent or "local",
                     "task_type": request.task_type,
                     "passed": best_result.get("passed", True),
@@ -521,28 +521,28 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         threading.Thread(target=_log_completed_job, daemon=True).start()
 
         # Store report on Filecoin in background (fire-and-forget)
-        asyncio.ensure_future(_store_filecoin_background(task_id, response))
+        asyncio.ensure_future(_store_filecoin_background(job_id, response))
 
         # Create on-chain job record (fire-and-forget)
-        _process_onchain_background(task_id, response)
+        _process_onchain_background(job_id, response)
 
         return response
 
 
-@app.get("/status/{task_id}", response_model=TaskStatus)
-async def get_task_status(task_id: str):
+@app.get("/status/{job_id}", response_model=TaskStatus)
+async def get_task_status(job_id: str):
     """Check the status of a submitted verification job."""
-    if task_id in results:
+    if job_id in results:
         return TaskStatus(
-            task_id=task_id,
+            job_id=job_id,
             status="complete",
-            result=results[task_id],
+            result=results[job_id],
         )
 
     if _manager is not None:
         for task in _manager.task_queue:
-            if task["task_id"] == task_id:
-                return TaskStatus(task_id=task_id, status="queued")
+            if task["job_id"] == job_id:
+                return TaskStatus(job_id=job_id, status="queued")
 
     raise HTTPException(status_code=404, detail="Task not found")
 
@@ -829,8 +829,8 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         _keys.use_credit(request_key, "/jobs/create")
 
     import hashlib
-    task_id = str(uuid4())
-    desc_hash = hashlib.sha256(f"{request.title}:{task_id}".encode()).digest()
+    job_id = str(uuid4())
+    desc_hash = hashlib.sha256(f"{request.title}:{job_id}".encode()).digest()
 
     # 1. Create on-chain (source of truth)
     job_result = None
@@ -844,7 +844,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
     from agent_market.keys import _supabase_post
     _supabase_post("marketplace_jobs", {
         "on_chain_job_id": on_chain_id,
-        "task_id": task_id,
+        "job_id": job_id,
         "title": request.title,
         "description": request.description,
         "task_type": request.task_type,
@@ -859,7 +859,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         agent_role="client",
         agent_id=request_key[:12] + "..." if request_key else "anonymous",
         details={
-            "task_id": task_id,
+            "job_id": job_id,
             "title": request.title,
             "task_type": request.task_type,
             "on_chain_job_id": on_chain_id,
@@ -868,13 +868,13 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
 
     return {
         "success": True,
-        "task_id": task_id,
+        "job_id": job_id,
         "on_chain_job_id": on_chain_id,
         "on_chain_tx": job_result.get("tx_hash") if job_result else None,
         "title": request.title,
         "task_type": request.task_type,
         "status": "open",
-        "claim_via_api": f"POST /jobs/{task_id}/claim",
+        "claim_via_api": f"POST /jobs/{job_id}/claim",
         "claim_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
         "message": "Job created on-chain and stored in Supabase. Permanent.",
     }
@@ -912,7 +912,7 @@ async def get_marketplace_jobs():
         # Only show open/funded jobs (not completed/rejected)
         if status in ("open", "funded"):
             open_jobs.append({
-                "task_id": sj["task_id"],
+                "job_id": sj["job_id"],
                 "on_chain_job_id": on_chain_id,
                 "title": sj["title"],
                 "task_type": sj["task_type"],
@@ -930,8 +930,8 @@ async def get_marketplace_jobs():
     }
 
 
-@app.post("/jobs/{task_id}/claim")
-async def claim_marketplace_job(task_id: str, raw_request: Request = None):
+@app.post("/jobs/{job_id}/claim")
+async def claim_marketplace_job(job_id: str, raw_request: Request = None):
     """
     Claim and reserve a marketplace job. The worker receives the code/text
     and intent, then has 10 minutes to submit their result.
@@ -952,7 +952,7 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
                 claimer_id = key_info.get("agent_name", "anonymous")
 
     # Read from Supabase
-    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{_sanitize_param(task_id)}&select=*") or []
+    jobs = _supabase_get(f"marketplace_jobs?job_id=eq.{_sanitize_param(job_id)}&select=*") or []
     if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
@@ -977,7 +977,7 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
         import urllib.request as _ureq
         import json as _json
         rpc_url = f"{SUPABASE_URL}/rest/v1/rpc/claim_job"
-        rpc_data = _json.dumps({"p_task_id": task_id, "p_claimer": claimer_id}).encode("utf-8")
+        rpc_data = _json.dumps({"p_job_id": job_id, "p_claimer": claimer_id}).encode("utf-8")
         from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
         req = _ureq.Request(rpc_url, data=rpc_data, method="POST", headers={
             "apikey": SUPABASE_KEY,
@@ -999,7 +999,7 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
 
     return {
         "success": True,
-        "task_id": task_id,
+        "job_id": job_id,
         "on_chain_job_id": on_chain_id,
         "claimed_by": claimer_id,
         "claim_expires_in": "10 minutes",
@@ -1010,13 +1010,13 @@ async def claim_marketplace_job(task_id: str, raw_request: Request = None):
         "text": job.get("text_content", ""),
         "budget_avnc": float(job.get("budget_avnc", 0)),
         "status": status,
-        "submit_via_api": f"POST /jobs/{task_id}/submit",
+        "submit_via_api": f"POST /jobs/{job_id}/submit",
         "submit_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
     }
 
 
-@app.post("/jobs/{task_id}/submit")
-async def submit_marketplace_job(task_id: str, raw_request: Request = None):
+@app.post("/jobs/{job_id}/submit")
+async def submit_marketplace_job(job_id: str, raw_request: Request = None):
     """
     Submit result for a marketplace job. The worker provides their analysis
     (passed, issues, confidence). Credits the worker's earnings balance in Supabase.
@@ -1037,18 +1037,18 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
                 submitter_name = name_rows[0].get("agent_name")
 
     # Read from Supabase
-    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{_sanitize_param(task_id)}&select=*") or []
+    jobs = _supabase_get(f"marketplace_jobs?job_id=eq.{_sanitize_param(job_id)}&select=*") or []
     if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
     job = jobs[0]
 
     # Prevent double-submit — check if already completed
-    existing = _supabase_get(f"completed_jobs?task_id=eq.{_sanitize_param(task_id)}&select=task_id") or []
+    existing = _supabase_get(f"completed_jobs?job_id=eq.{_sanitize_param(job_id)}&select=job_id") or []
     if existing:
         return JSONResponse(status_code=400, content={
             "error": "Job already completed",
-            "task_id": task_id,
+            "job_id": job_id,
             "message": "This job has already been submitted. Each job can only be completed once.",
         })
 
@@ -1062,7 +1062,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
             if state in ("completed", "submitted", "rejected"):
                 return JSONResponse(status_code=400, content={
                     "error": f"Job is already {state} on-chain",
-                    "task_id": task_id,
+                    "job_id": job_id,
                 })
         except Exception:
             pass
@@ -1094,7 +1094,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
         agent_role="worker",
         agent_id=submitter_name or body.get("agent_id") or "api-submitter",
         details={
-            "task_id": task_id,
+            "job_id": job_id,
             "on_chain_job_id": job.get("on_chain_job_id"),
             "task_type": job["task_type"],
             "issues_found": len(result.get("issues", [])),
@@ -1111,7 +1111,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
             import urllib.request as _ureq
             log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
             log_data = _jlog.dumps({
-                "task_id": task_id,
+                "job_id": job_id,
                 "agent_id": submitter_name or body.get("agent_id") or "marketplace-submitter",
                 "task_type": job.get("task_type", "code-verification"),
                 "passed": result.get("passed", True),
@@ -1186,7 +1186,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
 
     return {
         "success": True,
-        "task_id": task_id,
+        "job_id": job_id,
         "on_chain_job_id": on_chain_id,
         "on_chain_tx": on_chain_tx,
         "status": "completed",
@@ -1280,10 +1280,10 @@ async def get_activity():
     activity = []
 
     # Recent verifications
-    for task_id, result in list(results.items())[-10:]:
+    for job_id, result in list(results.items())[-10:]:
         activity.append({
             "type": "verification",
-            "task_id": task_id,
+            "job_id": job_id,
             "passed": result.passed,
             "confidence": result.confidence,
             "issues": len(result.issues),
@@ -1566,7 +1566,7 @@ async def agent_jobs(agent_id: str, limit: int = 20):
     try:
         from agent_market.keys import _supabase_get
         rows = _supabase_get(
-            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=task_id,task_type,passed,confidence,issues_count,processing_time,mode,created_at"
+            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=job_id,task_type,passed,confidence,issues_count,processing_time,mode,created_at"
         )
         return {"agent_id": agent_id, "jobs": rows or [], "source": "supabase"}
     except Exception as e:
@@ -1718,7 +1718,7 @@ async def root():
         "skill_file": "/skill.md",
         "endpoints": {
             "/jobs/submit": "POST — Submit a job",
-            "/status/{task_id}": "GET — Check task status",
+            "/status/{job_id}": "GET — Check task status",
             "/leaderboard": "GET — Top performing agents",
             "/register-worker": "POST — Register a worker agent",
             "/register-manager": "POST — Register a manager agent",

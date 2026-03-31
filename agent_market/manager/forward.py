@@ -35,8 +35,8 @@ class ManagerForward:
         self.image_spot_check_gen = ImageSpotCheckGenerator()
         self.scorer = WorkerScorer()
         self.scores: Dict[str, float] = {}  # agent_id -> running score
-        self.task_queue: List[dict] = []
-        self.results: Dict[str, dict] = {}  # task_id -> result
+        self.job_queue: List[dict] = []
+        self.results: Dict[str, dict] = {}  # job_id -> result
         self.worker_agents: List[dict] = []  # registered worker endpoints
         self.worker_job_counts: Dict[str, int] = {}  # agent_id -> jobs completed
         self.round_count = 0
@@ -52,21 +52,21 @@ class ManagerForward:
         logger.info(f"Registered worker: {agent_id} at {endpoint}")
 
     def add_task(self, code: str, intent: str, language: str = "python") -> str:
-        """Add an external task to the queue. Returns task_id."""
-        task_id = str(uuid4())
-        self.task_queue.append({
-            "task_id": task_id,
+        """Add an external task to the queue. Returns job_id."""
+        job_id = str(uuid4())
+        self.job_queue.append({
+            "job_id": job_id,
             "code": code,
             "intent": intent,
             "language": language,
             "is_spot_check": False,
             "known_bugs": None,
         })
-        return task_id
+        return job_id
 
-    def get_result(self, task_id: str) -> Optional[dict]:
+    def get_result(self, job_id: str) -> Optional[dict]:
         """Get result for a completed task."""
-        return self.results.get(task_id)
+        return self.results.get(job_id)
 
     async def run_round(self):
         """
@@ -87,14 +87,14 @@ class ManagerForward:
         )
         spot_check_rate = 0.5 if any_on_probation else 0.3
 
-        if self.task_queue and random.random() > spot_check_rate:
-            task = self.task_queue.pop(0)
+        if self.job_queue and random.random() > spot_check_rate:
+            task = self.job_queue.pop(0)
         else:
             # Generate spot check — 85% code, 15% image
             if random.random() < 0.15:
                 image_b64, intent, known_bugs = self.image_spot_check_gen.generate()
                 task = {
-                    "task_id": str(uuid4()),
+                    "job_id": str(uuid4()),
                     "code": "",
                     "image": image_b64,
                     "intent": intent,
@@ -106,7 +106,7 @@ class ManagerForward:
             else:
                 code, intent, known_bugs = self.spot_check_gen.generate()
                 task = {
-                    "task_id": str(uuid4()),
+                    "job_id": str(uuid4()),
                     "code": code,
                     "intent": intent,
                     "language": "python",
@@ -120,7 +120,7 @@ class ManagerForward:
             image=task.get("image", ""),
             intent=task["intent"],
             language=task.get("language", "python"),
-            task_id=task["task_id"],
+            job_id=task["job_id"],
             task_type=task.get("task_type", "code-verification"),
         )
 
@@ -130,7 +130,7 @@ class ManagerForward:
         if not responses:
             return {
                 "round": self.round_count,
-                "task_id": task["task_id"],
+                "job_id": task["job_id"],
                 "is_spot_check": task["is_spot_check"],
                 "responses": 0,
                 "best_agent": None,
@@ -183,7 +183,7 @@ class ManagerForward:
 
         # Store result for real tasks
         if not task["is_spot_check"] and best_response:
-            self.results[task["task_id"]] = {
+            self.results[task["job_id"]] = {
                 "passed": best_response.passed,
                 "confidence": best_response.confidence,
                 "issues": best_response.issues,
@@ -197,7 +197,7 @@ class ManagerForward:
 
         return {
             "round": self.round_count,
-            "task_id": task["task_id"],
+            "job_id": task["job_id"],
             "is_spot_check": task["is_spot_check"],
             "responses": len(responses),
             "best_agent": best_agent,
@@ -250,7 +250,7 @@ class ManagerForward:
                     "intent": request.intent,
                     "language": request.language,
                     "task_type": request.task_type,
-                    "task_id": request.task_id,
+                    "job_id": request.job_id,
                 }).encode("utf-8")
 
                 req = urllib.request.Request(
@@ -263,7 +263,7 @@ class ManagerForward:
                     result = json.loads(resp.read().decode("utf-8"))
 
                 responses[worker["agent_id"]] = JobResponse(
-                    task_id=result.get("task_id", request.task_id),
+                    job_id=result.get("job_id", request.job_id),
                     issues=result.get("issues", []),
                     confidence=result.get("confidence", 0.0),
                     passed=result.get("passed", True),

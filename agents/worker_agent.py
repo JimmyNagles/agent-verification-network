@@ -44,10 +44,10 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         intent: str
         language: str = "python"
         task_type: str = "code-verification"
-        task_id: str = ""
+        job_id: str = ""
 
     class VerifyResponse(BaseModel):
-        task_id: str
+        job_id: str
         issues: list = []
         confidence: float = 0.0
         passed: bool = True
@@ -60,10 +60,10 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
 
     @app.post("/verify", response_model=VerifyResponse)
     async def verify(request: VerifyRequest):
-        task_id = request.task_id or str(uuid4())
+        job_id = request.job_id or str(uuid4())
         start = time.time()
 
-        logger.info(f"Task {task_id}: analyzing {request.task_type}")
+        logger.info(f"Task {job_id}: analyzing {request.task_type}")
 
         if request.task_type == "image-analysis":
             from agent_market.worker.image_analyzer import analyze_image
@@ -98,7 +98,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
             agent_role="worker",
             agent_id=agent_id,
             details={
-                "task_id": task_id,
+                "job_id": job_id,
                 "issues_found": len(result["issues"]),
                 "confidence": result["confidence"],
                 "passed": result["passed"],
@@ -107,12 +107,12 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         )
 
         logger.info(
-            f"Task {task_id}: {len(result['issues'])} issues, "
+            f"Task {job_id}: {len(result['issues'])} issues, "
             f"confidence={result['confidence']:.2f}, time={elapsed:.2f}s"
         )
 
         return VerifyResponse(
-            task_id=task_id,
+            job_id=job_id,
             issues=result["issues"],
             confidence=result["confidence"],
             passed=result["passed"],

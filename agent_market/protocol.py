@@ -18,7 +18,7 @@ class JobRequest(BaseModel):
     code: str = Field(default="", description="Source code to analyze")
     intent: str = Field(description="Natural language description of what the code should do")
     language: str = Field(default="python", description="Programming language of the code")
-    task_id: str = Field(default="", description="Unique identifier for this job")
+    job_id: str = Field(default="", description="Unique identifier for this job")
     image: str = Field(default="", description="Base64-encoded image data (for image-analysis tasks, max ~10MB)")
     task_type: str = Field(default="code-verification", alias="job_type", description="Job type: 'code-verification' | 'text-review' | 'image-analysis'")
 
@@ -35,7 +35,7 @@ class JobRequest(BaseModel):
 class JobResponse(BaseModel):
     """Audit report returned by a worker agent."""
 
-    task_id: str = Field(default="", description="Job identifier")
+    job_id: str = Field(default="", description="Job identifier")
     issues: List[dict] = Field(
         default=[],
         description="List of issues found. Each: {type, severity, line, description, suggestion}",

@@ -126,7 +126,7 @@ class TestX402ValidPayment:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "task_id" in data
+        assert "job_id" in data
 
     @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT, "VERIFY_API_KEY": "test-key"})
     def test_wrong_api_key_rejected(self):

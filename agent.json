@@ -80,7 +80,7 @@
         "job_type": "string — 'code-verification' | 'text-review' | 'image-analysis' (default: code-verification)"
       },
       "output": {
-        "task_id": "string",
+        "job_id": "string",
         "passed": "boolean",
         "confidence": "float 0.0-1.0",
         "issues": "array of {type, severity, line, description, suggestion}",
@@ -98,7 +98,7 @@
     {
       "name": "status",
       "type": "REST",
-      "endpoint": "/status/{task_id}",
+      "endpoint": "/status/{job_id}",
       "method": "GET",
       "description": "Check the status of a submitted verification task."
     },

@@ -33,7 +33,7 @@ interface StatsData {
 
 interface ActivityItem {
   type: string;
-  task_id?: string;
+  job_id?: string;
   passed?: boolean;
   confidence?: number;
   issues?: number;
@@ -161,7 +161,7 @@ export default function Home() {
                   >
                     {item.type === "verification" ? (
                       <>
-                        <span style={{ color: "var(--text-muted)", fontSize: 12 }}>#{item.task_id?.slice(-3) || i}</span>
+                        <span style={{ color: "var(--text-muted)", fontSize: 12 }}>#{item.job_id?.slice(-3) || i}</span>
                         <span style={{ fontFamily: "var(--font-body)", fontWeight: 500 }}>
                           {item.mode === "image-analysis" ? "image" : item.mode === "text-review" ? "text" : "code"}
                         </span>

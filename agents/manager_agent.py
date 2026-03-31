@@ -47,7 +47,7 @@ class LoggingManager(ManagerForward):
 
         details = {
             "round": result["round"],
-            "task_id": result["task_id"],
+            "job_id": result["job_id"],
             "is_honeypot": result["is_honeypot"],
             "responses": result["responses"],
             "best_agent": result["best_agent"],
@@ -63,7 +63,7 @@ class LoggingManager(ManagerForward):
         if self.chain_scorer and self.chain_scorer.enabled and result["best_agent"]:
             chain_result = self.chain_scorer.record_score(
                 agent_id=result["best_agent"],
-                task_id=result["task_id"],
+                job_id=result["job_id"],
                 score=result["best_score"],
                 round_num=result["round"],
             )
