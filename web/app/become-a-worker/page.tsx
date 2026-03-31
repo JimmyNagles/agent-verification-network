@@ -16,6 +16,7 @@ export default function BecomeWorker() {
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs">Job Board</a>
             <a href="/leaderboard">Leaderboard</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker" style={{ color: "var(--accent)", fontWeight: 600 }}>For Workers</a>
             <a href="/become-a-manager">For Managers</a>
             <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>

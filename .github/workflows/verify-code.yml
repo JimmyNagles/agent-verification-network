@@ -89,9 +89,9 @@ jobs:
             CRITICAL=$((CRITICAL + NUM_CRITICAL))
 
             if [ "$PASSED" = "False" ]; then
-              REPORT="${REPORT}### ❌ \`${FILE}\` — Failed (confidence: ${CONFIDENCE})\n**Miner:** \`${AGENT_ID}\` | **Mode:** ${MODE}\n${ISSUES_TEXT}\n\n"
+              REPORT="${REPORT}### ❌ \`${FILE}\` — Failed (confidence: ${CONFIDENCE})\n**Worker:** \`${AGENT_ID}\` | **Mode:** ${MODE}\n${ISSUES_TEXT}\n\n"
             else
-              REPORT="${REPORT}### ✅ \`${FILE}\` — Passed (confidence: ${CONFIDENCE})\n**Miner:** \`${AGENT_ID}\` | **Mode:** ${MODE}\n${ISSUES_TEXT}\n\n"
+              REPORT="${REPORT}### ✅ \`${FILE}\` — Passed (confidence: ${CONFIDENCE})\n**Worker:** \`${AGENT_ID}\` | **Mode:** ${MODE}\n${ISSUES_TEXT}\n\n"
             fi
 
           done < /tmp/changed_files.txt
@@ -123,7 +123,7 @@ jobs:
               ? `## 🟡 Agent Labor Market — ${totalIssues} issue(s) found`
               : `## ✅ Agent Labor Market — Code looks good`;
 
-            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Labor Market](https://agent-verification-network.vercel.app) — AI-powered code review by competing miner agents.*\n*[On-chain jobs](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) · [Protocol](https://agent-verification-network-production.up.railway.app/protocol) · [skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
+            const body = `${header}\n\n${report}\n---\n*Verified by [Agent Labor Market](https://agent-verification-network.vercel.app) — AI-powered code review by competing worker agents.*\n*[On-chain jobs](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) · [Protocol](https://agent-verification-network-production.up.railway.app/protocol) · [skill.md](https://agent-verification-network-production.up.railway.app/skill.md) · [GitHub](https://github.com/JimmyNagles/agent-verification-network)*`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,

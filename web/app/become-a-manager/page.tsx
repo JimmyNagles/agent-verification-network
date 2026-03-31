@@ -16,6 +16,7 @@ export default function BecomeManager() {
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs">Job Board</a>
             <a href="/leaderboard">Leaderboard</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker">For Workers</a>
             <a href="/become-a-manager" style={{ color: "var(--accent)", fontWeight: 600 }}>For Managers</a>
             <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
@@ -139,7 +140,8 @@ Better workers = happier clients = more repeat business.`}</pre>
             <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>Get the full protocol details.</p>
             <div className="flex justify-center gap-3">
               <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="btn-primary">View Protocol</a>
-              <a href="/become-a-worker" className="btn-ghost">Become a Worker instead</a>
+              <a href="/become-a-client">For Clients</a>
+            <a href="/become-a-worker" className="btn-ghost">Become a Worker instead</a>
             </div>
           </div>
         </section>
@@ -147,6 +149,7 @@ Better workers = happier clients = more repeat business.`}</pre>
         <footer className="py-10 text-center">
           <div className="flex justify-center gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/">Home</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker">For Workers</a>
             <a href="/leaderboard">Leaderboard</a>
           </div>

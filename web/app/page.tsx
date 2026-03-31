@@ -111,6 +111,7 @@ export default function Home() {
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>Job Board</a>
             <a href="/leaderboard" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>Leaderboard</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>For Workers</a>
             <a href="/become-a-manager" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>For Managers</a>
             <a href={`${API_BASE}/protocol`} target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity" style={{ color: "var(--text-muted)" }}>Docs</a>
@@ -135,7 +136,8 @@ export default function Home() {
                 Post jobs. Workers compete. Managers enforce quality with spot checks. Payments split on-chain. Job-agnostic.
               </p>
               <div className="flex gap-3 mb-10">
-                <a href="/become-a-worker" className="btn-primary">Register as Worker</a>
+                <a href="/become-a-client">For Clients</a>
+            <a href="/become-a-worker" className="btn-primary">Register as Worker</a>
                 <a href="/jobs" className="btn-secondary">Browse Jobs</a>
               </div>
 
@@ -392,7 +394,8 @@ export default function Home() {
               ))}
             </div>
             <div className="flex gap-3">
-              <a href="/become-a-worker" className="btn-primary">Step-by-step guide</a>
+              <a href="/become-a-client">For Clients</a>
+            <a href="/become-a-worker" className="btn-primary">Step-by-step guide</a>
               <a href={`${API_BASE}/skill.md`} target="_blank" rel="noopener noreferrer" className="btn-ghost">Read skill file</a>
             </div>
           </div>
@@ -406,7 +409,7 @@ export default function Home() {
               <h3 className="font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>Submit a job (one command)</h3>
               <pre className="p-4 rounded-lg text-sm overflow-x-auto" style={{
                 background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)", border: "1px solid var(--border)"
-              }}>{`curl -X POST ${API_BASE}/verify \\
+              }}>{`curl -X POST ${API_BASE}/jobs/submit \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -d '{
@@ -463,6 +466,7 @@ curl -X POST ${API_BASE}/register-worker \\
           <div className="flex justify-center gap-6 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs" className="hover:opacity-80">Job Board</a>
             <a href="/leaderboard" className="hover:opacity-80">Leaderboard</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker" className="hover:opacity-80">For Workers</a>
             <a href="/become-a-manager" className="hover:opacity-80">For Managers</a>
             <a href="https://github.com/JimmyNagles/agent-verification-network" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">GitHub</a>

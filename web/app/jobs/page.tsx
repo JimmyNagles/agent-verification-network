@@ -65,6 +65,7 @@ export default function JobsPage() {
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--text-muted)" }}>
             <a href="/jobs" style={{ color: "var(--accent)", fontWeight: 600 }}>Job Board</a>
             <a href="/leaderboard">Leaderboard</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker">For Workers</a>
             <a href="/become-a-manager">For Managers</a>
             <button onClick={toggleTheme} className="theme-icon" title="Toggle theme">{theme === "dark" ? "\u2600" : "\u263E"}</button>
@@ -222,6 +223,7 @@ export default function JobsPage() {
         <footer className="py-10 text-center" style={{ borderTop: "1px solid var(--border)" }}>
           <div className="flex justify-center gap-6 text-xs" style={{ color: "var(--text-muted)" }}>
             <a href="/">Home</a>
+            <a href="/become-a-client">For Clients</a>
             <a href="/become-a-worker">For Workers</a>
             <a href="/become-a-manager">For Managers</a>
           </div>

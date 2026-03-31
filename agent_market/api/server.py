@@ -248,7 +248,8 @@ class NetworkStatus(BaseModel):
 
 # ── Endpoints ────────────────────────────────────────────────────
 
-@app.post("/verify")
+@app.post("/jobs/submit")
+@app.post("/verify")  # Deprecated alias — use /jobs/submit
 async def verify_code(request: VerifyRequest, raw_request: Request = None):
     """
     Submit a job for verification by the agent network.
@@ -641,7 +642,33 @@ async def register_manager(request: RegisterManagerRequest):
         "manager_id": request.manager_id,
         "endpoint": request.endpoint,
     }
+    # Deduplicate in-memory
+    _registered_managers[:] = [m for m in _registered_managers if m["manager_id"] != request.manager_id]
     _registered_managers.append(entry)
+
+    # Persist to Supabase (same table as workers, with role=manager)
+    try:
+        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+        import urllib.request as _ureq
+        import json as _json
+        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_miners"
+        upsert_data = _json.dumps({
+            "agent_id": request.manager_id,
+            "endpoint": request.endpoint,
+            "strategy": "manager",
+            "role": "manager",
+            "is_active": True,
+        }).encode("utf-8")
+        req = _ureq.Request(upsert_url, data=upsert_data, method="POST", headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        })
+        _ureq.urlopen(req, timeout=5)
+        logger.info(f"Manager {request.manager_id} persisted to Supabase")
+    except Exception as e:
+        logger.warning(f"Failed to persist manager to Supabase: {e}")
 
     log_event(
         event_type="manager_registered",
@@ -1051,23 +1078,45 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
         except Exception as e:
             logger.warning(f"On-chain completion failed for job #{on_chain_id}: {e}")
 
-    # Credit worker earnings (85% of budget)
+    # Gate + Base + Bonus payment model
+    # Manager takes 15% off top. Remaining 85% split:
+    #   30% base pay pool (all workers who pass quality gate)
+    #   55% winner bonus (best worker)
+    #   15% reserve
+    # For marketplace jobs (single worker), worker gets full 85%.
     earnings_credited = 0
+    payment_details = {}
     if submitter_key:
         try:
             import hashlib
             key_hash = hashlib.sha256(submitter_key.encode()).hexdigest()
             budget = float(job.get("budget_avnc", 0))
-            worker_share = budget * 0.85
-            if worker_share > 0:
-                # Read current earnings
-                rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=earnings")
+
+            if budget > 0:
+                manager_fee = budget * 0.15
+                worker_pool = budget * 0.85
+
+                # For marketplace (single worker claims), worker gets the full 85%
+                # Gate + Base + Bonus only applies in competitive mode (multiple workers)
+                worker_share = worker_pool
+
+                # Read current earnings and jobs_completed
+                rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=earnings,jobs_completed")
                 if rows:
-                    current = float(rows[0].get("earnings", 0) or 0)
+                    current_earnings = float(rows[0].get("earnings", 0) or 0)
+                    current_jobs = int(rows[0].get("jobs_completed", 0) or 0)
                     _supabase_patch(f"api_keys?key_hash=eq.{key_hash}", {
-                        "earnings": current + worker_share,
+                        "earnings": current_earnings + worker_share,
+                        "jobs_completed": current_jobs + 1,
                     })
                     earnings_credited = worker_share
+
+                payment_details = {
+                    "budget": budget,
+                    "manager_fee": round(manager_fee, 4),
+                    "worker_earned": round(worker_share, 4),
+                    "model": "marketplace_single_worker",
+                }
         except Exception as e:
             logger.warning(f"Failed to credit earnings: {e}")
 
@@ -1078,6 +1127,7 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
         "on_chain_tx": on_chain_tx,
         "status": "completed",
         "earnings_credited": earnings_credited,
+        "payment": payment_details,
         "result": result,
     }
 
@@ -1291,7 +1341,7 @@ async def register_client(request: Request):
                 **result,
                 "usage": "Include your key as: -H 'X-API-Key: your-key-here'",
                 "endpoints": {
-                    "/verify": "Submit code for verification (costs 1 credit per call)",
+                    "/jobs/submit": "Submit a job for verification (costs 1 credit per call)",
                     "/token": "AVNC token info",
                     "/faucet": "Claim free AVNC tokens (requires wallet address)",
                     "/pricing": "Payment options when credits run out",
@@ -1583,10 +1633,10 @@ async def skill_file():
         "- `image-analysis` — submit base64 image + intent, get validation (Venice vision AI)\n\n"
         "## Join as a Worker\n"
         "POST /register-worker with {agent_id, endpoint}\n"
-        "Your endpoint needs: GET /health (return 200) + POST /verify (accept tasks, return results)\n\n"
+        "Your endpoint needs: GET /health (return 200) + POST /jobs/submit (accept tasks, return results)\n\n"
         "## Verify a Task\n"
-        'POST /verify with {"code": "...", "intent": "...", "task_type": "code-verification"}\n'
-        'POST /verify with {"image": "<base64>", "intent": "...", "task_type": "image-analysis"}\n\n'
+        'POST /jobs/submit with {"code": "...", "intent": "...", "task_type": "code-verification"}\n'
+        'POST /jobs/submit with {"image": "<base64>", "intent": "...", "task_type": "image-analysis"}\n\n'
         "## Register as Client\n"
         "POST /register with {agent_name} — get API key with 20 free credits\n\n"
         f"Base URL: https://agent-verification-network-production.up.railway.app\n"
@@ -1603,7 +1653,7 @@ async def root():
         "mode": get_mode(),
         "skill_file": "/skill.md",
         "endpoints": {
-            "/verify": "POST — Submit code for verification",
+            "/jobs/submit": "POST — Submit a job",
             "/status/{task_id}": "GET — Check task status",
             "/leaderboard": "GET — Top performing agents",
             "/register-worker": "POST — Register a worker agent",
