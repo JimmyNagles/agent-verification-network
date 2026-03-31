@@ -38,7 +38,9 @@ class ManagerForward:
         self.task_queue: List[dict] = []
         self.results: Dict[str, dict] = {}  # task_id -> result
         self.worker_agents: List[dict] = []  # registered worker endpoints
+        self.worker_job_counts: Dict[str, int] = {}  # agent_id -> jobs completed
         self.round_count = 0
+        self.PROBATION_THRESHOLD = 20  # jobs before full worker status
 
     def register_worker(self, agent_id: str, endpoint: str):
         """Register a worker agent to receive jobs."""
@@ -78,7 +80,14 @@ class ManagerForward:
         logger.info(f"=== Validation round {self.round_count} ===")
 
         # Decide: spot check or real task
-        if self.task_queue and random.random() > 0.3:
+        # Probation workers (< 20 jobs) get 50% spot checks instead of 30%
+        any_on_probation = any(
+            self.worker_job_counts.get(w["agent_id"], 0) < self.PROBATION_THRESHOLD
+            for w in self.worker_agents
+        )
+        spot_check_rate = 0.5 if any_on_probation else 0.3
+
+        if self.task_queue and random.random() > spot_check_rate:
             task = self.task_queue.pop(0)
         else:
             # Generate spot check — 85% code, 15% image
@@ -158,6 +167,7 @@ class ManagerForward:
             # Exponential moving average
             old_score = self.scores.get(agent_id, 0.0)
             self.scores[agent_id] = 0.9 * old_score + 0.1 * score
+            self.worker_job_counts[agent_id] = self.worker_job_counts.get(agent_id, 0) + 1
             round_scores[agent_id] = score
 
             logger.info(

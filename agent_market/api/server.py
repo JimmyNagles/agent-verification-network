@@ -408,13 +408,40 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 except Exception as e:
                     logger.warning(f"Worker {worker['agent_id']} failed: {e}")
 
-            # Pick the best response (highest confidence)
+            # Score all responses using the scorer (with consensus if multiple workers)
             if worker_responses:
-                best = max(worker_responses, key=lambda r: r["result"].get("confidence", 0))
-                best_result = best["result"]
-                best_agent = best["agent_id"]
+                from agent_market.manager.scorer import WorkerScorer
+                _network_scorer = WorkerScorer()
+
+                # Build response objects for consensus scoring
+                all_resp_for_consensus = []
+                for wr in worker_responses:
+                    class _R:
+                        def __init__(self, issues):
+                            self.issues = issues
+                    all_resp_for_consensus.append(_R(wr["result"].get("issues", [])))
+
+                best_score = -1
+                best_result = None
+                best_agent = None
+                for wr in worker_responses:
+                    r = wr["result"]
+                    score = _network_scorer.score(
+                        response_issues=r.get("issues", []),
+                        response_passed=r.get("passed", True),
+                        response_confidence=r.get("confidence", 0),
+                        response_time=r.get("processing_time", 1.0),
+                        is_spot_check=False,
+                        known_bugs=None,
+                        all_responses=all_resp_for_consensus if len(worker_responses) > 1 else None,
+                    )
+                    if score > best_score:
+                        best_score = score
+                        best_result = r
+                        best_agent = wr["agent_id"]
+
                 mode = "network"
-                logger.info(f"Best response from {best_agent} (confidence: {best_result.get('confidence')})")
+                logger.info(f"Best response from {best_agent} (score: {best_score:.3f}, confidence: {best_result.get('confidence')})")
 
         # No workers available — return error instead of doing the work ourselves
         if best_result is None:
