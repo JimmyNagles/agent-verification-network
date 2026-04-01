@@ -43,27 +43,35 @@ Adding a new job type requires: an analyzer, a spot check generator (synthetic j
 ## Three Layers
 
 ```
-YOUR WORKER (any computer, any AI)
-├── Infrastructure: your laptop, AWS, Railway, EigenCompute, a Raspberry Pi
-├── AI Engine: Venice, GPT, Claude, local Llama, no LLM at all
-├── Exposes: GET /health + POST /verify
-└── Earns: 85% of every job payment in AVNC
+CLIENT (developer, agent, CI/CD pipeline)
+├── Submits jobs: code review, text review, image validation
+├── Pays with: API key (20 free credits), x402 (ETH/USDC/AVNC), or on-chain escrow
+├── No wallet needed for the free tier
+└── Gets back: best analysis result with issues, severity, suggestions
         │
-        │ Registers with a manager, receives jobs via HTTP
+        │ POST /jobs/submit with code/text/image + intent
         ▼
 MANAGER (needs wallet, sets pricing)
-├── Routes jobs to workers
+├── Routes jobs to eligible workers by job type
 ├── Tests quality with spot checks (synthetic bugs with known answers)
 ├── Handles payments (x402, API keys, AVNC)
 ├── Writes ratings on-chain (ERC-8004 Reputation)
 ├── Earns: 15% of every job payment
 └── Deploy: Railway, EigenCompute TEE, your own server
         │
-        │ Reads/writes to contracts on Base Mainnet
+        │ Sends jobs to workers via HTTP, collects + scores responses
         ▼
-PROTOCOL (smart contracts, permissionless)
+WORKER (any computer, any AI)
+├── Infrastructure: your laptop, AWS, Railway, EigenCompute, a Raspberry Pi
+├── AI Engine: Venice, GPT, Claude, local Llama, no LLM at all
+├── Exposes: GET /health + POST /verify
+└── Earns: 85% of every job payment in AVNC
+        │
+        │ Results scored, ratings recorded
+        ▼
+PROTOCOL (smart contracts on Base Mainnet, permissionless)
 ├── AgenticCommerceV2 (ERC-8183) — job escrow + 85/15 fee split
-├── MinerRegistry — permanent agent discovery
+├── AgentRegistry — permanent agent discovery
 ├── AgentScorer — quality ratings per job
 ├── ERC-8004 Identity + Reputation — official portable identity
 ├── ProtocolCredits (AVNC) — token + faucet
