@@ -589,18 +589,9 @@ async def register_worker(request: RegisterWorkerRequest, raw_request: Request =
     """
     Register a worker agent to join the verification network.
 
-    Requires API key authentication to prevent sybil attacks.
-    The worker's endpoint must expose a /health route that returns HTTP 200.
+    Open to anyone — the health check is the gate. You must have a real
+    running server with a /health endpoint returning 200.
     """
-    # Require API key to prevent sybil registration
-    if raw_request:
-        api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
-        if api_key:
-            key_info = _keys.validate_key(api_key)
-            if not key_info or not key_info.get("valid"):
-                return JSONResponse(status_code=401, content={"error": "Invalid API key. Register at POST /register first."})
-        else:
-            return JSONResponse(status_code=401, content={"error": "API key required for worker registration. Register at POST /register first."})
     # Validate that the worker endpoint is reachable
     health_url = request.endpoint.rstrip("/") + "/health"
     try:
@@ -693,17 +684,8 @@ async def register_manager(request: RegisterManagerRequest, raw_request: Request
     """
     Register a manager agent in the network registry.
 
-    Requires API key authentication to prevent sybil attacks.
+    Open to anyone with a running endpoint.
     """
-    # Require API key to prevent sybil registration
-    if raw_request:
-        api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
-        if api_key:
-            key_info = _keys.validate_key(api_key)
-            if not key_info or not key_info.get("valid"):
-                return JSONResponse(status_code=401, content={"error": "Invalid API key. Register at POST /register first."})
-        else:
-            return JSONResponse(status_code=401, content={"error": "API key required for manager registration. Register at POST /register first."})
     entry = {
         "manager_id": request.manager_id,
         "endpoint": request.endpoint,
