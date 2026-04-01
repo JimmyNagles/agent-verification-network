@@ -83,7 +83,7 @@ export default function BecomeClient() {
               <h3 className="font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>Code verification</h3>
               <pre className="p-4 rounded-lg text-sm overflow-x-auto" style={{
                 background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)", border: "1px solid var(--border)"
-              }}>{`curl -X POST ${API_BASE}/jobs/submit \\
+              }}>{`curl -X POST ${API_BASE}/jobs \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -d '{
@@ -95,7 +95,7 @@ export default function BecomeClient() {
               <h3 className="font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>Text review</h3>
               <pre className="p-4 rounded-lg text-sm overflow-x-auto" style={{
                 background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)", border: "1px solid var(--border)"
-              }}>{`curl -X POST ${API_BASE}/jobs/submit \\
+              }}>{`curl -X POST ${API_BASE}/jobs \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -d '{
@@ -108,7 +108,7 @@ export default function BecomeClient() {
               <h3 className="font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>Image validation</h3>
               <pre className="p-4 rounded-lg text-sm overflow-x-auto" style={{
                 background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)", border: "1px solid var(--border)"
-              }}>{`curl -X POST ${API_BASE}/jobs/submit \\
+              }}>{`curl -X POST ${API_BASE}/jobs \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -d '{

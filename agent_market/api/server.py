@@ -253,9 +253,10 @@ class NetworkStatus(BaseModel):
 
 # ── Endpoints ────────────────────────────────────────────────────
 
-@app.post("/jobs/submit")
-@app.post("/verify")  # Deprecated alias — use /jobs/submit
-async def verify_code(request: VerifyRequest, raw_request: Request = None):
+@app.post("/jobs")
+@app.post("/jobs/submit")  # Alias
+@app.post("/verify")  # Legacy alias
+async def submit_job(request: VerifyRequest, raw_request: Request = None):
     """
     Submit a job for verification by the agent network.
 
@@ -369,7 +370,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                     if m["agent_id"] not in known_ids:
                         strategy = m.get("strategy", "")
                         # Skip managers — they're not workers
-                        if "manager" in strategy.lower():
+                        if "manager" in strategy.lower() or "validator" in strategy.lower():
                             continue
                         all_workers.append({
                             "agent_id": m["agent_id"],
@@ -1382,10 +1383,11 @@ async def register_client(request: Request):
                 **result,
                 "usage": "Include your key as: -H 'X-API-Key: your-key-here'",
                 "endpoints": {
-                    "/jobs/submit": "Submit a job for verification (costs 1 credit per call)",
-                    "/token": "AVNC token info",
+                    "/jobs": "Submit a job (costs 1 credit per call)",
+                    "/credits/buy": "Buy more credits with AVNC",
+                    "/claim": "Convert earned credits to AVNC tokens (send to your wallet)",
                     "/faucet": "Claim free AVNC tokens (requires wallet address)",
-                    "/pricing": "Payment options when credits run out",
+                    "/pricing": "Payment options",
                 },
             }
         return JSONResponse(status_code=500, content={"error": "Registration failed"})
@@ -1398,6 +1400,52 @@ async def register_client(request: Request):
 async def key_stats():
     """API key usage statistics for this manager."""
     return _keys.get_stats()
+
+
+@app.post("/credits/buy")
+async def buy_credits(raw_request: Request):
+    """
+    Buy more API credits. Pay with AVNC (x402) to refill your key.
+
+    Send your API key + an x402 payment. Each 0.0001 ETH equivalent
+    buys 10 credits. Credits are added to your existing key.
+    """
+    from agent_market.keys import _supabase_get, _supabase_patch
+
+    # Require API key
+    api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
+    if not api_key:
+        return JSONResponse(status_code=401, content={"error": "API key required"})
+
+    key_info = _keys.validate_key(api_key)
+    if not key_info or not key_info.get("valid"):
+        return JSONResponse(status_code=401, content={"error": "Invalid API key"})
+
+    # Require x402 payment
+    payment_result = await check_x402_payment(raw_request)
+    if payment_result is not None:
+        return payment_result  # Returns 402 with payment instructions
+
+    # Payment verified — add credits
+    import hashlib
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    credits_to_add = 10  # 10 credits per payment
+
+    rows = _supabase_get(f"api_keys?key_hash=eq.{_sanitize_param(key_hash)}&select=credits_remaining")
+    if rows:
+        current = int(rows[0].get("credits_remaining", 0))
+        _supabase_patch(f"api_keys?key_hash=eq.{_sanitize_param(key_hash)}", {
+            "credits_remaining": current + credits_to_add,
+        })
+
+        return {
+            "success": True,
+            "credits_added": credits_to_add,
+            "credits_remaining": current + credits_to_add,
+            "agent_name": key_info.get("agent_name"),
+        }
+
+    return JSONResponse(status_code=500, content={"error": "Failed to add credits"})
 
 
 @app.get("/token")
@@ -1571,13 +1619,14 @@ async def check_earnings(raw_request: Request):
         "earnings": float(row.get("earnings", 0) or 0),
         "withdraw_address": row.get("withdraw_address"),
         "currency": "AVNC",
-        "note": "Use POST /withdraw to send earnings to your wallet",
+        "note": "Use POST /claim to convert earnings to AVNC tokens sent to your wallet",
     }
 
 
-@app.post("/withdraw")
-async def withdraw_earnings(raw_request: Request):
-    """Withdraw AVNC earnings to a wallet address. Requires API key."""
+@app.post("/claim")
+@app.post("/withdraw")  # Legacy alias
+async def claim_earnings(raw_request: Request):
+    """Claim AVNC earnings — converts off-chain credits to on-chain tokens sent to your wallet."""
     from agent_market.keys import _supabase_get, _supabase_patch
     import hashlib
 

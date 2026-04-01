@@ -69,7 +69,7 @@
     {
       "name": "verify",
       "type": "REST",
-      "endpoint": "/jobs/submit",
+      "endpoint": "/jobs",
       "method": "POST",
       "input": {
         "code": "string — source code to verify (code-verification tasks)",

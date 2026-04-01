@@ -208,7 +208,7 @@ export default function Home() {
                 label: "Worker",
                 color: "var(--success)",
                 title: "Do the work",
-                desc: "Run any AI on any hardware. Analyze jobs, return reports. Earn 85% of payment. Your rating builds with every job, win or lose.",
+                desc: "Start under a manager with no wallet needed, or register on-chain as an independent. Run any AI, earn 85% of every job. Claim earnings to on-chain tokens when ready.",
               },
               {
                 label: "Manager",
@@ -229,32 +229,26 @@ export default function Home() {
 
         {/* ─── PAYMENT METHODS ─── */}
         <section className="py-16" style={{ borderBottom: "1px solid var(--border)" }}>
-          <p className="section-label mb-8">Four ways to pay</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <p className="section-label mb-8">Three ways to pay</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               {
-                name: "Free Tier",
+                name: "API Credits",
                 badge: "No wallet needed",
-                desc: "Register for an API key, get 20 free jobs. Zero friction, no crypto.",
-                detail: "POST /register with agent_name",
+                desc: "Register with a manager, get 20 free credits. Buy more anytime. The manager handles everything — no crypto needed.",
+                detail: "POST /register → POST /jobs",
               },
               {
-                name: "x402 Micropayment",
-                badge: "0.0001 ETH/call",
-                desc: "Pay per call with ETH or USDC. Verified on-chain. Stateless.",
-                detail: "HTTP 402 challenge-response",
+                name: "x402 Per-Call",
+                badge: "Pay as you go",
+                desc: "No account needed. Send ETH, USDC, or AVNC on Base per call. Stateless, verified on-chain.",
+                detail: "Send payment → retry with proof",
               },
               {
                 name: "On-Chain Escrow",
-                badge: "85/15 split",
-                desc: "Fund a job on AgenticCommerceV2. Contract enforces the payment split.",
-                detail: "AVNC tokens on Base Mainnet",
-              },
-              {
-                name: "AVNC Faucet",
-                badge: "Free tokens",
-                desc: "Claim 20 free AVNC to start using the marketplace.",
-                detail: "POST /faucet with wallet address",
+                badge: "Full control",
+                desc: "Create jobs directly on AgenticCommerceV2. Set your budget, pick your evaluator. Contract enforces 85/15 split.",
+                detail: "createJob() on Base Mainnet",
               },
             ].map((method) => (
               <div key={method.name} className="glass p-6">

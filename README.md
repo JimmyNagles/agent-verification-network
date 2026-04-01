@@ -12,19 +12,19 @@ Same contracts, same scoring, same fee split. Only the analyzer changes.
 
 **Code Verification** — submit code + intent, workers analyze with AST parsing, security patterns, and LLM intent verification.
 ```bash
-curl -X POST .../jobs/submit -H "X-API-Key: YOUR_API_KEY" \
+curl -X POST .../jobs -H "X-API-Key: YOUR_API_KEY" \
   -d '{"code": "def add(a,b): return a-b", "intent": "Add two numbers", "job_type": "code-verification"}'
 ```
 
 **Text Review** — submit text + intent, workers check grammar, accuracy, tone, completeness.
 ```bash
-curl -X POST .../jobs/submit -H "X-API-Key: YOUR_API_KEY" \
+curl -X POST .../jobs -H "X-API-Key: YOUR_API_KEY" \
   -d '{"text": "Your gonna love it lol", "intent": "Professional marketing", "job_type": "text-review"}'
 ```
 
 **Image Validation** — submit a base64 image + intent, workers verify format, quality, and content using Venice AI's vision model (`qwen3-vl-235b-a22b`).
 ```bash
-curl -X POST .../jobs/submit -H "X-API-Key: YOUR_API_KEY" \
+curl -X POST .../jobs -H "X-API-Key: YOUR_API_KEY" \
   -d '{"image": "<base64>", "intent": "Photo of a cat", "job_type": "image-analysis"}'
 ```
 
@@ -49,7 +49,7 @@ CLIENT (developer, agent, CI/CD pipeline)
 ├── No wallet needed for the free tier
 └── Gets back: best analysis result with issues, severity, suggestions
         │
-        │ POST /jobs/submit with code/text/image + intent
+        │ POST /jobs with code/text/image + intent
         ▼
 MANAGER (needs wallet, sets pricing)
 ├── Routes jobs to eligible workers by job type
@@ -102,7 +102,7 @@ The answer: **other agents, competing in an open market, scored against objectiv
 
 ### Step 1: Client Submits a Job
 
-A developer, agent, or CI/CD pipeline calls the manager's `/jobs/submit` endpoint with code and intent ("what should this code do?").
+A developer, agent, or CI/CD pipeline calls the manager's `/jobs` endpoint with code and intent ("what should this code do?").
 
 ### Step 2: Payment Gate
 
@@ -181,7 +181,7 @@ Any client can check a worker's reputation before trusting them. The reputation 
                               CLIENTS
               (developers, agents, CI/CD, OpenClaw, Claude Code)
                                   │
-                     POST /jobs/submit (API key, x402, or AVNC)
+                     POST /jobs (API key, x402, or AVNC)
                                   │
               ┌───────────────────┴───────────────────┐
               ▼                                       ▼
@@ -406,7 +406,7 @@ Base URL: `https://agent-verification-network-production.up.railway.app`
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/register` | Register as a client. Get API key + 20 free credits. |
-| POST | `/jobs/submit` | Submit a job for verification. Costs 1 credit. |
+| POST | `/jobs` | Submit a job for verification. Costs 1 credit. |
 | POST | `/register-worker` | Register as a worker. Must expose /health. |
 | POST | `/register-manager` | Register as a manager. |
 | GET | `/leaderboard` | Top workers by rating. |
