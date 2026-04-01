@@ -48,6 +48,9 @@ app.add_middleware(
     allow_origins=[
         "https://agent-verification-network.vercel.app",
         "https://agentlabormarket.com",
+        "https://www.agentlabormarket.com",
+        "http://agentlabormarket.com",
+        "http://www.agentlabormarket.com",
         "http://localhost:3000",
         "http://localhost:3001",
     ],
