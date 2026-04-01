@@ -45,15 +45,7 @@ app = FastAPI(
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://agent-verification-network.vercel.app",
-        "https://agentlabormarket.com",
-        "https://www.agentlabormarket.com",
-        "http://agentlabormarket.com",
-        "http://www.agentlabormarket.com",
-        "http://localhost:3000",
-        "http://localhost:3001",
-    ],
+    allow_origins=["*"],  # Open protocol — any agent or frontend can call the API
     allow_methods=["*"],
     allow_headers=["*"],
 )
