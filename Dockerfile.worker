@@ -12,4 +12,4 @@ COPY agent_log.json .
 
 EXPOSE 8001
 
-CMD ["python", "-m", "agents.miner_agent", "--port", "8001", "--agent-id", "miner-persistent-001", "--strategy", "intent-focused", "--host", "0.0.0.0"]
+CMD ["python", "-m", "agents.worker_agent", "--port", "8001", "--agent-id", "miner-persistent-001", "--strategy", "intent-focused", "--host", "0.0.0.0"]

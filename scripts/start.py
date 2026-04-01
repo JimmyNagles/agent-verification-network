@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Startup script — runs as validator or miner based on ROLE env var."""
+"""Startup script — runs as manager or worker based on ROLE env var."""
 import os
 import subprocess
 import sys
 
-role = os.environ.get("ROLE", "validator")
+role = os.environ.get("ROLE", "manager")
 port = os.environ.get("PORT", "8000")
 agent_id = os.environ.get("AGENT_ID", "agent-001")
 strategy = os.environ.get("STRATEGY", "default")
 
-if role == "miner":
+if role in ("miner", "worker"):
     cmd = [
-        sys.executable, "-m", "agents.miner_agent",
+        sys.executable, "-m", "agents.worker_agent",
         "--port", port,
         "--agent-id", agent_id,
         "--strategy", strategy,
