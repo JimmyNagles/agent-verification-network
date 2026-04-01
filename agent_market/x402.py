@@ -190,11 +190,11 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
             min_wei = int(min_price * 1e18)
             if tx.value < min_wei:
                 return False, f"Payment too low: sent {w3.from_wei(tx.value, 'ether')} ETH, minimum is {min_price} ETH"
-            # Mark tx hash as consumed (replay prevention)
+            # Mark tx hash as consumed (replay prevention) — reject if recording fails
             try:
                 _supabase_post("consumed_tx_hashes", {"tx_hash": tx_hash})
             except Exception:
-                pass
+                return False, "Payment verified but failed to record tx hash. Try again."
             return True, f"ETH payment verified on-chain: tx {tx_hash}"
 
         # Check if this is an ERC-20 token transfer (AVNC or other)
@@ -214,11 +214,11 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
                             amount = int(log_entry.data.hex(), 16) if log_entry.data else 0
                             if amount < min_price_wei:
                                 return False, f"AVNC payment too low: sent {amount / 1e18:.6f}, minimum is {min_price_eth}"
-                            # Mark tx hash as consumed (replay prevention)
+                            # Mark tx hash as consumed (replay prevention) — reject if recording fails
                             try:
                                 _supabase_post("consumed_tx_hashes", {"tx_hash": tx_hash})
                             except Exception:
-                                pass
+                                return False, "Payment verified but failed to record tx hash. Try again."
                             return True, f"AVNC token payment verified on-chain: tx {tx_hash}"
 
         # If we got here, payment didn't match

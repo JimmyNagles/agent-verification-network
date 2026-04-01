@@ -106,7 +106,7 @@ def analyze_image(image_data: str, intent: str, use_llm: bool = False) -> dict:
         "confidence": float,
         "passed": bool,
         "suggestions": [...],
-        "task_type": "image-analysis"
+        "job_type": "image-analysis"
     }
     """
     all_issues = []
@@ -191,7 +191,7 @@ def _build_response(issues: List[Dict], llm_used: bool = False) -> dict:
         "confidence": confidence,
         "passed": passed,
         "suggestions": suggestions,
-        "task_type": "image-analysis",
+        "job_type": "image-analysis",
     }
 
 

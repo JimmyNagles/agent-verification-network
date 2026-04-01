@@ -20,7 +20,7 @@ interface MarketplaceJob {
   job_id: string;
   on_chain_job_id: number | null;
   title: string;
-  task_type: string;
+  job_type: string;
   intent: string;
   budget_avnc: number;
   status: string;
@@ -128,7 +128,7 @@ export default function JobsPage() {
                     </div>
                     <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>{job.intent}</p>
                     <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
-                      <span className="badge" style={{ background: "var(--highlight)", color: "var(--accent)" }}>{job.task_type}</span>
+                      <span className="badge" style={{ background: "var(--highlight)", color: "var(--accent)" }}>{job.job_type}</span>
                       {job.has_code && <span>Has code</span>}
                       {job.has_text && <span>Has text</span>}
                     </div>

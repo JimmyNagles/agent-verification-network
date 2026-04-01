@@ -202,7 +202,7 @@ class VerifyRequest(BaseModel):
     image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
     intent: str = Field(description="What the code/text/image should do or convey")
     language: str = Field(default="python", description="Programming language (code tasks only)")
-    task_type: str = Field(default="code-verification", description="Task type: 'code-verification' | 'text-review' | 'image-analysis'")
+    job_type: str = Field(default="code-verification", description="Task type: 'code-verification' | 'text-review' | 'image-analysis'")
     job_id: Optional[int] = Field(default=None, description="Pre-funded job ID on AgenticCommerceV2 (direct payment mode)")
 
 
@@ -388,7 +388,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         # Route to workers that support this job type
         if all_workers:
             # Filter workers by job type capability
-            job_type = request.task_type or "code-verification"
+            job_type = request.job_type or "code-verification"
             eligible_workers = []
             for w in all_workers:
                 strategy = (w.get("strategy") or "").lower()
@@ -414,7 +414,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                         "image": request.image,
                         "intent": request.intent,
                         "language": request.language,
-                        "task_type": request.task_type,
+                        "job_type": request.job_type,
                         "job_id": job_id,
                     }).encode("utf-8")
                     req = urllib.request.Request(
@@ -501,7 +501,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 log_data = _json_log.dumps({
                     "job_id": job_id,
                     "agent_id": best_agent or "local",
-                    "task_type": request.task_type,
+                    "job_type": request.job_type,
                     "passed": best_result.get("passed", True),
                     "confidence": best_result.get("confidence", 0),
                     "issues_count": len(best_result.get("issues", [])),
@@ -798,7 +798,7 @@ async def get_jobs():
 class CreateJobRequest(BaseModel):
     title: str = Field(description="Short description of the job")
     description: str = Field(default="", description="Detailed description of what needs to be done")
-    task_type: str = Field(default="code-verification", description="Task type: code-verification | text-review | image-analysis")
+    job_type: str = Field(default="code-verification", description="Task type: code-verification | text-review | image-analysis")
     code: str = Field(default="", description="Code to verify (for code-verification tasks)")
     text: str = Field(default="", description="Text to review (for text-review tasks)")
     image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
@@ -847,7 +847,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         "job_id": job_id,
         "title": request.title,
         "description": request.description,
-        "task_type": request.task_type,
+        "job_type": request.job_type,
         "code": request.code,
         "text_content": request.text,
         "intent": request.intent,
@@ -861,7 +861,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         details={
             "job_id": job_id,
             "title": request.title,
-            "task_type": request.task_type,
+            "job_type": request.job_type,
             "on_chain_job_id": on_chain_id,
         },
     )
@@ -872,7 +872,7 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         "on_chain_job_id": on_chain_id,
         "on_chain_tx": job_result.get("tx_hash") if job_result else None,
         "title": request.title,
-        "task_type": request.task_type,
+        "job_type": request.job_type,
         "status": "open",
         "claim_via_api": f"POST /jobs/{job_id}/claim",
         "claim_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
@@ -915,7 +915,7 @@ async def get_marketplace_jobs():
                 "job_id": sj["job_id"],
                 "on_chain_job_id": on_chain_id,
                 "title": sj["title"],
-                "task_type": sj["task_type"],
+                "job_type": sj["job_type"],
                 "intent": sj["intent"],
                 "budget_avnc": float(sj.get("budget_avnc", 0)),
                 "status": status,
@@ -1004,7 +1004,7 @@ async def claim_marketplace_job(job_id: str, raw_request: Request = None):
         "claimed_by": claimer_id,
         "claim_expires_in": "10 minutes",
         "title": job["title"],
-        "task_type": job["task_type"],
+        "job_type": job["job_type"],
         "intent": job["intent"],
         "code": job.get("code", ""),
         "text": job.get("text_content", ""),
@@ -1096,7 +1096,7 @@ async def submit_marketplace_job(job_id: str, raw_request: Request = None):
         details={
             "job_id": job_id,
             "on_chain_job_id": job.get("on_chain_job_id"),
-            "task_type": job["task_type"],
+            "job_type": job["job_type"],
             "issues_found": len(result.get("issues", [])),
             "confidence": result.get("confidence", 0),
         },
@@ -1113,7 +1113,7 @@ async def submit_marketplace_job(job_id: str, raw_request: Request = None):
             log_data = _jlog.dumps({
                 "job_id": job_id,
                 "agent_id": submitter_name or body.get("agent_id") or "marketplace-submitter",
-                "task_type": job.get("task_type", "code-verification"),
+                "job_type": job.get("job_type", "code-verification"),
                 "passed": result.get("passed", True),
                 "confidence": result.get("confidence", 0),
                 "issues_count": len(result.get("issues", [])),
@@ -1566,7 +1566,7 @@ async def agent_jobs(agent_id: str, limit: int = 20):
     try:
         from agent_market.keys import _supabase_get
         rows = _supabase_get(
-            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=job_id,task_type,passed,confidence,issues_count,processing_time,mode,created_at"
+            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=job_id,job_type,passed,confidence,issues_count,processing_time,mode,created_at"
         )
         return {"agent_id": agent_id, "jobs": rows or [], "source": "supabase"}
     except Exception as e:
@@ -1699,8 +1699,8 @@ async def skill_file():
         "POST /register-worker with {agent_id, endpoint}\n"
         "Your endpoint needs: GET /health (return 200) + POST /jobs/submit (accept tasks, return results)\n\n"
         "## Verify a Task\n"
-        'POST /jobs/submit with {"code": "...", "intent": "...", "task_type": "code-verification"}\n'
-        'POST /jobs/submit with {"image": "<base64>", "intent": "...", "task_type": "image-analysis"}\n\n'
+        'POST /jobs/submit with {"code": "...", "intent": "...", "job_type": "code-verification"}\n'
+        'POST /jobs/submit with {"image": "<base64>", "intent": "...", "job_type": "image-analysis"}\n\n'
         "## Register as Client\n"
         "POST /register with {agent_name} — get API key with 20 free credits\n\n"
         f"Base URL: https://agent-verification-network-production.up.railway.app\n"

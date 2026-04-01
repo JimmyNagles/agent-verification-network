@@ -43,7 +43,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         image: str = ""
         intent: str
         language: str = "python"
-        task_type: str = "code-verification"
+        job_type: str = "code-verification"
         job_id: str = ""
 
     class VerifyResponse(BaseModel):
@@ -63,9 +63,9 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
         job_id = request.job_id or str(uuid4())
         start = time.time()
 
-        logger.info(f"Task {job_id}: analyzing {request.task_type}")
+        logger.info(f"Task {job_id}: analyzing {request.job_type}")
 
-        if request.task_type == "image-analysis":
+        if request.job_type == "image-analysis":
             from agent_market.worker.image_analyzer import analyze_image
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
             result = analyze_image(
@@ -73,7 +73,7 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
                 intent=request.intent,
                 use_llm=use_llm,
             )
-        elif request.task_type == "text-review":
+        elif request.job_type == "text-review":
             from agent_market.worker.text_analyzer import analyze_text
             use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
             result = analyze_text(
@@ -124,20 +124,20 @@ def create_app(agent_id: str, strategy: str = "default") -> FastAPI:
     @app.get("/health")
     async def health():
         if _strategy == "venice-vision":
-            task_types = ["image-analysis"]
+            job_types = ["image-analysis"]
         elif _strategy == "intent-focused":
-            task_types = ["code-verification", "text-review"]
+            job_types = ["code-verification", "text-review"]
         elif _strategy == "security-focused":
-            task_types = ["code-verification"]
+            job_types = ["code-verification"]
         else:
-            task_types = ["code-verification", "text-review", "image-analysis"]
+            job_types = ["code-verification", "text-review", "image-analysis"]
 
         return {
             "status": "healthy",
             "agent_id": agent_id,
             "role": "worker",
             "strategy": _strategy,
-            "job_types": task_types,
+            "job_types": job_types,
             "uptime": round(time.time() - stats["started_at"], 1),
             "jobs_completed": stats["jobs_completed"],
             "issues_found": stats["issues_found"],

@@ -99,7 +99,7 @@ class ManagerForward:
                     "image": image_b64,
                     "intent": intent,
                     "language": "python",
-                    "task_type": "image-analysis",
+                    "job_type": "image-analysis",
                     "is_spot_check": True,
                     "known_bugs": known_bugs,
                 }
@@ -110,7 +110,7 @@ class ManagerForward:
                     "code": code,
                     "intent": intent,
                     "language": "python",
-                    "task_type": "code-verification",
+                    "job_type": "code-verification",
                     "is_spot_check": True,
                     "known_bugs": known_bugs,
                 }
@@ -121,7 +121,7 @@ class ManagerForward:
             intent=task["intent"],
             language=task.get("language", "python"),
             job_id=task["job_id"],
-            task_type=task.get("task_type", "code-verification"),
+            job_type=task.get("job_type", "code-verification"),
         )
 
         # Collect ALL responses from workers first (needed for consensus)
@@ -221,7 +221,7 @@ class ManagerForward:
             return responses
 
         # Filter by job type capability
-        job_type = request.task_type or "code-verification"
+        job_type = request.job_type or "code-verification"
         eligible = []
         for w in self.worker_agents:
             agent_id = w.get("agent_id", "").lower()
@@ -249,7 +249,7 @@ class ManagerForward:
                     "image": request.image,
                     "intent": request.intent,
                     "language": request.language,
-                    "task_type": request.task_type,
+                    "job_type": request.job_type,
                     "job_id": request.job_id,
                 }).encode("utf-8")
 

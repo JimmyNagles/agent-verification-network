@@ -24,7 +24,7 @@ async def forward(request: JobRequest) -> JobResponse:
     """
     start_time = time.time()
 
-    job_type = getattr(request, "task_type", "code-verification")
+    job_type = getattr(request, "job_type", "code-verification")
     valid_job_types = ("code-verification", "text-review", "image-analysis")
     if job_type not in valid_job_types:
         logger.warning(f"Unknown job_type '{job_type}', defaulting to code-verification")

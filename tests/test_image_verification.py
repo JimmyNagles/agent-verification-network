@@ -63,7 +63,7 @@ class TestImageAnalyzer:
         result = analyze_image("not-valid-base64!!!", "A product photo")
         assert result["passed"] is False
         assert any(i["type"] == "format" and i["severity"] == "critical" for i in result["issues"])
-        assert result["task_type"] == "image-analysis"
+        assert result["job_type"] == "image-analysis"
 
     def test_detects_blank_image(self):
         """Solid-color PNG should be flagged as blank/uniform."""
@@ -111,7 +111,7 @@ class TestImageAnalyzer:
         b64 = base64.b64encode(valid_png).decode()
         data_uri = f"data:image/png;base64,{b64}"
         result = analyze_image(data_uri, "A simple test image")
-        assert result["task_type"] == "image-analysis"
+        assert result["job_type"] == "image-analysis"
         # Should not flag format issues — it's a valid PNG
         format_issues = [i for i in result["issues"] if i["type"] == "format" and i["severity"] == "critical"]
         assert len(format_issues) == 0
@@ -125,7 +125,7 @@ class TestImageAnalyzer:
         result = analyze_image(b64, "A test image for verification")
         assert result["passed"] is True
         assert result["confidence"] > 0
-        assert result["task_type"] == "image-analysis"
+        assert result["job_type"] == "image-analysis"
 
     def test_intent_mismatch_highres(self):
         """Small image with high-res intent should flag mismatch."""

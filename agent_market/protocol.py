@@ -20,9 +20,9 @@ class JobRequest(BaseModel):
     language: str = Field(default="python", description="Programming language of the code")
     job_id: str = Field(default="", description="Unique identifier for this job")
     image: str = Field(default="", description="Base64-encoded image data (for image-analysis tasks, max ~10MB)")
-    task_type: str = Field(default="code-verification", alias="job_type", description="Job type: 'code-verification' | 'text-review' | 'image-analysis'")
+    job_type: str = Field(default="code-verification", description="Job type: 'code-verification' | 'text-review' | 'image-analysis'")
 
-    model_config = {"populate_by_name": True}  # Accept both task_type and job_type
+    model_config = {"populate_by_name": True}
 
     @field_validator("image")
     @classmethod

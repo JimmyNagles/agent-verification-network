@@ -65,7 +65,7 @@ def analyze_text(text: str, intent: str, use_llm: bool = False) -> dict:
         "confidence": confidence,
         "passed": passed,
         "suggestions": suggestions,
-        "task_type": "text-review",
+        "job_type": "text-review",
     }
 
 

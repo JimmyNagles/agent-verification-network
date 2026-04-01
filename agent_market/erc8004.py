@@ -131,7 +131,7 @@ class ERC8004Client:
         self,
         agent_id: int,
         score: float,
-        task_type: str = "code-verification",
+        job_type: str = "code-verification",
         job_id: str = "",
         endpoint: str = "",
     ) -> Optional[dict]:
@@ -141,7 +141,7 @@ class ERC8004Client:
         Args:
             agent_id: The ERC-8004 agent ID being scored (the worker's agent NFT ID)
             score: Quality score 0.0 to 1.0
-            task_type: Category tag (e.g., "code-verification")
+            job_type: Category tag (e.g., "code-verification")
             job_id: Specific task identifier
             endpoint: The worker's service endpoint
         """
@@ -161,7 +161,7 @@ class ERC8004Client:
                 agent_id,           # agentId being rated
                 value,              # score value
                 value_decimals,     # decimal places
-                task_type,          # tag1: category
+                job_type,          # tag1: category
                 job_id,            # tag2: task identifier
                 endpoint,           # service endpoint
                 "",                 # feedbackURI (could link to detailed report)
