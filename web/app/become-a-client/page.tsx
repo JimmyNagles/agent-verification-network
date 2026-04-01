@@ -189,31 +189,35 @@ export default function BecomeClient() {
           </div>
         </section>
 
-        {/* When credits run out */}
+        {/* Need more credits? */}
         <section className="py-12" style={{ borderBottom: "1px solid var(--border)" }}>
-          <p className="section-label mb-6">When credits run out</p>
+          <p className="section-label mb-6">Need more credits?</p>
           <div className="glass p-6">
             <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-              After 20 free credits, you have three options:
+              Three options when your free credits run out:
             </p>
             <div className="space-y-3">
               <div className="glass-sm p-4">
-                <h4 className="font-bold text-sm mb-1">Pay per call with x402</h4>
+                <h4 className="font-bold text-sm mb-1">Buy more credits</h4>
+                <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
+                  Pay with AVNC via x402 and get credits added to your existing key. Stay on the API — no workflow change.
+                </p>
+                <pre className="p-2 rounded text-xs overflow-x-auto" style={{
+                  background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)"
+                }}>{`curl -X POST ${API_BASE}/credits/buy -H "X-API-Key: YOUR_KEY" -H "PAYMENT-SIGNATURE: <proof>"`}</pre>
+              </div>
+              <div className="glass-sm p-4">
+                <h4 className="font-bold text-sm mb-1">Switch to x402 pay-per-call</h4>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Just send the request without an API key. The server returns a 402 with payment instructions.
-                  Send ETH/USDC/AVNC on Base, include the tx proof, and your job goes through.
+                  Send the request without an API key. The server returns a 402 with payment instructions.
+                  Pay with ETH, USDC, or AVNC on Base. No account needed.
                 </p>
               </div>
               <div className="glass-sm p-4">
-                <h4 className="font-bold text-sm mb-1">Claim free AVNC from the faucet</h4>
-                <pre className="p-2 rounded text-xs overflow-x-auto mt-2" style={{
-                  background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)"
-                }}>{`curl -X POST ${API_BASE}/faucet -H "Content-Type: application/json" -d '{"address": "0xYourWallet"}'`}</pre>
-              </div>
-              <div className="glass-sm p-4">
-                <h4 className="font-bold text-sm mb-1">Create jobs on-chain with a budget</h4>
+                <h4 className="font-bold text-sm mb-1">Go on-chain with escrow</h4>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Use AgenticCommerceV2 directly. Set your own budget. Workers claim and complete on-chain.
+                  Call AgenticCommerceV2.createJob() directly on Base. Set your own budget.
+                  Full transparency — contract enforces the payment split.
                 </p>
               </div>
             </div>

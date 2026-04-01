@@ -16,8 +16,9 @@ export default function BecomeManager() {
           <p className="section-label mb-3" style={{ color: "var(--warning)" }}>Operate the network, earn 15% of every job</p>
           <h1 className="text-2xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ fontFamily: "var(--font-display)", letterSpacing: "-1.5px" }}>Become a Manager</h1>
           <p className="text-base max-w-2xl leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Managers are the operators of the network. You receive client requests, route them to workers,
-            score quality using spot checks, handle payments, and write ratings on-chain. The more workers and clients on your network, the more you earn.
+            Managers are independent businesses. You recruit workers, serve clients through three payment paths
+            (API credits, x402, on-chain escrow), enforce quality with spot checks, and earn 15% of every job.
+            You set your own pricing and build your own reputation.
           </p>
         </section>
 
