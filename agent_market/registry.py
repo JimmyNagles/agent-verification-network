@@ -24,6 +24,9 @@ class RegistryClient:
         self.w3 = None
         self.contract = None
         self.account = None
+        self._cached_workers: List[Dict] = []
+        self._cache_time: float = 0
+        self._cached_count: int = 0
 
         if not DEPLOYED_PATH.exists():
             logger.info("No contracts/registry_deployed.json — on-chain registry disabled")
@@ -96,9 +99,6 @@ class RegistryClient:
             logger.error(f"On-chain worker registration failed: {e}")
             return None
 
-    _cached_workers: List[Dict] = []
-    _cache_time: float = 0
-
     def get_active_workers(self) -> List[Dict]:
         """Read all active workers from the on-chain registry. Cached for 60s."""
         import time
@@ -144,8 +144,6 @@ class RegistryClient:
         except Exception as e:
             logger.error(f"Failed to read on-chain registry: {e}")
             return self._cached_workers  # Return last known state, not empty
-
-    _cached_count: int = 0
 
     # Backward-compatible aliases (deployed contract uses miner terminology)
     get_active_miners = get_active_workers

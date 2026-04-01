@@ -119,11 +119,26 @@ class TestX402ValidPayment:
     @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT, "VERIFY_API_KEY": "test-key"})
     def test_api_key_bypass_works(self):
         """API key bypass still works for authorized services."""
-        resp = client.post(
-            "/verify",
-            json=VERIFY_PAYLOAD,
-            headers={"X-API-Key": "test-key"},
-        )
+        from unittest.mock import AsyncMock
+        from agent_market.api import server
+
+        mock_result = {
+            "passed": True,
+            "confidence": 0.95,
+            "issues": [],
+            "suggestions": [],
+            "agent_id": "test-worker",
+            "score": 0.9,
+            "processing_time": 0.1,
+            "all_scores": {},
+            "mode": "network",
+        }
+        with patch.object(server._manager, "route_job", new_callable=AsyncMock, return_value=mock_result):
+            resp = client.post(
+                "/verify",
+                json=VERIFY_PAYLOAD,
+                headers={"X-API-Key": "test-key"},
+            )
         assert resp.status_code == 200
         data = resp.json()
         assert "job_id" in data

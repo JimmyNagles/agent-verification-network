@@ -50,8 +50,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Manager reference — None means standalone/demo mode
-_manager = None
+# Start background services on startup
+@app.on_event("startup")
+async def _start_background_services():
+    # Reliable Supabase writer retry loop
+    from agent_market.supabase_writer import writer as _sb_writer
+    await _sb_writer.start_retry_loop()
+
+    # Event indexer — watches on-chain events and syncs to Supabase
+    from agent_market.indexer import EventIndexer
+    _indexer = EventIndexer()
+    await _indexer.start()
+
+# Manager — always instantiated, single routing path
+from agent_market.manager.forward import ManagerForward
+_manager = ManagerForward()
 
 # Commerce client for on-chain job lifecycle
 _commerce = CommerceClient()
@@ -81,15 +94,13 @@ def _sanitize_param(value: str) -> str:
     import urllib.parse
     return urllib.parse.quote(str(value), safe="")
 
-# In-memory job storage
+# In-memory job storage (cache, also backed by Supabase)
 results = {}
 
-# In-memory registries for open network registration
-_registered_workers: list[dict] = []
+# In-memory manager list (for /network endpoint display)
 _registered_managers: list[dict] = []
-_total_verifications: int = 0
 
-# Load persisted workers from Supabase on startup
+# Load persisted workers from Supabase on startup into ManagerForward
 def _load_workers_from_supabase():
     """Load previously registered workers from Supabase so they survive restarts."""
     try:
@@ -97,16 +108,26 @@ def _load_workers_from_supabase():
         rows = _supabase_get("registered_workers?is_active=eq.true&select=agent_id,endpoint,strategy")
         if rows:
             for row in rows:
-                _registered_workers.append({
-                    "agent_id": row["agent_id"],
-                    "endpoint": row["endpoint"],
-                    "strategy": row.get("strategy", "default"),
-                })
-            logger.info(f"Loaded {len(rows)} workers from Supabase")
+                strategy = row.get("strategy", "default")
+                # Skip managers — they're not workers
+                if strategy == "manager":
+                    continue
+                _manager.register_worker(
+                    agent_id=row["agent_id"],
+                    endpoint=row["endpoint"],
+                    strategy=strategy,
+                )
+            logger.info(f"Loaded {len(rows)} workers from Supabase into ManagerForward")
     except Exception as e:
         logger.warning(f"Failed to load workers from Supabase: {e}")
 
 _load_workers_from_supabase()
+
+# Also merge on-chain workers
+_manager.merge_onchain_workers(_registry)
+
+# Backward compat: expose worker list for endpoints that still reference it
+_registered_workers = _manager.worker_agents
 
 
 async def _store_filecoin_background(job_id: str, response):
@@ -120,8 +141,8 @@ async def _store_filecoin_background(job_id: str, response):
             response.filecoin_cid = storage["cid"]
             response.filecoin_url = storage["url"]
             results[job_id] = response  # Update with CID
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Filecoin storage failed for job {job_id}: {e}")
 
 
 def _process_onchain_background(job_id: str, response):
@@ -168,16 +189,19 @@ def _process_onchain_background(job_id: str, response):
 
 
 def attach_manager(manager):
-    """Attach a manager instance to route jobs through the agent network."""
-    global _manager
-    _manager = manager
+    """Legacy attach — manager is now always instantiated.
+    This copies config from the provided manager (e.g., chain scoring) onto our global one."""
+    # If someone passes a subclass with extra features (like LoggingManager),
+    # copy its chain scorer reference
+    if hasattr(manager, 'chain_scorer'):
+        _manager.chain_scorer = manager.chain_scorer
+    if hasattr(manager, 'use_chain'):
+        _manager.use_chain = getattr(manager, 'use_chain', False)
 
 
 def get_mode():
     """Return current operating mode."""
-    if _manager is not None:
-        return "connected"
-    if _registered_workers:
+    if _manager.worker_agents:
         return "network"
     if _registry.enabled:
         try:
@@ -313,221 +337,70 @@ async def submit_job(request: VerifyRequest, raw_request: Request = None):
                         "register": "POST /register to get an API key with 20 free credits",
                     })
 
-    if _manager is not None:
-        job_id = _manager.add_task(
-            code=request.code,
-            intent=request.intent,
-            language=request.language,
-        )
+    # Single routing path — ManagerForward handles everything
+    job_id = str(uuid4())
 
-        result = None
-        for _ in range(60):
-            result = _manager.get_result(job_id)
-            if result is not None:
-                break
-            await asyncio.sleep(1)
+    # Refresh on-chain workers periodically
+    _manager.merge_onchain_workers(_registry)
 
-        if result is None:
-            return JSONResponse(status_code=503, content={
-                "error": "No workers available",
-                "job_id": job_id,
-                "message": "Task was queued but no workers responded in time. Try again or register as a worker at POST /register-worker.",
-            })
-        else:
-            response = VerifyResponse(
-                job_id=job_id,
-                passed=result["passed"],
-                confidence=result["confidence"],
-                issues=result["issues"],
-                suggestions=result["suggestions"],
-                agent_id=result.get("agent_id"),
-                score=result.get("score"),
-                mode="connected",
-            )
+    from agent_market.protocol import JobRequest as _JobRequest
+    job_request = _JobRequest(
+        code=request.code or request.text,
+        image=request.image,
+        intent=request.intent,
+        language=request.language,
+        job_type=request.job_type,
+        job_id=job_id,
+    )
 
-        results[job_id] = response
-        return response
+    result = await _manager.route_job(job_request)
 
-    else:
-        job_id = str(uuid4())
+    if result is None:
+        return JSONResponse(status_code=503, content={
+            "error": "No workers available",
+            "job_id": job_id,
+            "message": "No workers responded. Register as a worker at POST /register-worker.",
+        })
 
-        import os
-        import json as _json
+    response = VerifyResponse(
+        job_id=job_id,
+        passed=result["passed"],
+        confidence=result["confidence"],
+        issues=result["issues"],
+        suggestions=result["suggestions"],
+        agent_id=result.get("agent_id"),
+        score=result.get("score"),
+        mode=result.get("mode", "network"),
+    )
 
-        best_result = None
-        best_agent = None
-        mode = "standalone"
+    results[job_id] = response
 
-        # Build combined worker list: in-memory + on-chain registry
-        all_workers = list(_registered_workers)
-        known_ids = {m["agent_id"] for m in all_workers}
+    # Log completed job to Supabase (with retry)
+    from agent_market.supabase_writer import writer as _sb_writer
+    asyncio.ensure_future(_sb_writer.write("completed_jobs", {
+        "job_id": job_id,
+        "agent_id": result.get("agent_id") or "local",
+        "job_type": request.job_type,
+        "passed": result["passed"],
+        "confidence": result["confidence"],
+        "issues_count": len(result.get("issues", [])),
+        "processing_time": result.get("processing_time", 0),
+        "mode": result.get("mode", "network"),
+    }))
 
-        # Add on-chain workers from WorkerRegistry
-        if _registry.enabled:
-            try:
-                onchain = _registry.get_active_workers()
-                for m in onchain:
-                    if m["agent_id"] not in known_ids:
-                        strategy = m.get("strategy", "")
-                        # Skip managers — they're not workers
-                        if "manager" in strategy.lower() or "validator" in strategy.lower():
-                            continue
-                        all_workers.append({
-                            "agent_id": m["agent_id"],
-                            "endpoint": m["endpoint"],
-                            "strategy": strategy,
-                        })
-                        known_ids.add(m["agent_id"])
-            except Exception as e:
-                logger.warning(f"Failed to read on-chain workers: {e}")
+    # Store report on Filecoin in background
+    asyncio.ensure_future(_store_filecoin_background(job_id, response))
 
-        # Route to workers that support this job type
-        if all_workers:
-            # Filter workers by job type capability
-            job_type = request.job_type or "code-verification"
-            eligible_workers = []
-            for w in all_workers:
-                strategy = (w.get("strategy") or "").lower()
-                # Image workers only get image jobs, and image jobs only go to image workers
-                is_image_worker = "vision" in strategy or "image" in strategy
-                is_image_job = job_type == "image-analysis"
-                if is_image_job and not is_image_worker:
-                    continue  # Skip non-image workers for image jobs
-                if not is_image_job and is_image_worker:
-                    continue  # Skip image workers for non-image jobs
-                eligible_workers.append(w)
+    # Create on-chain job record
+    _process_onchain_background(job_id, response)
 
-            # Fall back to all workers if no eligible ones found
-            if not eligible_workers:
-                eligible_workers = all_workers
-
-            worker_responses = []
-            for worker in eligible_workers:
-                try:
-                    data = _json.dumps({
-                        "code": request.code or request.text,
-                        "text": request.text,
-                        "image": request.image,
-                        "intent": request.intent,
-                        "language": request.language,
-                        "job_type": request.job_type,
-                        "job_id": job_id,
-                    }).encode("utf-8")
-                    req = urllib.request.Request(
-                        f"{worker['endpoint'].rstrip('/')}/verify",
-                        data=data,
-                        headers={
-                            "Content-Type": "application/json",
-                            "User-Agent": "AgentVerificationNetwork/1.0",
-                        },
-                        method="POST",
-                    )
-                    with urllib.request.urlopen(req, timeout=30) as resp:
-                        worker_result = _json.loads(resp.read().decode("utf-8"))
-                        worker_responses.append({
-                            "agent_id": worker["agent_id"],
-                            "result": worker_result,
-                        })
-                        logger.info(f"Worker {worker['agent_id']} responded: {len(worker_result.get('issues', []))} issues")
-                except Exception as e:
-                    logger.warning(f"Worker {worker['agent_id']} failed: {e}")
-
-            # Score all responses using the scorer (with consensus if multiple workers)
-            if worker_responses:
-                from agent_market.manager.scorer import WorkerScorer
-                _network_scorer = WorkerScorer()
-
-                # Build response objects for consensus scoring
-                all_resp_for_consensus = []
-                for wr in worker_responses:
-                    class _R:
-                        def __init__(self, issues):
-                            self.issues = issues
-                    all_resp_for_consensus.append(_R(wr["result"].get("issues", [])))
-
-                best_score = -1
-                best_result = None
-                best_agent = None
-                for wr in worker_responses:
-                    r = wr["result"]
-                    score = _network_scorer.score(
-                        response_issues=r.get("issues", []),
-                        response_passed=r.get("passed", True),
-                        response_confidence=r.get("confidence", 0),
-                        response_time=r.get("processing_time", 1.0),
-                        is_spot_check=False,
-                        known_bugs=None,
-                        all_responses=all_resp_for_consensus if len(worker_responses) > 1 else None,
-                    )
-                    if score > best_score:
-                        best_score = score
-                        best_result = r
-                        best_agent = wr["agent_id"]
-
-                mode = "network"
-                logger.info(f"Best response from {best_agent} (score: {best_score:.3f}, confidence: {best_result.get('confidence')})")
-
-        # No workers available — return error instead of doing the work ourselves
-        if best_result is None:
-            return JSONResponse(status_code=503, content={
-                "error": "No workers available",
-                "job_id": job_id,
-                "message": "No workers responded. Register as a worker at POST /register-worker.",
-            })
-
-        response = VerifyResponse(
-            job_id=job_id,
-            passed=best_result.get("passed", True),
-            confidence=best_result.get("confidence", 0),
-            issues=best_result.get("issues", []),
-            suggestions=best_result.get("suggestions", []),
-            agent_id=best_agent,
-            mode=mode,
-        )
-
-        results[job_id] = response
-
-        # Log completed job to Supabase (persistent history)
-        def _log_completed_job():
-            try:
-                import json as _json_log
-                from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
-                import urllib.request as _urllib_req
-                log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
-                log_data = _json_log.dumps({
-                    "job_id": job_id,
-                    "agent_id": best_agent or "local",
-                    "job_type": request.job_type,
-                    "passed": best_result.get("passed", True),
-                    "confidence": best_result.get("confidence", 0),
-                    "issues_count": len(best_result.get("issues", [])),
-                    "processing_time": best_result.get("processing_time", 0),
-                    "mode": mode,
-                }).encode("utf-8")
-                log_req = _urllib_req.Request(log_url, data=log_data, method="POST", headers={
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_KEY}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=minimal",
-                })
-                _urllib_req.urlopen(log_req, timeout=5)
-            except Exception as e:
-                logger.warning(f"Failed to log completed job: {e}")
-        import threading
-        threading.Thread(target=_log_completed_job, daemon=True).start()
-
-        # Store report on Filecoin in background (fire-and-forget)
-        asyncio.ensure_future(_store_filecoin_background(job_id, response))
-
-        # Create on-chain job record (fire-and-forget)
-        _process_onchain_background(job_id, response)
-
-        return response
+    return response
 
 
 @app.get("/status/{job_id}", response_model=TaskStatus)
 async def get_task_status(job_id: str):
     """Check the status of a submitted verification job."""
+    # Check in-memory cache first (fast path)
     if job_id in results:
         return TaskStatus(
             job_id=job_id,
@@ -535,10 +408,32 @@ async def get_task_status(job_id: str):
             result=results[job_id],
         )
 
-    if _manager is not None:
-        for task in _manager.task_queue:
-            if task["job_id"] == job_id:
-                return TaskStatus(job_id=job_id, status="queued")
+    # Check if queued
+    for task in _manager.job_queue:
+        if task["job_id"] == job_id:
+            return TaskStatus(job_id=job_id, status="queued")
+
+    # Fall back to Supabase (survives restarts)
+    try:
+        from agent_market.keys import _supabase_get
+        rows = _supabase_get(f"completed_jobs?job_id=eq.{_sanitize_param(job_id)}&select=job_id,agent_id,job_type,passed,confidence,issues_count,mode")
+        if rows:
+            row = rows[0]
+            return TaskStatus(
+                job_id=job_id,
+                status="complete",
+                result=VerifyResponse(
+                    job_id=job_id,
+                    passed=row.get("passed", True),
+                    confidence=row.get("confidence", 0),
+                    issues=[],
+                    suggestions=[],
+                    agent_id=row.get("agent_id"),
+                    mode=row.get("mode"),
+                ),
+            )
+    except Exception:
+        pass
 
     raise HTTPException(status_code=404, detail="Task not found")
 
@@ -616,39 +511,17 @@ async def register_worker(request: RegisterWorkerRequest, raw_request: Request =
             detail=f"Health check failed for {health_url}: {e}",
         )
 
-    # Register with the manager if one is attached
-    if _manager is not None:
-        _manager.register_worker(request.agent_id, request.endpoint)
+    # Register with the manager (single routing path)
+    _manager.register_worker(request.agent_id, request.endpoint, request.strategy or "default")
 
-    # Always store in the in-memory registry (deduplicate)
-    entry = {
+    # Persist to Supabase (survives manager restarts, with retry)
+    from agent_market.supabase_writer import writer as _sb_writer
+    asyncio.ensure_future(_sb_writer.upsert("registered_workers", {
         "agent_id": request.agent_id,
         "endpoint": request.endpoint,
-        "strategy": request.strategy,
-    }
-    _registered_workers[:] = [m for m in _registered_workers if m["agent_id"] != request.agent_id]
-    _registered_workers.append(entry)
-
-    # Persist to Supabase (survives manager restarts)
-    try:
-        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
-        import urllib.request as _urllib_req
-        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_workers"
-        upsert_data = json.dumps({
-            "agent_id": request.agent_id,
-            "endpoint": request.endpoint,
-            "strategy": request.strategy or "default",
-            "is_active": True,
-        }).encode("utf-8")
-        upsert_req = _urllib_req.Request(upsert_url, data=upsert_data, method="POST", headers={
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates",
-        })
-        _urllib_req.urlopen(upsert_req, timeout=5)
-    except Exception as e:
-        logger.warning(f"Failed to persist worker to Supabase: {e}")
+        "strategy": request.strategy or "default",
+        "is_active": True,
+    }, on_conflict="agent_id"))
 
     # Also register on-chain (fire-and-forget)
     import threading
@@ -695,29 +568,15 @@ async def register_manager(request: RegisterManagerRequest, raw_request: Request
     _registered_managers[:] = [m for m in _registered_managers if m["manager_id"] != request.manager_id]
     _registered_managers.append(entry)
 
-    # Persist to Supabase (same table as workers, with role=manager)
-    try:
-        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
-        import urllib.request as _ureq
-        import json as _json
-        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_workers"
-        upsert_data = _json.dumps({
-            "agent_id": request.manager_id,
-            "endpoint": request.endpoint,
-            "strategy": "manager",
-            "role": "manager",
-            "is_active": True,
-        }).encode("utf-8")
-        req = _ureq.Request(upsert_url, data=upsert_data, method="POST", headers={
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates",
-        })
-        _ureq.urlopen(req, timeout=5)
-        logger.info(f"Manager {request.manager_id} persisted to Supabase")
-    except Exception as e:
-        logger.warning(f"Failed to persist manager to Supabase: {e}")
+    # Persist to Supabase (same table as workers, with role=manager, with retry)
+    from agent_market.supabase_writer import writer as _sb_writer
+    asyncio.ensure_future(_sb_writer.upsert("registered_workers", {
+        "agent_id": request.manager_id,
+        "endpoint": request.endpoint,
+        "strategy": "manager",
+        "role": "manager",
+        "is_active": True,
+    }, on_conflict="agent_id"))
 
     log_event(
         event_type="manager_registered",
@@ -738,17 +597,34 @@ async def register_manager(request: RegisterManagerRequest, raw_request: Request
 async def get_network():
     """Return the current state of the verification network."""
     # Merge in-memory workers with on-chain registry
-    all_workers = list(_registered_workers)
-    onchain_workers = _registry.get_active_workers()
-    # Add on-chain workers not already in memory
-    known_ids = {m["agent_id"] for m in all_workers}
-    for m in onchain_workers:
+    all_agents = list(_registered_workers)
+    onchain_agents = _registry.get_active_workers()
+    known_ids = {m["agent_id"] for m in all_agents}
+    for m in onchain_agents:
         if m["agent_id"] not in known_ids:
-            all_workers.append(m)
+            all_agents.append(m)
+
+    # Separate workers from managers using role field
+    workers_only = []
+    managers_from_registry = list(_registered_managers)
+    manager_ids = {m["manager_id"] for m in managers_from_registry}
+    for agent in all_agents:
+        role = agent.get("role", "worker")
+        strategy = (agent.get("strategy") or "").lower()
+        is_manager = role == "manager" or "manager" in strategy or "validator" in strategy
+        if is_manager:
+            if agent.get("agent_id") not in manager_ids:
+                managers_from_registry.append({
+                    "manager_id": agent.get("agent_id"),
+                    "endpoint": agent.get("endpoint", ""),
+                })
+                manager_ids.add(agent.get("agent_id"))
+        else:
+            workers_only.append(agent)
 
     return NetworkStatus(
-        managers=list(_registered_managers),
-        workers=all_workers,
+        managers=managers_from_registry,
+        workers=workers_only,
         total_verifications=len(results),
         mode=get_mode(),
     )
@@ -1080,33 +956,17 @@ async def submit_marketplace_job(job_id: str, raw_request: Request = None):
         },
     )
 
-    # Log to completed_jobs in Supabase
-    import threading
-    def _log_marketplace_completion():
-        try:
-            import json as _jlog
-            from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
-            import urllib.request as _ureq
-            log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
-            log_data = _jlog.dumps({
-                "job_id": job_id,
-                "agent_id": submitter_name or body.get("agent_id") or "marketplace-submitter",
-                "job_type": job.get("job_type", "code-verification"),
-                "passed": result.get("passed", True),
-                "confidence": result.get("confidence", 0),
-                "issues_count": len(result.get("issues", [])),
-                "mode": "marketplace",
-            }).encode("utf-8")
-            req = _ureq.Request(log_url, data=log_data, method="POST", headers={
-                "apikey": SUPABASE_KEY,
-                "Authorization": f"Bearer {SUPABASE_KEY}",
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal",
-            })
-            _ureq.urlopen(req, timeout=5)
-        except Exception as e:
-            logger.warning(f"Failed to log marketplace job completion: {e}")
-    threading.Thread(target=_log_marketplace_completion, daemon=True).start()
+    # Log to completed_jobs in Supabase (with retry)
+    from agent_market.supabase_writer import writer as _sb_writer
+    asyncio.ensure_future(_sb_writer.write("completed_jobs", {
+        "job_id": job_id,
+        "agent_id": submitter_name or body.get("agent_id") or "marketplace-submitter",
+        "job_type": job.get("job_type", "code-verification"),
+        "passed": result.get("passed", True),
+        "confidence": result.get("confidence", 0),
+        "issues_count": len(result.get("issues", [])),
+        "mode": "marketplace",
+    }))
 
     # Complete on-chain if job has an on-chain ID (triggers 85/15 payment)
     on_chain_id = job.get("on_chain_job_id")
@@ -1459,9 +1319,9 @@ async def claim_faucet(request: Request):
     """Claim free AVNC credits. Send your wallet address to receive 20 credits."""
     try:
         body = await request.json()
-        address = body.get("address")
+        address = body.get("address") or body.get("wallet_address")
         if not address:
-            return JSONResponse(status_code=400, content={"error": "Missing address field"})
+            return JSONResponse(status_code=400, content={"error": "Missing address field. Use 'address' or 'wallet_address'."})
 
         result = _token.claim_faucet(address)
         if result:
@@ -1609,13 +1469,14 @@ async def check_earnings(raw_request: Request):
         return JSONResponse(status_code=401, content={"error": "API key required"})
 
     key_hash = hashlib.sha256(api_key.encode()).hexdigest()
-    rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=agent_name,earnings,withdraw_address")
+    rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=agent_name,earnings,credits_remaining,withdraw_address")
     if not rows:
         return JSONResponse(status_code=401, content={"error": "Invalid API key"})
 
     row = rows[0]
     return {
         "agent_name": row.get("agent_name"),
+        "credits_remaining": int(row.get("credits_remaining", 0) or 0),
         "earnings": float(row.get("earnings", 0) or 0),
         "withdraw_address": row.get("withdraw_address"),
         "currency": "AVNC",

@@ -31,6 +31,7 @@ interface HealthData {
 interface AgentWithStats extends AgentInfo {
   health?: HealthData;
   online: boolean;
+  supabase_jobs?: number;
 }
 
 export default function Leaderboard() {
@@ -56,13 +57,28 @@ export default function Leaderboard() {
         })
       );
 
+      // Use Supabase leaderboard as source of truth for job counts
       const lbRes = await fetch(`${API_BASE}/leaderboard`).then((r) => r.json()).catch(() => null);
+      const lbMap = new Map<string, number>();
+      if (lbRes?.agents) {
+        for (const lb of lbRes.agents) {
+          lbMap.set(lb.agent_id, lb.jobs_completed || 0);
+        }
+      }
+
+      // Apply Supabase job counts to all agents
       const knownIds = new Set(withStats.map((a) => a.agent_id));
+      for (const agent of withStats) {
+        agent.supabase_jobs = lbMap.get(agent.agent_id) ?? 0;
+      }
+
+      // Add agents only in Supabase (API agents, not on-chain)
       if (lbRes?.agents) {
         for (const lb of lbRes.agents) {
           if (!knownIds.has(lb.agent_id)) {
             withStats.push({
               agent_id: lb.agent_id, role: "agent", strategy: "api", online: true,
+              supabase_jobs: lb.jobs_completed || 0,
               health: { status: "healthy", jobs_completed: lb.jobs_completed } as HealthData,
             });
             knownIds.add(lb.agent_id);
@@ -70,7 +86,8 @@ export default function Leaderboard() {
         }
       }
 
-      withStats.sort((a, b) => (b.health?.jobs_completed ?? 0) - (a.health?.jobs_completed ?? 0));
+      // Sort by Supabase job count (verified data, not self-reported)
+      withStats.sort((a, b) => (b.supabase_jobs ?? 0) - (a.supabase_jobs ?? 0));
       setAgents(withStats);
     } catch {} finally { setLoading(false); }
   }, []);
@@ -185,7 +202,7 @@ export default function Leaderboard() {
                       {agent.online ? "On" : "Off"}
                     </span>
                     <span className="text-sm font-bold" style={{ fontFamily: "var(--font-mono)" }}>
-                      {agent.health?.jobs_completed ?? "..."}
+                      {agent.supabase_jobs ?? 0}
                     </span>
                     <span className="text-sm" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
                       {agent.health?.uptime ? formatUptime(agent.health.uptime) : "..."}

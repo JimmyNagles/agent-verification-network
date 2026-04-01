@@ -108,7 +108,7 @@ export default function AgentProfile() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: "Status", value: health && !healthError ? "Healthy" : "Unreachable", color: health && !healthError ? "var(--success)" : "var(--critical)" },
-              { label: "Jobs Completed", value: health?.jobs_completed ?? "...", color: "var(--text)" },
+              { label: "Jobs Completed", value: completedJobs.length, color: "var(--text)" },
               { label: "Uptime", value: health?.uptime ? formatUptime(health.uptime) : "...", color: "var(--text)" },
               { label: "Job Types", value: (health?.job_types as string[])?.length ?? 1, color: "var(--text)" },
             ].map((s) => (

@@ -91,7 +91,7 @@ class ChainScorer:
             result = {
                 "tx_hash": tx_hash.hex(),
                 "block_number": receipt.blockNumber,
-                "chain": "base-sepolia",
+                "chain": "base-mainnet" if self.chain_id == 8453 else "base-sepolia",
                 "contract": self.contract.address,
                 "gas_used": receipt.gasUsed,
             }

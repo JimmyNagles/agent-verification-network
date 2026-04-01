@@ -48,7 +48,7 @@ class LoggingManager(ManagerForward):
         details = {
             "round": result["round"],
             "job_id": result["job_id"],
-            "is_honeypot": result["is_honeypot"],
+            "is_spot_check": result.get("is_spot_check", result.get("is_honeypot", False)),
             "responses": result["responses"],
             "best_agent": result["best_agent"],
             "best_score": round(result["best_score"], 4) if result["best_score"] else None,
@@ -59,16 +59,27 @@ class LoggingManager(ManagerForward):
             },
         }
 
-        # Write score on-chain if enabled
-        if self.chain_scorer and self.chain_scorer.enabled and result["best_agent"]:
-            chain_result = self.chain_scorer.record_score(
-                agent_id=result["best_agent"],
-                job_id=result["job_id"],
-                score=result["best_score"],
-                round_num=result["round"],
-            )
-            if chain_result:
-                details["on_chain"] = chain_result
+        # Write scores on-chain for ALL workers (not just the winner)
+        # This gives managed workers permanent reputation even without a wallet
+        if self.chain_scorer and self.chain_scorer.enabled and result.get("scores"):
+            import threading
+            from agent_market.api.server import _onchain_lock
+            chain_results = []
+            for agent_id, score in result["scores"].items():
+                try:
+                    with _onchain_lock:
+                        chain_result = self.chain_scorer.record_score(
+                            agent_id=agent_id,
+                            job_id=result["job_id"],
+                            score=score,
+                            round_num=result["round"],
+                        )
+                    if chain_result:
+                        chain_results.append({"agent_id": agent_id, **chain_result})
+                except Exception as e:
+                    logger.warning(f"Failed to record on-chain score for {agent_id}: {e}")
+            if chain_results:
+                details["on_chain_scores"] = chain_results
 
         log_event(
             event_type="validation_round",

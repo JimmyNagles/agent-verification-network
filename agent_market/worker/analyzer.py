@@ -304,7 +304,7 @@ def analyze_code(code: str, intent: str, language: str = "python", use_llm: bool
     all_issues.extend(ast_issues)
 
     # Pass 2: Pattern-based bug detection
-    pattern_issues = analyze_patterns(code, language)
+    pattern_issues = analyze_patterns(code, language, intent=intent)
     all_issues.extend(pattern_issues)
 
     # Pass 3: Intent verification (LLM with heuristic fallback)
@@ -420,7 +420,7 @@ def analyze_syntax(code: str, language: str) -> List[Dict]:
     return issues
 
 
-def analyze_patterns(code: str, language: str) -> List[Dict]:
+def analyze_patterns(code: str, language: str, intent: str = "") -> List[Dict]:
     """Pattern-based detection for common bugs and security issues."""
     issues = []
     lines = code.split("\n")
@@ -451,32 +451,58 @@ def analyze_patterns(code: str, language: str) -> List[Dict]:
     while_matches = list(re.finditer(r'while\s+(\w+)\s*([><=!]+)', full_code))
     for match in while_matches:
         var_name = match.group(1)
-        # Check if the variable is modified inside the loop body
         loop_start = match.start()
-        # Simple check: is the variable assigned or modified after the while?
-        remaining = full_code[loop_start:]
-        if f"{var_name} =" not in remaining.split("\n", 1)[-1] and f"{var_name} -=" not in remaining and f"{var_name} +=" not in remaining:
-            line_num = full_code[:loop_start].count("\n") + 1
+        loop_line = full_code[:loop_start].count("\n")
+        # Extract the full loop body by finding all indented lines after the while
+        remaining_lines = full_code[loop_start:].split("\n")
+        if len(remaining_lines) < 2:
+            continue
+        # Get indentation of the while line
+        while_indent = len(remaining_lines[0]) - len(remaining_lines[0].lstrip())
+        # Collect loop body (all lines indented more than while)
+        loop_body = ""
+        for body_line in remaining_lines[1:]:
+            stripped = body_line.lstrip()
+            if not stripped:  # blank line
+                loop_body += "\n"
+                continue
+            line_indent = len(body_line) - len(stripped)
+            if line_indent <= while_indent:
+                break  # end of loop body
+            loop_body += body_line + "\n"
+        # Check if variable is modified anywhere in the loop body
+        var_modified = (
+            f"{var_name} =" in loop_body
+            or f"{var_name} -=" in loop_body
+            or f"{var_name} +=" in loop_body
+            or f"{var_name} *=" in loop_body
+            or f"{var_name} //=" in loop_body
+            or "break" in loop_body
+            or "return" in loop_body
+        )
+        if not var_modified:
             issues.append({
                 "type": "bug",
                 "severity": "critical",
-                "line": line_num,
+                "line": loop_line + 1,
                 "description": f"Potential infinite loop — '{var_name}' is not modified inside the while loop",
                 "suggestion": f"Add '{var_name} -= 1' or similar modification inside the loop body",
             })
 
-    # Off-by-one in range — check if intent mentions inclusive
-    if "range(" in full_code:
+    # Off-by-one in range — only flag when intent suggests inclusive range
+    intent_lower = intent.lower() if intent else ""
+    inclusive_hints = ["inclusive", "1 to ", "from 1", "through", "up to and including", "1 through"]
+    intent_wants_inclusive = any(hint in intent_lower for hint in inclusive_hints)
+    if intent_wants_inclusive and "range(" in full_code:
         range_matches = re.findall(r'range\((\w+)\)', full_code)
         for var in range_matches:
-            # This could be off-by-one if the intent requires inclusive range
             line_num = next((i for i, l in enumerate(lines, 1) if f'range({var})' in l), 0)
             issues.append({
                 "type": "off_by_one",
                 "severity": "medium",
                 "line": line_num,
-                "description": f"range({var}) produces values 0 to {var}-1. If inclusive range is needed, use range(1, {var}+1)",
-                "suggestion": f"Check if range should be range(1, {var}+1) for 1 to {var} inclusive",
+                "description": f"range({var}) produces values 0 to {var}-1. Intent requires inclusive range — use range(1, {var}+1)",
+                "suggestion": f"Change to range(1, {var}+1) for 1 to {var} inclusive",
             })
 
     # Missing return in function that should return a value

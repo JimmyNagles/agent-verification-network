@@ -41,15 +41,132 @@ class ManagerForward:
         self.worker_job_counts: Dict[str, int] = {}  # agent_id -> jobs completed
         self.round_count = 0
         self.PROBATION_THRESHOLD = 20  # jobs before full worker status
+        self._load_scores_from_supabase()
 
-    def register_worker(self, agent_id: str, endpoint: str):
+    def register_worker(self, agent_id: str, endpoint: str, strategy: str = ""):
         """Register a worker agent to receive jobs."""
+        # Deduplicate
+        self.worker_agents = [w for w in self.worker_agents if w["agent_id"] != agent_id]
         self.worker_agents.append({
             "agent_id": agent_id,
             "endpoint": endpoint,
+            "strategy": strategy,
         })
-        self.scores[agent_id] = 0.0
+        if agent_id not in self.scores:
+            self.scores[agent_id] = 0.0
         logger.info(f"Registered worker: {agent_id} at {endpoint}")
+
+    def merge_onchain_workers(self, registry):
+        """Merge workers from on-chain registry into our worker list."""
+        if not registry or not registry.enabled:
+            return
+        try:
+            onchain = registry.get_active_workers()
+            known_ids = {w["agent_id"] for w in self.worker_agents}
+            for agent in onchain:
+                if agent["agent_id"] in known_ids:
+                    continue
+                strategy = agent.get("strategy", "")
+                # Skip managers
+                if "manager" in strategy.lower() or "validator" in strategy.lower():
+                    continue
+                self.worker_agents.append({
+                    "agent_id": agent["agent_id"],
+                    "endpoint": agent["endpoint"],
+                    "strategy": strategy,
+                })
+        except Exception as e:
+            logger.warning(f"Failed to merge on-chain workers: {e}")
+
+    async def route_job(self, request: JobRequest) -> Optional[dict]:
+        """
+        Route a single job to workers, score responses, return best result.
+        This is the single code path for all job routing.
+
+        Returns dict with: passed, confidence, issues, suggestions, agent_id, score, mode
+        Returns None if no workers responded.
+        """
+        # Collect all responses from workers
+        responses = await self._query_workers(request)
+
+        if not responses:
+            return None
+
+        # Convert to list for consensus scoring
+        all_response_list = list(responses.values())
+
+        # Score each response
+        best_score = -1
+        best_response = None
+        best_agent = None
+        round_scores = {}
+
+        for agent_id, response in responses.items():
+            score = self.scorer.score(
+                response_issues=response.issues,
+                response_passed=response.passed,
+                response_confidence=response.confidence,
+                response_time=response.processing_time,
+                is_spot_check=False,
+                known_bugs=None,
+                all_responses=all_response_list if len(all_response_list) > 1 else None,
+            )
+
+            # Update running scores
+            old_score = self.scores.get(agent_id, 0.0)
+            self.scores[agent_id] = 0.9 * old_score + 0.1 * score
+            self.worker_job_counts[agent_id] = self.worker_job_counts.get(agent_id, 0) + 1
+            round_scores[agent_id] = score
+
+            if score > best_score:
+                best_score = score
+                best_response = response
+                best_agent = agent_id
+
+        if best_response is None:
+            return None
+
+        # Persist scores to Supabase in background
+        asyncio.ensure_future(self._save_scores_to_supabase(round_scores))
+
+        return {
+            "passed": best_response.passed,
+            "confidence": best_response.confidence,
+            "issues": best_response.issues,
+            "suggestions": best_response.suggestions,
+            "agent_id": best_agent,
+            "score": best_score,
+            "processing_time": best_response.processing_time,
+            "all_scores": round_scores,
+            "mode": "network",
+        }
+
+    def _load_scores_from_supabase(self):
+        """Load persisted worker scores on startup."""
+        try:
+            from agent_market.keys import _supabase_get
+            rows = _supabase_get("worker_scores?select=agent_id,running_score,jobs_completed")
+            if rows:
+                for row in rows:
+                    self.scores[row["agent_id"]] = row["running_score"]
+                    self.worker_job_counts[row["agent_id"]] = row["jobs_completed"]
+                logger.info(f"Loaded {len(rows)} worker scores from Supabase")
+        except Exception as e:
+            logger.warning(f"Failed to load worker scores (table may not exist yet): {e}")
+
+    async def _save_scores_to_supabase(self, round_scores: Dict[str, float]):
+        """Persist updated scores to Supabase after a round."""
+        try:
+            from agent_market.supabase_writer import writer
+            for agent_id, score in round_scores.items():
+                await writer.upsert("worker_scores", {
+                    "agent_id": agent_id,
+                    "running_score": round(self.scores.get(agent_id, 0.0), 6),
+                    "jobs_completed": self.worker_job_counts.get(agent_id, 0),
+                    "last_round": self.round_count,
+                }, on_conflict="agent_id")
+        except Exception as e:
+            logger.warning(f"Failed to save scores to Supabase: {e}")
 
     def add_task(self, code: str, intent: str, language: str = "python") -> str:
         """Add an external task to the queue. Returns job_id."""
@@ -208,15 +325,14 @@ class ManagerForward:
 
     async def _query_workers(self, request: JobRequest) -> Dict[str, JobResponse]:
         """
-        Send a job request to eligible registered workers.
+        Send a job request to eligible registered workers concurrently.
 
         Filters workers by job type capability before routing.
-        In production, this makes HTTP calls to worker endpoints.
+        Uses async httpx for non-blocking concurrent requests.
         """
         responses = {}
 
         if not self.worker_agents:
-            # No workers registered — manager never does analysis itself
             logger.warning("No workers registered — cannot process job")
             return responses
 
@@ -225,8 +341,8 @@ class ManagerForward:
         eligible = []
         for w in self.worker_agents:
             agent_id = w.get("agent_id", "").lower()
-            # Image workers only get image jobs, image jobs only go to image workers
-            is_image_worker = "image" in agent_id or "vision" in agent_id
+            strategy = w.get("strategy", "").lower()
+            is_image_worker = "image" in agent_id or "vision" in agent_id or "image" in strategy or "vision" in strategy
             is_image_job = job_type == "image-analysis"
             if is_image_job and not is_image_worker:
                 continue
@@ -234,45 +350,57 @@ class ManagerForward:
                 continue
             eligible.append(w)
 
-        # Fall back to all if no match
         if not eligible:
             eligible = self.worker_agents
 
-        # Production mode — HTTP calls to worker endpoints
-        import urllib.request
         import json
+        import httpx
 
-        for worker in eligible:
+        payload = {
+            "code": request.code,
+            "image": request.image,
+            "intent": request.intent,
+            "language": request.language,
+            "job_type": request.job_type,
+            "job_id": request.job_id,
+        }
+
+        async def _call_worker(client: httpx.AsyncClient, worker: dict) -> tuple:
+            """Call a single worker and return (agent_id, result_or_none)."""
+            agent_id = worker["agent_id"]
             try:
-                data = json.dumps({
-                    "code": request.code,
-                    "image": request.image,
-                    "intent": request.intent,
-                    "language": request.language,
-                    "job_type": request.job_type,
-                    "job_id": request.job_id,
-                }).encode("utf-8")
-
-                req = urllib.request.Request(
-                    f"{worker['endpoint']}/verify",
-                    data=data,
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
+                resp = await client.post(
+                    f"{worker['endpoint'].rstrip('/')}/verify",
+                    json=payload,
+                    timeout=30.0,
                 )
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    result = json.loads(resp.read().decode("utf-8"))
-
-                responses[worker["agent_id"]] = JobResponse(
-                    job_id=result.get("job_id", request.job_id),
-                    issues=result.get("issues", []),
-                    confidence=result.get("confidence", 0.0),
-                    passed=result.get("passed", True),
-                    suggestions=result.get("suggestions", []),
-                    processing_time=result.get("processing_time", 0.0),
-                    agent_id=worker["agent_id"],
-                )
+                result = resp.json()
+                return agent_id, result
             except Exception as e:
-                logger.warning(f"Worker {worker['agent_id']} failed: {e}")
+                logger.warning(f"Worker {agent_id} failed: {e}")
+                return agent_id, None
+
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(
+                *[_call_worker(client, w) for w in eligible],
+                return_exceptions=True,
+            )
+
+        for item in results:
+            if isinstance(item, Exception):
+                continue
+            agent_id, result = item
+            if result is None:
+                continue
+            responses[agent_id] = JobResponse(
+                job_id=result.get("job_id", request.job_id),
+                issues=result.get("issues", []),
+                confidence=result.get("confidence", 0.0),
+                passed=result.get("passed", True),
+                suggestions=result.get("suggestions", []),
+                processing_time=result.get("processing_time", 0.0),
+                agent_id=agent_id,
+            )
 
         return responses
 

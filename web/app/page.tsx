@@ -9,7 +9,7 @@ const API_BASE =
 interface HealthData {
   status: string;
   mode?: string;
-  tasks_completed?: number;
+  jobs_completed?: number;
   [key: string]: unknown;
 }
 
