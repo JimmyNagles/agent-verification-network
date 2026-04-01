@@ -19,7 +19,7 @@ interface AgentInfo {
 
 interface HealthData {
   status: string;
-  tasks_completed?: number;
+  jobs_completed?: number;
   issues_found?: number;
   uptime?: number;
   strategy?: string;
@@ -63,14 +63,14 @@ export default function Leaderboard() {
           if (!knownIds.has(lb.agent_id)) {
             withStats.push({
               agent_id: lb.agent_id, role: "agent", strategy: "api", online: true,
-              health: { status: "healthy", tasks_completed: lb.jobs_completed } as HealthData,
+              health: { status: "healthy", jobs_completed: lb.jobs_completed } as HealthData,
             });
             knownIds.add(lb.agent_id);
           }
         }
       }
 
-      withStats.sort((a, b) => (b.health?.tasks_completed ?? 0) - (a.health?.tasks_completed ?? 0));
+      withStats.sort((a, b) => (b.health?.jobs_completed ?? 0) - (a.health?.jobs_completed ?? 0));
       setAgents(withStats);
     } catch {} finally { setLoading(false); }
   }, []);
@@ -185,7 +185,7 @@ export default function Leaderboard() {
                       {agent.online ? "On" : "Off"}
                     </span>
                     <span className="text-sm font-bold" style={{ fontFamily: "var(--font-mono)" }}>
-                      {agent.health?.tasks_completed ?? "..."}
+                      {agent.health?.jobs_completed ?? "..."}
                     </span>
                     <span className="text-sm" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
                       {agent.health?.uptime ? formatUptime(agent.health.uptime) : "..."}
