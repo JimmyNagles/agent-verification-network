@@ -212,7 +212,7 @@ class VerifyResponse(BaseModel):
     mode: Optional[str] = None
     filecoin_cid: Optional[str] = None
     filecoin_url: Optional[str] = None
-    job_id: Optional[int] = None
+    on_chain_job_id: Optional[int] = None
     job_tx: Optional[str] = None
 
 
