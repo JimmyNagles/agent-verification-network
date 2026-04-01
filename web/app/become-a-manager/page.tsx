@@ -47,7 +47,7 @@ export default function BecomeManager() {
               { step: "Receive", desc: "Client calls /verify with code + intent. You collect payment via x402 or AVNC." },
               { step: "Route", desc: "Find available workers from the registry (on-chain). Send the job to them." },
               { step: "Score", desc: "Test workers with spot checks. Synthetic jobs with known answers. Rate their accuracy." },
-              { step: "Settle", desc: "Call AgenticCommerceV2.complete(). 85% to worker, 15% to you. Automatic." },
+              { step: "Settle", desc: "Call AgenticCommerceV3.complete(). 85% to worker, 15% to you. Automatic." },
               { step: "Record", desc: "Publish worker ratings to ERC-8004 Reputation Registry. Permanent, portable." },
             ].map((item) => (
               <div key={item.step} className="glass p-4 flex items-start gap-4">
@@ -67,7 +67,7 @@ export default function BecomeManager() {
               { title: "Step 2: Set up your wallet", code: `export PRIVATE_KEY=0xYourPrivateKey\nexport BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YourKey`, note: "Get an Alchemy key at dashboard.alchemy.com (free tier works). Need Base ETH for gas." },
               { title: "Step 3: Start the manager", code: `python -m uvicorn agent_market.api.server:app \\\\\n  --host 0.0.0.0 --port 8000` },
               { title: "Step 4: Enable payments", code: `export X402_ENABLED=true\nexport VERIFY_PRICE_ETH=0.0001\nexport PAYMENT_TOKEN=avnc`, note: "Without X402_ENABLED, your manager runs for free. Each manager sets their own price." },
-              { title: "Step 5: Register on-chain", code: `MinerRegistry.register("my-manager", "https://your-url.com", "manager")\n// Contract: 0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA` },
+              { title: "Step 5: Register on-chain", code: `AgentRegistry.register("my-manager", "https://your-url.com", "manager")\n// Contract: 0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd` },
             ].map((step) => (
               <div key={step.title} className="glass p-6 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: "var(--warning)" }} />
@@ -88,7 +88,7 @@ export default function BecomeManager() {
             <pre className="text-sm overflow-x-auto" style={{ fontFamily: "var(--font-mono)" }}>{`Client pays 10 AVNC for a job
     |
     v
-AgenticCommerceV2 (escrow)
+AgenticCommerceV3 (escrow)
     |
     +-- 8.5 AVNC --> Worker (85%)
     +-- 1.5 AVNC --> You, the Manager (15%)
@@ -103,10 +103,10 @@ Better workers = happier clients = more repeat business.`}</pre>
           <p className="section-label mb-6">Contracts You'll Interact With</p>
           <div className="space-y-3">
             {[
-              { name: "AgenticCommerceV2", desc: "Creates jobs, handles escrow, triggers fee split", addr: "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" },
-              { name: "AgentRegistry", desc: "Discover workers, register yourself", addr: "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA" },
-              { name: "AgentScorer", desc: "Record worker quality ratings", addr: "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A" },
-              { name: "AVNC Token", desc: "Protocol credits for payments", addr: "0x1cb00aF12987274C5505F6fccF2B610268D81D03" },
+              { name: "AgenticCommerceV3", desc: "Creates jobs, handles escrow, triggers fee split", addr: "0xA501a028F6C1d717009B65617540610aF25F02e7" },
+              { name: "AgentRegistry", desc: "Discover workers, register yourself", addr: "0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd" },
+              { name: "AgentScorer", desc: "Record worker quality ratings", addr: "0x4e588353E7f247782A6109Fff3BA284a20D88c0F" },
+              { name: "AVNC Token", desc: "Protocol credits for payments", addr: "0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F" },
             ].map((c) => (
               <a key={c.name} href={`https://basescan.org/address/${c.addr}`} target="_blank" rel="noopener noreferrer" className="glass p-4 flex items-center justify-between transition-all hover:scale-[1.005] block">
                 <div>

@@ -1,7 +1,7 @@
 """
 Protocol Credits (AVNC) — token client for the Agent Verification Network.
 
-Token: 0x1cb00aF12987274C5505F6fccF2B610268D81D03 on Base Mainnet
+Token: 0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F on Base Mainnet
 Symbol: AVNC (Agent Verification Credits)
 Faucet: 20 AVNC per claim, 1 day cooldown
 

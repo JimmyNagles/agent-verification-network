@@ -1156,10 +1156,10 @@
       "agent_id": "deployer",
       "details": {
         "contract": "AgentScorer",
-        "address": "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+        "address": "0x4e588353E7f247782A6109Fff3BA284a20D88c0F",
         "chain": "base-mainnet",
         "tx_hash": "d0ad72553761ab68978f984cdeb93ed304aec0f893c826a5697314a1534b4e03",
-        "explorer": "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A"
+        "explorer": "https://basescan.org/address/0x4e588353E7f247782A6109Fff3BA284a20D88c0F"
       }
     },
     {
@@ -1183,7 +1183,7 @@
       "agent_id": "deployer",
       "details": {
         "contract": "MinerRegistry",
-        "address": "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
+        "address": "0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd",
         "chain": "base-mainnet",
         "tx_hash": "f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
         "description": "On-chain agent registry \u2014 miners register once, discoverable forever"
@@ -1197,7 +1197,7 @@
       "details": {
         "contract": "AgenticCommerceV2",
         "standard": "ERC-8183",
-        "address": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+        "address": "0xA501a028F6C1d717009B65617540610aF25F02e7",
         "chain": "base-mainnet",
         "tx_hash": "33997472ed5a509fe3479c80ed6ab6b0a4ee615221ed6397544c9be007a89f6c",
         "validator_fee": "15%",
@@ -1238,7 +1238,7 @@
       "agent_id": "validator-001",
       "details": {
         "job_id": 0,
-        "contract": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+        "contract": "0xA501a028F6C1d717009B65617540610aF25F02e7",
         "budget_wei": 100000000000000,
         "miner_payout_wei": 85000000000000,
         "validator_fee_wei": 15000000000000,
@@ -1281,7 +1281,7 @@
         "tx_hash": "72b6051c838626d11fe9cbd577ced66780380eea9d615d783bbd559fd6a91325",
         "block_number": 43646173,
         "chain": "base-mainnet",
-        "contract": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1"
+        "contract": "0xA501a028F6C1d717009B65617540610aF25F02e7"
       }
     },
     {
@@ -1295,7 +1295,7 @@
         "tx_hash": "3427024c2a8fac16d3eeaf567ff7790866b9d2463f51d851d7d505a656a3236c",
         "block_number": 43646213,
         "chain": "base-mainnet",
-        "contract": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1"
+        "contract": "0xA501a028F6C1d717009B65617540610aF25F02e7"
       }
     },
     {
@@ -1321,7 +1321,7 @@
       "details": {
         "contract": "ProtocolCredits",
         "symbol": "AVNC",
-        "address": "0x1cb00aF12987274C5505F6fccF2B610268D81D03",
+        "address": "0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F",
         "chain": "base-mainnet",
         "tx_hash": "6ded9bd74ee10ea3e0d1724b78718965e840a77ab044a735ef9c8f4ec6e7873a",
         "initial_supply": 1000000,

@@ -104,10 +104,10 @@ export default function JobsPage() {
                 <h3 className="font-bold mb-2" style={{ fontFamily: "var(--font-display)", color: "var(--success)" }}>Path 2: On-chain</h3>
                 <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>Use your wallet. Talk to the contract directly.</p>
                 <div className="space-y-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                  <p><span style={{ color: "var(--success)" }}>1.</span> Read funded jobs from AgenticCommerceV2</p>
+                  <p><span style={{ color: "var(--success)" }}>1.</span> Read funded jobs from AgenticCommerceV3</p>
                   <p><span style={{ color: "var(--success)" }}>2.</span> Call submit(jobId, deliverableHash)</p>
                   <p><span style={{ color: "var(--success)" }}>3.</span> Manager approves, contract pays 85%</p>
-                  <p style={{ opacity: 0.6 }}>Contract: <a href="https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>0xE4ED0C73...</a></p>
+                  <p style={{ opacity: 0.6 }}>Contract: <a href="https://basescan.org/address/0xA501a028F6C1d717009B65617540610aF25F02e7" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>0xE4ED0C73...</a></p>
                 </div>
               </div>
             </div>
@@ -140,7 +140,7 @@ export default function JobsPage() {
                       <div className="glass-sm p-3">
                         <p className="text-xs font-bold mb-1" style={{ color: "var(--success)" }}>On-chain</p>
                         {job.on_chain_job_id !== null ? (
-                          <pre className="p-2 rounded text-xs overflow-x-auto" style={{ background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)" }}>{`AgenticCommerceV2.submit(${job.on_chain_job_id}, hash)`}</pre>
+                          <pre className="p-2 rounded text-xs overflow-x-auto" style={{ background: "var(--surface-alt)", color: "var(--success)", fontFamily: "var(--font-mono)" }}>{`AgenticCommerceV3.submit(${job.on_chain_job_id}, hash)`}</pre>
                         ) : (
                           <p className="text-xs" style={{ color: "var(--text-muted)" }}>On-chain ID pending</p>
                         )}

@@ -1,9 +1,10 @@
 {
-  "address": "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+  "address": "0x4e588353E7f247782A6109Fff3BA284a20D88c0F",
   "chain": "base-mainnet",
-  "rpc": "https://mainnet.base.org",
-  "tx_hash": "d0ad72553761ab68978f984cdeb93ed304aec0f893c826a5697314a1534b4e03",
-  "block_number": 43638920,
+  "chain_id": 8453,
+  "contract": "AgentScorerV2",
+  "deployer": "0xd68D8C09a1067814De8b08Eca443B0595a2b48Ba",
+  "tx_hash": "0xe92b93e777c0e12fe4d7c880cbfad09bcf03c129e2b3a149447372c22030fb3f",
   "abi": [
     {
       "type": "constructor",
@@ -12,7 +13,14 @@
     },
     {
       "type": "function",
-      "name": "agentBestScore",
+      "name": "acceptOwnership",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "agentBestRating",
       "inputs": [
         {
           "name": "",
@@ -31,7 +39,7 @@
     },
     {
       "type": "function",
-      "name": "agentScoreCount",
+      "name": "agentRatingCount",
       "inputs": [
         {
           "name": "",
@@ -39,6 +47,58 @@
           "internalType": "string"
         }
       ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getRatingAt",
+      "inputs": [
+        {
+          "name": "index",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "jobId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "score",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "timestamp",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "round",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getRatingCount",
+      "inputs": [],
       "outputs": [
         {
           "name": "",
@@ -60,27 +120,27 @@
       ],
       "outputs": [
         {
-          "name": "agentId",
+          "name": "",
           "type": "string",
           "internalType": "string"
         },
         {
-          "name": "taskId",
+          "name": "",
           "type": "string",
           "internalType": "string"
         },
         {
-          "name": "score",
+          "name": "",
           "type": "uint256",
           "internalType": "uint256"
         },
         {
-          "name": "timestamp",
+          "name": "",
           "type": "uint256",
           "internalType": "uint256"
         },
         {
-          "name": "round",
+          "name": "",
           "type": "uint256",
           "internalType": "uint256"
         }
@@ -115,6 +175,86 @@
     },
     {
       "type": "function",
+      "name": "pendingOwner",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "ratings",
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "jobId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "score",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "timestamp",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "round",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "recordRating",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "jobId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "score",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "round",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
       "name": "recordScore",
       "inputs": [
         {
@@ -143,46 +283,58 @@
     },
     {
       "type": "function",
-      "name": "scores",
+      "name": "transferOwnership",
       "inputs": [
         {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
+          "name": "newOwner",
+          "type": "address",
+          "internalType": "address"
         }
       ],
-      "outputs": [
-        {
-          "name": "agentId",
-          "type": "string",
-          "internalType": "string"
-        },
-        {
-          "name": "taskId",
-          "type": "string",
-          "internalType": "string"
-        },
-        {
-          "name": "score",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "timestamp",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "round",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
+      "outputs": [],
+      "stateMutability": "nonpayable"
     },
     {
       "type": "event",
-      "name": "ScoreRecorded",
+      "name": "OwnershipTransferStarted",
+      "inputs": [
+        {
+          "name": "currentOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "OwnershipTransferred",
+      "inputs": [
+        {
+          "name": "previousOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RatingRecorded",
       "inputs": [
         {
           "name": "agentId",
@@ -191,7 +343,7 @@
           "internalType": "string"
         },
         {
-          "name": "taskId",
+          "name": "jobId",
           "type": "string",
           "indexed": false,
           "internalType": "string"

@@ -209,7 +209,7 @@ export default function Leaderboard() {
           {[
             { label: "Data Source", value: "AgentRegistry (on-chain)", detail: "Permanent and verifiable on Base Mainnet" },
             { label: "Health Data", value: "Live (via manager proxy)", detail: "Self-reported, refreshes every 30s" },
-            { label: "Scores", value: "AgentScorer (on-chain)", detail: "View on Basescan", link: "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A" },
+            { label: "Scores", value: "AgentScorer (on-chain)", detail: "View on Basescan", link: "https://basescan.org/address/0x4e588353E7f247782A6109Fff3BA284a20D88c0F" },
           ].map((info) => (
             <div key={info.label} className="glass p-5">
               <p className="section-label mb-2">{info.label}</p>

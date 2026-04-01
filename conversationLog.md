@@ -174,7 +174,7 @@ The final push shifted the project from "a service that verifies code" to "a pro
 **The GitHub Action Bug:** When we deployed the GitHub Action to verify PRs automatically, it returned "0% confidence, no issues found" for code with obvious vulnerabilities (pickle deserialization, command injection, hardcoded API keys). The miner was finding the bugs — its logs showed 4-8 issues with 99-100% confidence. But the Filecoin storage integration was timing out (30 seconds), and the GitHub Action's curl had a 30-second max timeout. The response never made it back. Fix: made Filecoin storage fire-and-forget so the API returns immediately after verification.
 
 **Mainnet Deployment:** Both contracts deployed to Base Mainnet (not testnet):
-- AgentScorer at `0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`
+- AgentScorer at `0x4e588353E7f247782A6109Fff3BA284a20D88c0F`
 - AgenticCommerce (ERC-8183) at `0xeE779106989Dd16287A114f9e5039C1EFC47A95E`
 
 **The Protocol Insight:** A question from Jimmy crystallized the architecture: "Why do we need a private key? If this is on-chain, agents shouldn't need us." He was right. The contracts ARE the protocol. Our API is just one interface — one "door" to the contracts. Anyone can build another door. An agent with a wallet can call `createJob()`, `submit()`, `complete()` directly on AgenticCommerce without ever touching our API.

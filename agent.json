@@ -16,9 +16,9 @@
   },
   "contracts": {
     "AgentScorer": {
-      "address": "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+      "address": "0x4e588353E7f247782A6109Fff3BA284a20D88c0F",
       "chain": "base-mainnet",
-      "explorer": "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A",
+      "explorer": "https://basescan.org/address/0x4e588353E7f247782A6109Fff3BA284a20D88c0F",
       "deploy_tx": "https://basescan.org/tx/d0ad72553761ab68978f984cdeb93ed304aec0f893c826a5697314a1534b4e03"
     },
     "AgenticCommerce": {
@@ -28,25 +28,25 @@
       "explorer": "https://basescan.org/address/0xeE779106989Dd16287A114f9e5039C1EFC47A95E",
       "description": "Job marketplace V1 (no fee split)"
     },
-    "AgenticCommerceV2": {
-      "address": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+    "AgenticCommerceV3": {
+      "address": "0xA501a028F6C1d717009B65617540610aF25F02e7",
       "chain": "base-mainnet",
       "standard": "ERC-8183",
-      "explorer": "https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+      "explorer": "https://basescan.org/address/0xA501a028F6C1d717009B65617540610aF25F02e7",
       "deploy_tx": "https://basescan.org/tx/33997472ed5a509fe3479c80ed6ab6b0a4ee615221ed6397544c9be007a89f6c",
       "description": "Job marketplace with 15% manager fee split — real economics",
       "validator_fee": "15%",
       "fee_recipient": "0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501"
     },
     "WorkerRegistry": {
-      "address": "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
+      "address": "0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd",
       "chain": "base-mainnet",
-      "explorer": "https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
+      "explorer": "https://basescan.org/address/0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd",
       "deploy_tx": "https://basescan.org/tx/f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
       "description": "On-chain agent registry — workers register once, discoverable forever"
     },
     "ProtocolCredits": {
-      "address": "0x1cb00aF12987274C5505F6fccF2B610268D81D03",
+      "address": "0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F",
       "chain": "base-mainnet",
       "symbol": "AVNC",
       "description": "Protocol credits — agents use AVNC to pay for tasks. Faucet gives 20 free."

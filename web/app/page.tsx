@@ -247,7 +247,7 @@ export default function Home() {
               {
                 name: "On-Chain Escrow",
                 badge: "Full control",
-                desc: "Create jobs directly on AgenticCommerceV2. Set your budget, pick your evaluator. Contract enforces 85/15 split.",
+                desc: "Create jobs directly on AgenticCommerceV3. Set your budget, pick your evaluator. Contract enforces 85/15 split.",
                 detail: "createJob() on Base Mainnet",
               },
             ].map((method) => (
@@ -406,10 +406,10 @@ curl -X POST ${API_BASE}/register-worker \\
           <p className="section-label mb-8">On-Chain Contracts</p>
           <div className="space-y-3">
             {[
-              { name: "AgenticCommerceV2", desc: "Job escrow, payment splits, 85/15 fee", addr: "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1" },
-              { name: "AgentScorer", desc: "Immutable worker rating records", addr: "0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A" },
-              { name: "MinerRegistry", desc: "On-chain agent discovery", addr: "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA" },
-              { name: "AVNC Token", desc: "Protocol credits for payments", addr: "0x1cb00aF12987274C5505F6fccF2B610268D81D03" },
+              { name: "AgenticCommerceV3", desc: "Job escrow, payment splits, 85/15 fee", addr: "0xA501a028F6C1d717009B65617540610aF25F02e7" },
+              { name: "AgentScorer", desc: "Immutable worker rating records", addr: "0x4e588353E7f247782A6109Fff3BA284a20D88c0F" },
+              { name: "AgentRegistry", desc: "On-chain agent discovery", addr: "0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd" },
+              { name: "AVNC Token", desc: "Protocol credits for payments", addr: "0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F" },
             ].map((c) => (
               <a key={c.name} href={`https://basescan.org/address/${c.addr}`} target="_blank" rel="noopener noreferrer"
                 className="glass flex items-center justify-between p-4 transition-all hover:scale-[1.005]" style={{ cursor: "pointer" }}>

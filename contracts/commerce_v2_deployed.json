@@ -1,11 +1,10 @@
 {
-  "address": "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1",
+  "address": "0xA501a028F6C1d717009B65617540610aF25F02e7",
   "chain": "base-mainnet",
-  "rpc": "https://mainnet.base.org",
-  "tx_hash": "33997472ed5a509fe3479c80ed6ab6b0a4ee615221ed6397544c9be007a89f6c",
-  "block_number": 43640753,
-  "fee_bps": 1500,
-  "fee_recipient": "0x135f95b3B4676fFDa0b86f7575EAB59eE1f3F501",
+  "chain_id": 8453,
+  "contract": "AgenticCommerceV3",
+  "deployer": "0xd68D8C09a1067814De8b08Eca443B0595a2b48Ba",
+  "tx_hash": "0x287dafb4a87759e54515aed678eaa705c4b53bc9f2f77307fc1594df0fb204cc",
   "abi": [
     {
       "type": "constructor",
@@ -41,7 +40,7 @@
       "name": "createJob",
       "inputs": [
         {
-          "name": "evaluator",
+          "name": "manager",
           "type": "address",
           "internalType": "address"
         },
@@ -113,12 +112,12 @@
           "internalType": "address"
         },
         {
-          "name": "provider",
+          "name": "worker",
           "type": "address",
           "internalType": "address"
         },
         {
-          "name": "evaluator",
+          "name": "manager",
           "type": "address",
           "internalType": "address"
         },
@@ -140,7 +139,7 @@
         {
           "name": "state",
           "type": "uint8",
-          "internalType": "enum AgenticCommerceV2.State"
+          "internalType": "enum AgenticCommerceV3.State"
         },
         {
           "name": "deliverable",
@@ -185,12 +184,12 @@
           "internalType": "address"
         },
         {
-          "name": "provider",
+          "name": "worker",
           "type": "address",
           "internalType": "address"
         },
         {
-          "name": "evaluator",
+          "name": "manager",
           "type": "address",
           "internalType": "address"
         },
@@ -212,7 +211,7 @@
         {
           "name": "state",
           "type": "uint8",
-          "internalType": "enum AgenticCommerceV2.State"
+          "internalType": "enum AgenticCommerceV3.State"
         },
         {
           "name": "deliverable",
@@ -221,6 +220,19 @@
         },
         {
           "name": "createdAt",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "managerFeeBps",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
           "type": "uint256",
           "internalType": "uint256"
         }
@@ -360,7 +372,7 @@
           "internalType": "uint256"
         },
         {
-          "name": "provider",
+          "name": "worker",
           "type": "address",
           "indexed": true,
           "internalType": "address"
@@ -397,7 +409,7 @@
           "internalType": "address"
         },
         {
-          "name": "evaluator",
+          "name": "manager",
           "type": "address",
           "indexed": false,
           "internalType": "address"
@@ -472,7 +484,7 @@
           "internalType": "uint256"
         },
         {
-          "name": "provider",
+          "name": "worker",
           "type": "address",
           "indexed": true,
           "internalType": "address"

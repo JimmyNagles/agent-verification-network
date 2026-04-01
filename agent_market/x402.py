@@ -39,7 +39,7 @@ from fastapi.responses import JSONResponse
 # ── Configuration ────────────────────────────────────────────────
 
 USDC_CONTRACT = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-COMMERCE_V2 = "0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1"
+COMMERCE_V2 = "0xA501a028F6C1d717009B65617540610aF25F02e7"
 BASE_CHAIN_ID = 8453
 
 DEFAULT_PRICE_ETH = "0.0001"
@@ -199,7 +199,7 @@ def validate_payment_proof(proof: dict) -> tuple[bool, str]:
 
         # Check if this is an ERC-20 token transfer (AVNC or other)
         # ERC-20 transfers go TO the token contract, not the recipient directly
-        avnc_address = "0x1cb00aF12987274C5505F6fccF2B610268D81D03".lower()
+        avnc_address = "0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F".lower()
         if tx_to == avnc_address or tx_to == expected_recipient:
             # Check transfer events in the receipt for ERC-20 Transfer
             transfer_topic = w3.keccak(text="Transfer(address,address,uint256)")

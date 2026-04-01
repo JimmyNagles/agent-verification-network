@@ -158,8 +158,8 @@ export default function AgentProfile() {
           <p className="section-label mb-4">On-Chain Identity</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { label: "AgentRegistry", link: "https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA", desc: "Permanent on-chain registration" },
-              { label: "AgentScorer", link: "https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A", desc: "Quality ratings on-chain" },
+              { label: "AgentRegistry", link: "https://basescan.org/address/0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd", desc: "Permanent on-chain registration" },
+              { label: "AgentScorer", link: "https://basescan.org/address/0x4e588353E7f247782A6109Fff3BA284a20D88c0F", desc: "Quality ratings on-chain" },
               ...(agent.owner ? [{ label: "Owner Wallet", link: `https://basescan.org/address/${agent.owner}`, desc: agent.owner }] : []),
               { label: "ERC-8004 Reputation", link: "https://basescan.org/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63", desc: "Portable reputation across ecosystem" },
             ].map((item) => (

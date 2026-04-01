@@ -1,10 +1,22 @@
 {
-  "address": "0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA",
+  "address": "0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd",
   "chain": "base-mainnet",
-  "rpc": "https://mainnet.base.org",
-  "tx_hash": "f79e3231e6a1d41f0829acbbeb249acce978860fb6163b7ef212ac34eb759aca",
-  "block_number": 43639741,
+  "chain_id": 8453,
+  "contract": "AgentRegistry",
+  "deployer": "0xd68D8C09a1067814De8b08Eca443B0595a2b48Ba",
+  "tx_hash": "0xeb64ab8aecd5ca0b2b826ce5d20012660add233dad8834b086da976dd47e9817",
   "abi": [
+    {
+      "type": "constructor",
+      "inputs": [
+        {
+          "name": "_erc8004Registry",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
     {
       "type": "function",
       "name": "agentIndex",
@@ -26,6 +38,60 @@
     },
     {
       "type": "function",
+      "name": "agents",
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "endpoint",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "strategy",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "role",
+          "type": "uint8",
+          "internalType": "enum AgentRegistry.Role"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "registeredAt",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "internalType": "bool"
+        },
+        {
+          "name": "erc8004Id",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
       "name": "deactivate",
       "inputs": [
         {
@@ -36,6 +102,38 @@
       ],
       "outputs": [],
       "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "erc8004Registry",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getActiveCountByRole",
+      "inputs": [
+        {
+          "name": "role",
+          "type": "uint8",
+          "internalType": "enum AgentRegistry.Role"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "count",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
     },
     {
       "type": "function",
@@ -52,7 +150,7 @@
     },
     {
       "type": "function",
-      "name": "getMiner",
+      "name": "getAgent",
       "inputs": [
         {
           "name": "index",
@@ -77,6 +175,11 @@
           "internalType": "string"
         },
         {
+          "name": "role",
+          "type": "uint8",
+          "internalType": "enum AgentRegistry.Role"
+        },
+        {
           "name": "owner",
           "type": "address",
           "internalType": "address"
@@ -88,6 +191,68 @@
         },
         {
           "name": "active",
+          "type": "bool",
+          "internalType": "bool"
+        },
+        {
+          "name": "erc8004Id",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getAgentCount",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getMiner",
+      "inputs": [
+        {
+          "name": "index",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "",
+          "type": "string",
+          "internalType": "string"
+        },
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "",
           "type": "bool",
           "internalType": "bool"
         }
@@ -109,47 +274,40 @@
     },
     {
       "type": "function",
-      "name": "miners",
+      "name": "isVerified",
       "inputs": [
         {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
+          "name": "agentId",
+          "type": "string",
+          "internalType": "string"
         }
       ],
       "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "linkERC8004",
+      "inputs": [
         {
           "name": "agentId",
           "type": "string",
           "internalType": "string"
         },
         {
-          "name": "endpoint",
-          "type": "string",
-          "internalType": "string"
-        },
-        {
-          "name": "strategy",
-          "type": "string",
-          "internalType": "string"
-        },
-        {
-          "name": "owner",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "registeredAt",
+          "name": "erc8004Id",
           "type": "uint256",
           "internalType": "uint256"
-        },
-        {
-          "name": "active",
-          "type": "bool",
-          "internalType": "bool"
         }
       ],
-      "stateMutability": "view"
+      "outputs": [],
+      "stateMutability": "nonpayable"
     },
     {
       "type": "function",
@@ -169,6 +327,16 @@
           "name": "strategy",
           "type": "string",
           "internalType": "string"
+        },
+        {
+          "name": "role",
+          "type": "uint8",
+          "internalType": "enum AgentRegistry.Role"
+        },
+        {
+          "name": "erc8004Id",
+          "type": "uint256",
+          "internalType": "uint256"
         }
       ],
       "outputs": [],
@@ -199,7 +367,7 @@
     },
     {
       "type": "event",
-      "name": "MinerDeactivated",
+      "name": "AgentDeactivated",
       "inputs": [
         {
           "name": "agentId",
@@ -212,7 +380,7 @@
     },
     {
       "type": "event",
-      "name": "MinerRegistered",
+      "name": "AgentRegistered",
       "inputs": [
         {
           "name": "agentId",
@@ -227,23 +395,29 @@
           "internalType": "string"
         },
         {
-          "name": "strategy",
-          "type": "string",
+          "name": "role",
+          "type": "uint8",
           "indexed": false,
-          "internalType": "string"
+          "internalType": "enum AgentRegistry.Role"
         },
         {
           "name": "owner",
           "type": "address",
           "indexed": false,
           "internalType": "address"
+        },
+        {
+          "name": "erc8004Id",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
         }
       ],
       "anonymous": false
     },
     {
       "type": "event",
-      "name": "MinerUpdated",
+      "name": "AgentUpdated",
       "inputs": [
         {
           "name": "agentId",
@@ -262,6 +436,25 @@
           "type": "string",
           "indexed": false,
           "internalType": "string"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ERC8004Linked",
+      "inputs": [
+        {
+          "name": "agentId",
+          "type": "string",
+          "indexed": true,
+          "internalType": "string"
+        },
+        {
+          "name": "erc8004Id",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
         }
       ],
       "anonymous": false

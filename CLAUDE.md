@@ -92,10 +92,10 @@ POST /verify             → POST /jobs              ❌ TODO (next phase)
 
 | Artifact | Chain | Address |
 |----------|-------|---------|
-| AgenticCommerceV2 | Base Mainnet | `0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1` |
-| AgentScorer | Base Mainnet | `0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A` |
-| MinerRegistry | Base Mainnet | `0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA` |
-| ProtocolCredits (AVNC) | Base Mainnet | `0x1cb00aF12987274C5505F6fccF2B610268D81D03` |
+| AgenticCommerceV2 | Base Mainnet | `0xA501a028F6C1d717009B65617540610aF25F02e7` |
+| AgentScorer | Base Mainnet | `0x4e588353E7f247782A6109Fff3BA284a20D88c0F` |
+| MinerRegistry | Base Mainnet | `0xf80DA8B7687685Bc96bf521085Ac1C0eea64bbDd` |
+| ProtocolCredits (AVNC) | Base Mainnet | `0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F` |
 | ERC-8004 Agent ID | Base Mainnet | #34655 on official registry |
 | EigenCompute TEE | Intel TDX | App `0x7Fc30484...` at 34.142.184.34:8000 |
 
@@ -189,7 +189,7 @@ web/app/                     # Next.js frontend
 
 - Repo: https://github.com/JimmyNagles/agent-verification-network
 - Domain: agentlabormarket (secured March 29, 2026)
-- Contract: https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A
+- Contract: https://basescan.org/address/0x4e588353E7f247782A6109Fff3BA284a20D88c0F
 - ERC-8004 TX: https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751
 
 ## Competitive Landscape

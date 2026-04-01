@@ -1,14 +1,11 @@
 {
-  "address": "0x1cb00aF12987274C5505F6fccF2B610268D81D03",
-  "symbol": "AVNC",
-  "name": "Agent Verification Credits",
-  "decimals": 18,
-  "initial_supply": 1000000,
-  "faucet_amount": 20,
+  "address": "0x6f1F2C3DB90DFc2956A7Ba1CB8bFf31420B4cc8F",
   "chain": "base-mainnet",
+  "chain_id": 8453,
+  "contract": "ProtocolCreditsV2",
+  "deployer": "0xd68D8C09a1067814De8b08Eca443B0595a2b48Ba",
+  "tx_hash": "0x1c287dc515547ca36e921faa926f37b2ab72b97a1fb536bd5d58381bb3b62ec5",
   "rpc": "set BASE_RPC_URL env var",
-  "tx_hash": "6ded9bd74ee10ea3e0d1724b78718965e840a77ab044a735ef9c8f4ec6e7873a",
-  "block_number": 43663393,
   "abi": [
     {
       "type": "constructor",
