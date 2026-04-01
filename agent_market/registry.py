@@ -111,18 +111,30 @@ class RegistryClient:
             return self._cached_workers  # Return last known state
 
         try:
-            count = self.contract.functions.getMinerCount().call()
+            count = self.contract.functions.getAgentCount().call() if hasattr(self.contract.functions, 'getAgentCount') else self.contract.functions.getMinerCount().call()
             workers = []
+            role_names = {0: "worker", 1: "manager", 2: "client"}
             for i in range(count):
-                agent_id, endpoint, strategy, owner, registered_at, active = \
-                    self.contract.functions.getMiner(i).call()
+                try:
+                    # New AgentRegistry returns 8 fields including role
+                    result = self.contract.functions.getAgent(i).call()
+                    agent_id, endpoint, strategy, role_num, owner, registered_at, active, erc8004_id = result
+                    role = role_names.get(role_num, "worker")
+                except Exception:
+                    # Fallback: old MinerRegistry returns 6 fields
+                    agent_id, endpoint, strategy, owner, registered_at, active = \
+                        self.contract.functions.getMiner(i).call()
+                    role = "manager" if "validator" in strategy.lower() or "manager" in strategy.lower() else "worker"
+                    erc8004_id = 0
                 if active:
                     workers.append({
                         "agent_id": agent_id,
                         "endpoint": endpoint,
                         "strategy": strategy,
+                        "role": role,
                         "owner": owner,
                         "registered_at": registered_at,
+                        "erc8004_id": erc8004_id if erc8004_id else None,
                     })
             # Update cache on success
             self._cached_workers = workers
