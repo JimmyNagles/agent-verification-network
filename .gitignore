@@ -9,3 +9,14 @@ contracts/cache/
 .pytest_cache/
 .env.eigencompute
 submission_description.md
+
+# Sensitive files
+.env*
+!.env.example
+AUDIT-REPORT*.md
+FINAL-AUDIT*.md
+.context/
+cache/
+moltbook_*.md
+.next/
+
