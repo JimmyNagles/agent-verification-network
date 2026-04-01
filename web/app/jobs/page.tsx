@@ -34,6 +34,7 @@ export default function JobsPage() {
   const [totalOnChain, setTotalOnChain] = useState(0);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"marketplace" | "onchain">("marketplace");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -167,8 +168,14 @@ export default function JobsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
               {["Completed", "Funded", "Submitted", "Open", "Rejected"].map((state) => {
                 const count = onChainJobs.filter((j) => j.state === state).length;
+                const isActive = statusFilter === state;
                 return (
-                  <div key={state} className="glass p-4 text-center">
+                  <div
+                    key={state}
+                    className="glass p-4 text-center transition-all"
+                    style={{ cursor: "pointer", border: isActive ? "1px solid var(--accent)" : undefined, boxShadow: isActive ? "0 0 16px var(--accent-glow)" : undefined }}
+                    onClick={() => setStatusFilter(isActive ? null : state)}
+                  >
                     <p className="text-xl font-bold" style={{ fontFamily: "var(--font-display)", color: state === "Completed" ? "var(--success)" : state === "Rejected" ? "var(--critical)" : "var(--text)" }}>{count}</p>
                     <p className="section-label mt-1">{state}</p>
                   </div>
@@ -183,7 +190,7 @@ export default function JobsPage() {
                     <span key={h} className="section-label">{h}</span>
                   ))}
                 </div>
-                {onChainJobs.map((job) => (
+                {onChainJobs.filter((job) => !statusFilter || job.state === statusFilter).map((job) => (
                   <div key={job.id} className="grid items-center px-5 py-3 text-sm transition-colors" style={{ gridTemplateColumns: "60px 100px 100px 1fr 1fr 1fr", borderBottom: "1px solid var(--border)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "var(--highlight)")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
