@@ -1302,7 +1302,7 @@ async def list_agents():
     onchain_agents = _registry.get_active_workers() if _registry.enabled else []
     for m in onchain_agents:
         strategy = m.get("strategy", "")
-        is_manager = "manager" in strategy.lower()
+        is_manager = "manager" in strategy.lower() or "validator" in strategy.lower()
         agents.append({
             "agent_id": m["agent_id"],
             "role": "manager" if is_manager else "worker",
