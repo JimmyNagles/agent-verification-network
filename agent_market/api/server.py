@@ -1691,6 +1691,9 @@ async def claim_earnings(raw_request: Request):
     }
 
 
+import time as _time
+_server_start_time = _time.time()
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -1702,6 +1705,7 @@ async def health_check():
         "commerce_enabled": _commerce.enabled,
         "job_types": ["code-verification", "text-review", "image-analysis"],
         "jobs_completed": len(results),
+        "uptime": round(_time.time() - _server_start_time, 1),
     }
 
 
