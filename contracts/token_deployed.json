@@ -6,7 +6,7 @@
   "initial_supply": 1000000,
   "faucet_amount": 20,
   "chain": "base-mainnet",
-  "rpc": "https://base-mainnet.g.alchemy.com/v2/VkqT8RyCceRMz0G4PbTQYJjkG5KMFIQZ",
+  "rpc": "set BASE_RPC_URL env var",
   "tx_hash": "6ded9bd74ee10ea3e0d1724b78718965e840a77ab044a735ef9c8f4ec6e7873a",
   "block_number": 43663393,
   "abi": [

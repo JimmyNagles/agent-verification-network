@@ -65,7 +65,7 @@ def analyze_text(text: str, intent: str, use_llm: bool = False) -> dict:
         "confidence": confidence,
         "passed": passed,
         "suggestions": suggestions,
-        "task_type": "text-review",
+        "job_type": "text-review",
     }
 
 
@@ -212,7 +212,7 @@ def check_intent_match(text: str, intent: str) -> List[Dict]:
 def llm_text_analysis(text: str, intent: str) -> list:
     """Use LLM for deep text analysis."""
     try:
-        from agent_market.miner.analyzer import LLMClient
+        from agent_market.worker.analyzer import LLMClient
         client = LLMClient()
 
         system_prompt = """You are a text quality reviewer. Analyze the text against the stated intent.

@@ -3,102 +3,150 @@
 > This file is read by Claude Code at the start of every session.
 > It contains everything needed to understand and continue building this project.
 
+## ⚠️ Check Memory First
+
+Before starting work, **read the memory files** for the latest project state:
+- `project_terminology_redesign.md` — **DECISIONS LOCKED**: Client/Worker/Manager. Job not task. /jobs not /verify. Ready for implementation.
+- `project_agent_labor_market.md` — Core vision, what's built, community direction.
+- `feedback_terminology_decisions.md` — Job not task, /jobs not /verify, dynamic spot checks, AVNC in x402.
+- `feedback_no_push_main.md` — Use feature branches, never push to main.
+- `feedback_no_gh_cli.md` — No gh CLI. Push branch and give URL for PRs.
+- `feedback_production_focus.md` — Build for production. Three-layer architecture is sacred.
+
+**Status (March 29, 2026):**
+- RENAME COMPLETE: miner→worker, validator→manager in all files, endpoints, imports, UI
+- Branch: `feature/enforce-role-separation` (includes role separation + rename)
+- PR #44 still open on GitHub — merge before pushing this branch
+- Still TODO: README rewrite, skill.md rewrite, agent.json update, /verify→/jobs endpoint rename
+
+**Full system design document:** `~/Desktop/docs/agent_labor_market.html`
+**Plan file:** `~/.claude/plans/lexical-greeting-babbage.md`
+
 ---
 
 ## What This Project Is
 
-A decentralized network where AI agents verify each other's code, built for **The Synthesis hackathon** (https://synthesis.md, March 2026). Agents are judged by other agents.
+An open **job-agnostic marketplace for AI agents**. Clients post jobs, workers do them, managers check quality using spot checks (jobs with known answers). Everything on Base Mainnet.
+
+**Three roles:**
+- **Client** — posts jobs, pays for results (API key, x402, or on-chain escrow)
+- **Worker** (currently "miner" in code) — does the work, earns 85% of payment
+- **Manager** (currently "validator" in code) — routes jobs, runs spot checks, scores quality, earns 15% fee
 
 **The core loop:**
-1. Task creator submits code + intent ("what should this code do?")
-2. Miner agents independently analyze the code (AST parsing + pattern detection + LLM intent matching)
-3. Validator agent scores miners using **honeypots** — synthetic code with known bugs mixed in with real tasks
-4. Scores recorded on-chain via **AgentScorer.sol** on **Base Mainnet**
-5. Best result returned to task creator
+1. Client submits a job + intent ("what should this code do?")
+2. Manager routes to all registered workers + mixes in spot checks
+3. Workers independently analyze (AST parsing + pattern detection + LLM intent matching)
+4. Manager scores everyone: spot check accuracy + consensus + format + speed
+5. Best result returned to client. ALL workers get rated (even losers).
+6. Ratings recorded on-chain via AgentScorer.sol
+
+**Three verticals live:** Code verification, text review, image validation. Protocol is job-agnostic — any vertical where ground truth can be constructed.
+
+**Four payment methods:** API key credits (free tier), x402 micropayments (ETH/USDC/AVNC), on-chain escrow (AVNC), faucet (free 20 AVNC).
 
 ## Origin
 
-This started as the **Agent Orchestration Protocol** — a markdown-based system for coordinating multiple AI agents (Claude Code, Codex, Gemini). Rule #10 says "verify your own work," but self-verification is self-referential. Agents approve their own bugs. This project externalizes verification to a competitive market.
+Started as the **Agent Orchestration Protocol** — a system for coordinating multiple AI agents. Self-verification is self-referential. This project externalizes verification to a competitive market.
 
-The first version was a **Bittensor subnet** (~3,200 lines). The core verification logic (~1,500 lines) was chain-agnostic, so we extracted it and rebuilt the infrastructure layer for Ethereum/Base.
-
-**Original repo:** https://github.com/JimmyNagles/AgentOrchestrationProtocol
+First version was a **Bittensor subnet** (~3,200 lines). Core verification logic was chain-agnostic, so we extracted it and rebuilt for Ethereum/Base.
 
 ---
 
-## Target Bounties
+## Terminology Rename (IN PROGRESS)
 
-| Bounty | Prize | Track |
-|--------|-------|-------|
-| Protocol Labs — "Let the Agent Cook" | $8,000 | Primary |
-| Protocol Labs — "Agents With Receipts" (ERC-8004) | $8,004 | Primary |
-| Base — "Agent Services on Base" | — | Secondary |
+The codebase currently uses crypto terms. We are renaming to universal terms:
 
-**Key: Agent judges will evaluate submissions.** Everything must be machine-parseable: `agent.json`, `agent_log.json`, `conversationLog.md`, structured README.
+| Concept | Current (code) | Target | On-chain |
+|---------|---------------|--------|----------|
+| Does work | miner | **worker** | `provider` |
+| Checks quality | validator | **manager** | `evaluator` |
+| The work | task | **job** | — |
+| Quality test | honeypot | **spot check** | — |
+| Quality metric | score | **rating** | — |
+| Main endpoint | /verify | **/jobs** | — |
+| Browse work | marketplace | **job board** | — |
+
+### Files to rename:
+```
+agent_market/miner/        → agent_market/worker/
+agent_market/validator/    → agent_market/manager/
+agents/miner_agent.py      → agents/worker_agent.py
+agents/validator_agent.py  → agents/manager_agent.py
+agents/miner_strategies.py → agents/worker_strategies.py
+web/app/become-a-miner/   → web/app/become-a-worker/
+web/app/become-a-validator/ → web/app/become-a-manager/
+Dockerfile.miner           → Dockerfile.worker
+```
+
+### Endpoints (done / still TODO):
+```
+POST /register-miner     → POST /register-worker  ✅ DONE
+POST /register-validator → POST /register-manager  ✅ DONE
+POST /verify             → POST /jobs              ❌ TODO (next phase)
+```
 
 ---
 
 ## On-Chain Artifacts
 
-| Artifact | Chain | Address/TX |
-|----------|-------|------------|
-| ERC-8004 Identity | Base Mainnet | [`0x38b165df...`](https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751) |
-| Self-Custody Transfer | Base Mainnet | [`0x4f2a8885...`](https://basescan.org/tx/0x4f2a8885e62866adc7e6401b78fbb89e00281c190aab46c057915817a1c578da) |
-| AgentScorer Contract | Base Mainnet | [`0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A`](https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A) |
-| Score Transactions | Base Mainnet | 6 txs in `agent_log.json` |
-| AgenticCommerceV2 | Base Mainnet | [`0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1`](https://basescan.org/address/0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1) — Job marketplace with 15% fee split |
-| MinerRegistry | Base Mainnet | [`0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA`](https://basescan.org/address/0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA) — On-chain agent discovery |
-| ERC-8004 Agent ID | Base Mainnet | #34655 on official Identity Registry ([`0x8004A169...`](https://basescan.org/address/0x8004A169)) |
+| Artifact | Chain | Address |
+|----------|-------|---------|
+| AgenticCommerceV2 | Base Mainnet | `0xE4ED0C73B9c8c2153a2d39901309270c40Bee1a1` |
+| AgentScorer | Base Mainnet | `0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A` |
+| MinerRegistry | Base Mainnet | `0xE0d1346bC19791FD7065c7d9B5bFd1224b6859dA` |
+| ProtocolCredits (AVNC) | Base Mainnet | `0x1cb00aF12987274C5505F6fccF2B610268D81D03` |
+| ERC-8004 Agent ID | Base Mainnet | #34655 on official registry |
 | EigenCompute TEE | Intel TDX | App `0x7Fc30484...` at 34.142.184.34:8000 |
 
 ---
 
-## What's Built — Everything
-
-**31 tests passing. 80+ execution events. 5 contracts on mainnet.**
-
-### File Map
+## File Map (POST-RENAME)
 
 ```
 agent_market/
-├── protocol.py              # Pydantic data contracts (CodeVerificationRequest/Response)
-├── chain.py                 # Web3.py integration for AgentScorer.sol (graceful fallback)
-├── erc8004.py               # Official ERC-8004 Identity + Reputation registry integration
+├── protocol.py              # Pydantic data contracts
+├── chain.py                 # Web3.py → AgentScorer.sol
+├── erc8004.py               # ERC-8004 Identity + Reputation
 ├── commerce.py              # On-chain job lifecycle (AgenticCommerceV2)
-├── registry.py              # On-chain miner registry client
-├── logger.py                # Structured event logger → agent_log.json
-├── miner/
-│   ├── analyzer.py          # AST parsing + pattern detection + LLM intent verification
-│   │                        #   Supports OpenAI, Anthropic, Ollama. Falls back to heuristics.
-│   └── forward.py           # Miner entry point. Receives request → runs analyzer → returns response.
-├── validator/
-│   ├── honeypot.py          # 12 bug templates + 2 clean-code templates.
-│   ├── scorer.py            # Scoring: 0.6*honeypot + 0.2*consensus + 0.1*format + 0.1*speed
-│   └── forward.py           # Validator loop. Generates honeypots, queries miners, scores, stores results.
+├── registry.py              # On-chain agent registry client
+├── keys.py                  # API key management (Supabase)
+├── token.py                 # AVNC token client
+├── x402.py                  # x402 payment protocol (ETH/USDC/AVNC)
+├── storage.py               # Filecoin/IPFS storage
+├── logger.py                # Structured event logger
+├── worker/                  # (was miner/)
+│   ├── analyzer.py          # Code analysis (AST + patterns + LLM)
+│   ├── text_analyzer.py     # Text review (grammar + tone + accuracy)
+│   ├── image_analyzer.py    # Image validation (format + dimensions + Venice AI)
+│   └── forward.py           # Worker entry point
+├── manager/                 # (was validator/)
+│   ├── honeypot.py          # Spot check generator (12 bug + 2 clean templates)
+│   ├── image_honeypot.py    # Image spot checks
+│   ├── scorer.py            # Rating formula (spot check + consensus + format + speed)
+│   └── forward.py           # Manager loop (routes jobs, scores workers)
 └── api/
-    └── server.py            # FastAPI: /verify, /status/{task_id}, /leaderboard, /health
-
-contracts/
-├── AgentScorer.sol          # On-chain score recording (deployed on Base Mainnet)
-├── AgenticCommerceV2.sol    # Job marketplace with validator fee split
-├── MinerRegistry.sol        # Permanent on-chain agent registry
-└── deployed.json            # Contract address + ABI
+    └── server.py            # FastAPI: all endpoints (1574 lines)
 
 agents/
-├── miner_agent.py           # Standalone miner with /verify and /health endpoints
-└── validator_agent.py       # Standalone validator with on-chain scoring (--chain flag)
+├── worker_agent.py          # (was miner_agent.py)
+├── manager_agent.py         # (was validator_agent.py)
+└── worker_strategies.py     # (was miner_strategies.py)
 
-scripts/
-├── demo.sh                  # Multi-miner demo (3 miners, 8 rounds, --chain support)
-└── deploy_contract.py       # Deploy AgentScorer.sol to Base Mainnet
+contracts/                   # Deployed, no rename needed
+├── AgentScorer.sol
+├── AgenticCommerceV2.sol
+├── MinerRegistry.sol
+└── ProtocolCredits.sol
+
+web/app/                     # Next.js frontend
+├── page.tsx                 # Homepage
+├── leaderboard/             # Agent rankings
+├── jobs/                    # Job board
+├── become-a-miner/          # → will become become-a-worker/
+├── become-a-validator/      # → will become become-a-manager/
+└── agent/[agentId]/         # Agent detail page
 ```
-
-### Key Files for Hackathon
-
-- `agent.json` — ERC-8004 agent manifest with contract address and identity
-- `agent_log.json` — 78 execution events with 6 on-chain tx hashes
-- `conversationLog.md` — Human-agent collaboration log (8 chapters)
-- `README.md` — Full project docs with on-chain artifacts table
 
 ---
 
@@ -107,32 +155,45 @@ scripts/
 - **Python 3.10+** — core logic
 - **FastAPI** — API server
 - **Pydantic v2** — data contracts
-- **Solidity 0.8.19** — AgentScorer contract
-- **Foundry** — Solidity compilation + deployment
-- **web3.py** — Python → Base chain interaction
-- **Base Mainnet** — contract deployment, score recording, and ERC-8004 identity
-- **pytest** — tests (31 passing)
-- **LLM providers** (optional) — OpenAI, Anthropic, Ollama for intent verification
+- **Solidity 0.8.19** — contracts
+- **web3.py** — Python → Base chain
+- **Base Mainnet** — all contracts
+- **pytest** — tests
+- **Next.js 15 + React 19 + Tailwind** — frontend
+- **Supabase** — API keys, registered agents, jobs, usage logs
+- **LLM providers** (optional) — OpenAI, Anthropic, Ollama, Venice for intent verification
 
-## Important Context
+## Important Rules
 
-- **Hackathon deadline:** March 22, 2026 (building ends)
-- **Judged by agents**, not humans — everything must be machine-parseable
-- **The scoring formula** is the core IP: `0.6 * honeypot_detection + 0.2 * consensus + 0.1 * format + 0.1 * speed`
-- **Honeypots are the key insight** — synthetic bugs with known ground truth make scoring objective
-- **The analyzer has no chain dependency** — it's pure Python. Don't add chain imports to analyzer.py, honeypot.py, or scorer.py
-- **Standalone mode must always work** — the API should function without any chain connection
-- **`--chain` flag** — enables on-chain scoring in validator_agent.py (requires PRIVATE_KEY env var + contracts/deployed.json)
-- **ERC-8004 Agent ID is 34655** on the official registry
-- **AgenticCommerceV2 has 15% validator fee** (1500 bps)
-- **MinerRegistry makes agent discovery persistent** across server restarts
-- **Scores are published to both AgentScorer AND the official ERC-8004 Reputation Registry**
-- **Two validators running** — Railway (primary API) and EigenCompute TEE (Intel TDX). Both talk to the same Base Mainnet contracts.
+- **The analyzer has no chain dependency** — pure Python. Don't add chain imports to analyzer.py, honeypot.py, or scorer.py.
+- **System must work without chain** — API functions without RPC connection.
+- **Spot checks are the moat** — no competitor has automated, objective quality measurement. Protect this.
+- **"Job" not "task"** — everywhere, always. The protocol is job-agnostic.
+- **Dynamic spot checks needed** — static templates can be memorized. Future work: LLM-generated spot checks.
+- **x402 supports AVNC** — not just ETH/USDC.
+- **Consensus scoring is dead code** — exists in scorer.py but forward.py never passes all_responses. Needs wiring up.
+- **Don't push to main** — feature branches only.
+- **No gh CLI** — push branch, give Jimmy the URL.
+
+## Scoring (current vs planned)
+
+**Current (live):** `0.6 * spot_check + 0.2 * consensus(DEAD) + 0.1 * format + 0.1 * speed`
+**Planned:** `0.6 * spot_check + 0.25 * consensus(F1) + 0.10 * format + 0.05 * speed` + quality gate (>=0.70)
+
+## Payment (current vs planned)
+
+**Current (live):** Winner gets 85%, manager gets 15%. Losers get nothing.
+**Planned (Gate+Base+Bonus):** Manager 15% off top. Remaining: 30% base pay pool (all who pass gate), 55% winner bonus, 15% reserve.
 
 ## Links
 
 - Repo: https://github.com/JimmyNagles/agent-verification-network
-- Hackathon: https://synthesis.md
-- Moltbook: https://www.moltbook.com/post/769ca25a-ab5c-4853-8698-aaae3d6b6ab2
+- Domain: agentlabormarket (secured March 29, 2026)
 - Contract: https://basescan.org/address/0xc1679D1A8cCc6Da6338fF6DCE77ca22589C8dE9A
 - ERC-8004 TX: https://basescan.org/tx/0x38b165df227d6568f13e0d640a80220eaf35179ff03982b3740f2eda61c9b751
+
+## Competitive Landscape
+
+- **Closest competitor:** Moltlaunch (Base, ERC-8004, agent gig marketplace — but only client reviews, no automated QA)
+- **Our moat:** Spot check mechanism — nobody else has it in the decentralized agent space
+- **Key players:** Virtuals ACP (18K agents), Olas (10M+ txns), Fetch.ai (2M+ agents), Bittensor (ancestor)

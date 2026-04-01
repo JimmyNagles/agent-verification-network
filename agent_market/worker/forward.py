@@ -1,7 +1,7 @@
 """
-Miner Forward — The miner agent's entry point.
+Worker Forward — The worker agent's entry point.
 
-Receives a code verification request, runs the analysis pipeline,
+Receives a job request, runs the analysis pipeline,
 and returns a structured audit report.
 """
 
@@ -9,13 +9,13 @@ import logging
 import os
 import time
 
-from agent_market.protocol import CodeVerificationRequest, CodeVerificationResponse
-from agent_market.miner.analyzer import analyze_code
+from agent_market.protocol import JobRequest, JobResponse
+from agent_market.worker.analyzer import analyze_code
 
 logger = logging.getLogger(__name__)
 
 
-async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
+async def forward(request: JobRequest) -> JobResponse:
     """
     Process a code verification request.
 
@@ -24,26 +24,26 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
     """
     start_time = time.time()
 
-    task_type = getattr(request, "task_type", "code-verification")
-    valid_task_types = ("code-verification", "text-review", "image-analysis")
-    if task_type not in valid_task_types:
-        logger.warning(f"Unknown task_type '{task_type}', defaulting to code-verification")
-        task_type = "code-verification"
+    job_type = getattr(request, "job_type", "code-verification")
+    valid_job_types = ("code-verification", "text-review", "image-analysis")
+    if job_type not in valid_job_types:
+        logger.warning(f"Unknown job_type '{job_type}', defaulting to code-verification")
+        job_type = "code-verification"
 
-    logger.info(f"Received task {request.task_id}: task_type={task_type}")
+    logger.info(f"Received task {request.job_id}: job_type={job_type}")
 
     try:
         use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
 
-        if task_type == "image-analysis":
-            from agent_market.miner.image_analyzer import analyze_image
+        if job_type == "image-analysis":
+            from agent_market.worker.image_analyzer import analyze_image
             result = analyze_image(
                 image_data=getattr(request, "image", "") or request.code,
                 intent=request.intent,
                 use_llm=use_llm,
             )
-        elif task_type == "text-review":
-            from agent_market.miner.text_analyzer import analyze_text
+        elif job_type == "text-review":
+            from agent_market.worker.text_analyzer import analyze_text
             result = analyze_text(
                 text=getattr(request, "text", "") or request.code,
                 intent=request.intent,
@@ -57,8 +57,8 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
                 use_llm=use_llm,
             )
 
-        response = CodeVerificationResponse(
-            task_id=request.task_id,
+        response = JobResponse(
+            job_id=request.job_id,
             issues=result["issues"],
             confidence=result["confidence"],
             passed=result["passed"],
@@ -68,17 +68,17 @@ async def forward(request: CodeVerificationRequest) -> CodeVerificationResponse:
 
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
-        response = CodeVerificationResponse(
-            task_id=request.task_id,
-            issues=[],
+        response = JobResponse(
+            job_id=request.job_id,
+            issues=[{"type": "error", "severity": "critical", "line": 0, "description": f"Analysis failed: {str(e)}"}],
             confidence=0.0,
-            passed=True,
+            passed=False,  # Fail-closed: errors should not approve code
             suggestions=[],
             processing_time=time.time() - start_time,
         )
 
     logger.info(
-        f"Task {request.task_id} complete: "
+        f"Task {request.job_id} complete: "
         f"{len(response.issues)} issues found, "
         f"confidence={response.confidence:.2f}, "
         f"passed={response.passed}, "

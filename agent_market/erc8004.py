@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 IDENTITY_REGISTRY = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
 REPUTATION_REGISTRY = "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
 OUR_AGENT_ID = 34655
-BASE_MAINNET_RPC = os.environ.get("BASE_RPC_URL", "https://base-mainnet.g.alchemy.com/v2/VkqT8RyCceRMz0G4PbTQYJjkG5KMFIQZ")
+BASE_MAINNET_RPC = os.environ.get("BASE_RPC_URL", "")
 CHAIN_ID = 8453
 
 # Minimal ABIs for the functions we need
@@ -131,19 +131,19 @@ class ERC8004Client:
         self,
         agent_id: int,
         score: float,
-        task_type: str = "code-verification",
-        task_id: str = "",
+        job_type: str = "code-verification",
+        job_id: str = "",
         endpoint: str = "",
     ) -> Optional[dict]:
         """
-        Publish a miner's reputation score to the official ERC-8004 Reputation Registry.
+        Publish a worker's reputation score to the official ERC-8004 Reputation Registry.
 
         Args:
-            agent_id: The ERC-8004 agent ID being scored (the miner's agent NFT ID)
+            agent_id: The ERC-8004 agent ID being scored (the worker's agent NFT ID)
             score: Quality score 0.0 to 1.0
-            task_type: Category tag (e.g., "code-verification")
-            task_id: Specific task identifier
-            endpoint: The miner's service endpoint
+            job_type: Category tag (e.g., "code-verification")
+            job_id: Specific task identifier
+            endpoint: The worker's service endpoint
         """
         if not self.enabled:
             return None
@@ -154,15 +154,15 @@ class ERC8004Client:
             value_decimals = 2
 
             # Create feedback hash from task details
-            feedback_data = json.dumps({"task_id": task_id, "score": score}).encode()
+            feedback_data = json.dumps({"job_id": job_id, "score": score}).encode()
             feedback_hash = hashlib.sha256(feedback_data).digest()
 
             tx = self.reputation.functions.giveFeedback(
                 agent_id,           # agentId being rated
                 value,              # score value
                 value_decimals,     # decimal places
-                task_type,          # tag1: category
-                task_id,            # tag2: task identifier
+                job_type,          # tag1: category
+                job_id,            # tag2: task identifier
                 endpoint,           # service endpoint
                 "",                 # feedbackURI (could link to detailed report)
                 feedback_hash,      # integrity hash

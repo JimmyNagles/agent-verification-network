@@ -1,8 +1,8 @@
 """
-Code Analyzer — The miner agent's brain.
+Code Analyzer — The worker agent's brain.
 
 Analyzes code for bugs, logic errors, security issues, and intent compliance.
-Miner owners can swap this out with their own approach — the subnet doesn't
+Worker owners can swap this out with their own approach — the subnet doesn't
 prescribe HOW to analyze, only WHAT to return.
 
 LLM-enhanced mode: When use_llm=True, the analyzer uses an LLM for deeper

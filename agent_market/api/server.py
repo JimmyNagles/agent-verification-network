@@ -1,11 +1,13 @@
 """
 Agent Labor Market — API Server
 
-FastAPI endpoint for submitting code for verification by competing AI agents.
+FastAPI endpoint for submitting jobs to competing AI worker agents.
 
 Two modes:
-  - Standalone (default): Runs analysis directly using the local analyzer.
-  - Connected: Routes tasks through the validator to competing miner agents.
+  - Network: Routes jobs directly to registered workers, picks best response.
+  - Connected: Routes jobs through a manager that mixes in spot checks for scoring.
+
+The server never performs analysis itself — workers do all the work.
 
 Usage:
     uvicorn agent_market.api.server:app --host 0.0.0.0 --port 8000
@@ -43,18 +45,23 @@ app = FastAPI(
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://agent-verification-network.vercel.app",
+        "https://agentlabormarket.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Validator reference — None means standalone/demo mode
-_validator = None
+# Manager reference — None means standalone/demo mode
+_manager = None
 
 # Commerce client for on-chain job lifecycle
 _commerce = CommerceClient()
 
-# On-chain miner registry
+# On-chain agent registry
 _registry = RegistryClient()
 
 # Official ERC-8004 reputation publishing
@@ -74,96 +81,84 @@ _onchain_lock = threading.Lock()
 # API key manager
 _keys = KeyManager()
 
-# In-memory task storage
+def _sanitize_param(value: str) -> str:
+    """Sanitize user-supplied values for Supabase PostgREST query params."""
+    import urllib.parse
+    return urllib.parse.quote(str(value), safe="")
+
+# In-memory job storage
 results = {}
 
 # In-memory registries for open network registration
-_registered_miners: list[dict] = []
-_registered_validators: list[dict] = []
+_registered_workers: list[dict] = []
+_registered_managers: list[dict] = []
 _total_verifications: int = 0
 
-# Load persisted miners from Supabase on startup
-def _load_miners_from_supabase():
-    """Load previously registered miners from Supabase so they survive restarts."""
+# Load persisted workers from Supabase on startup
+def _load_workers_from_supabase():
+    """Load previously registered workers from Supabase so they survive restarts."""
     try:
         from agent_market.keys import _supabase_get
-        rows = _supabase_get("registered_miners?is_active=eq.true&select=agent_id,endpoint,strategy")
+        rows = _supabase_get("registered_workers?is_active=eq.true&select=agent_id,endpoint,strategy")
         if rows:
             for row in rows:
-                _registered_miners.append({
+                _registered_workers.append({
                     "agent_id": row["agent_id"],
                     "endpoint": row["endpoint"],
                     "strategy": row.get("strategy", "default"),
                 })
-            logger.info(f"Loaded {len(rows)} miners from Supabase")
+            logger.info(f"Loaded {len(rows)} workers from Supabase")
     except Exception as e:
-        logger.warning(f"Failed to load miners from Supabase: {e}")
+        logger.warning(f"Failed to load workers from Supabase: {e}")
 
-_load_miners_from_supabase()
+_load_workers_from_supabase()
 
 
-async def _store_filecoin_background(task_id: str, response):
+async def _store_filecoin_background(job_id: str, response):
     """Fire-and-forget Filecoin storage so it doesn't block the API response."""
     try:
         storage = await store_on_filecoin(
             data=response.model_dump(),
-            filename=f"verification_{task_id}.json",
+            filename=f"verification_{job_id}.json",
         )
         if storage:
             response.filecoin_cid = storage["cid"]
             response.filecoin_url = storage["url"]
-            results[task_id] = response  # Update with CID
+            results[job_id] = response  # Update with CID
     except Exception:
         pass
 
 
-def _process_onchain_background(task_id: str, response):
-    """After verification: record score + create job on-chain. Serialized to prevent nonce conflicts."""
+def _process_onchain_background(job_id: str, response):
+    """After verification: create job on-chain. Serialized to prevent nonce conflicts.
+
+    Note: On-chain SCORE recording only happens in connected mode via the manager
+    loop (manager_agent.py), which uses the objective spot check-based score.
+    Network mode does NOT record scores on-chain because only the worker's
+    self-reported confidence is available — not an objective quality metric.
+    """
     import hashlib
+
+    manager_id = os.environ.get("MANAGER_ID", "manager")
 
     def _do():
         with _onchain_lock:  # Serialize all on-chain txs to prevent nonce conflicts
             try:
-                import time
-
-                # 1. Record score on AgentScorer
-                if _scorer.enabled and response.confidence and response.confidence > 0:
-                    score_result = _scorer.record_score(
-                        agent_id=response.agent_id or "local",
-                        task_id=task_id,
-                        score=response.confidence,
-                        round_num=0,
-                    )
-                    if score_result:
-                        log_event(
-                            event_type="score_recorded",
-                            agent_role="validator",
-                            agent_id="railway-validator",
-                            details={
-                                "task_id": task_id,
-                                "miner": response.agent_id or "local",
-                                "score": response.confidence,
-                                "tx_hash": score_result.get("tx_hash"),
-                                "chain": score_result.get("chain"),
-                            },
-                        )
-                    time.sleep(2)  # Wait for nonce to update
-
-                # 2. Create job on AgenticCommerceV2
+                # Create job on AgenticCommerceV2 (records that work was done)
                 if _commerce.enabled:
-                    desc_hash = hashlib.sha256(task_id.encode()).digest()
+                    desc_hash = hashlib.sha256(job_id.encode()).digest()
                     job_result = _commerce.create_job(description_hash=desc_hash)
                     if job_result:
                         response.job_id = job_result["job_id"]
                         response.job_tx = job_result["tx_hash"]
-                        results[task_id] = response
+                        results[job_id] = response
 
                         log_event(
                             event_type="job_created",
                             agent_role="system",
-                            agent_id="commerce",
+                            agent_id=manager_id,
                             details={
-                                "task_id": task_id,
+                                "job_id": job_id,
                                 "job_id": job_result["job_id"],
                                 "tx_hash": job_result["tx_hash"],
                                 "chain": job_result["chain"],
@@ -173,30 +168,30 @@ def _process_onchain_background(task_id: str, response):
             except Exception as e:
                 logger.warning(f"Background on-chain processing failed: {e}")
 
-    if _commerce.enabled or _scorer.enabled:
+    if _commerce.enabled:
         threading.Thread(target=_do, daemon=True).start()
 
 
-def attach_validator(validator):
-    """Attach a validator instance to route tasks through the agent network."""
-    global _validator
-    _validator = validator
+def attach_manager(manager):
+    """Attach a manager instance to route jobs through the agent network."""
+    global _manager
+    _manager = manager
 
 
 def get_mode():
     """Return current operating mode."""
-    if _validator is not None:
+    if _manager is not None:
         return "connected"
-    if _registered_miners:
+    if _registered_workers:
         return "network"
     if _registry.enabled:
         try:
-            onchain = _registry.get_active_miners()
+            onchain = _registry.get_active_workers()
             if onchain:
                 return "network"
         except Exception:
             pass
-    return "standalone"
+    return "no_workers"
 
 
 # ── Request/Response Models ──────────────────────────────────────
@@ -207,12 +202,12 @@ class VerifyRequest(BaseModel):
     image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
     intent: str = Field(description="What the code/text/image should do or convey")
     language: str = Field(default="python", description="Programming language (code tasks only)")
-    task_type: str = Field(default="code-verification", description="Task type: 'code-verification' | 'text-review' | 'image-analysis'")
+    job_type: str = Field(default="code-verification", description="Task type: 'code-verification' | 'text-review' | 'image-analysis'")
     job_id: Optional[int] = Field(default=None, description="Pre-funded job ID on AgenticCommerceV2 (direct payment mode)")
 
 
 class VerifyResponse(BaseModel):
-    task_id: str
+    job_id: str
     passed: bool
     confidence: float
     issues: list
@@ -227,52 +222,55 @@ class VerifyResponse(BaseModel):
 
 
 class TaskStatus(BaseModel):
-    task_id: str
+    job_id: str
     status: str  # "queued", "processing", "complete"
     result: Optional[VerifyResponse] = None
 
 
-class RegisterMinerRequest(BaseModel):
-    agent_id: str = Field(description="Unique identifier for the miner agent")
-    endpoint: str = Field(description="Base URL of the miner (must expose /health)")
+class RegisterWorkerRequest(BaseModel):
+    agent_id: str = Field(description="Unique identifier for the worker agent")
+    endpoint: str = Field(description="Base URL of the worker (must expose /health)")
     strategy: Optional[str] = Field(default=None, description="Optional analysis strategy description")
 
 
-class RegisterMinerResponse(BaseModel):
+class RegisterWorkerResponse(BaseModel):
     registered: bool
     agent_id: str
-    total_miners: int
+    total_workers: int
 
 
-class RegisterValidatorRequest(BaseModel):
-    validator_id: str = Field(description="Unique identifier for the validator agent")
-    endpoint: str = Field(description="Base URL of the validator")
+class RegisterManagerRequest(BaseModel):
+    manager_id: str = Field(description="Unique identifier for the manager agent")
+    endpoint: str = Field(description="Base URL of the manager")
 
 
-class RegisterValidatorResponse(BaseModel):
+class RegisterManagerResponse(BaseModel):
     registered: bool
-    validator_id: str
+    manager_id: str
 
 
 class NetworkStatus(BaseModel):
-    validators: list
-    miners: list
+    managers: list
+    workers: list
     total_verifications: int
     mode: str
 
 
 # ── Endpoints ────────────────────────────────────────────────────
 
-@app.post("/verify")
+@app.post("/jobs/submit")
+@app.post("/verify")  # Deprecated alias — use /jobs/submit
 async def verify_code(request: VerifyRequest, raw_request: Request = None):
     """
-    Submit code for verification by the agent network.
+    Submit a job for verification by the agent network.
 
-    When x402 is enabled (X402_ENABLED=true), a valid payment is required.
-    In connected mode, the task is routed through the validator to
-    competing miner agents. In standalone mode, analysis runs locally.
+    Payment is required via API key, on-chain job_id, or x402 header.
+    In connected mode, the job is routed through the manager to
+    competing worker agents. In network mode, the job is broadcast
+    directly to registered workers. Returns 503 if no workers are available.
     """
-    # Payment gate: API key → x402 → job_id → 402
+    # Payment gate: API key → job_id → x402 → reject
+    authenticated = False
     if raw_request:
         # Path 1: API key (registered clients + internal services)
         request_key = (
@@ -284,7 +282,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             if key_info and key_info.get("valid"):
                 if key_info.get("credits_remaining", 0) > 0:
                     _keys.use_credit(request_key, "/verify")
-                    # Proceed with verification
+                    authenticated = True
                 else:
                     return JSONResponse(status_code=402, content={
                         "error": "Credits exhausted",
@@ -299,15 +297,28 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             valid, msg = verify_onchain_job(request.job_id, _commerce)
             if not valid:
                 return JSONResponse(status_code=402, content={"error": "Payment Required", "message": msg})
+            authenticated = True
 
         # Path 3: x402 payment header
         else:
             payment_response = await check_x402_payment(raw_request)
             if payment_response is not None:
                 return payment_response
+            else:
+                # x402 returned None — either payment valid or x402 disabled
+                # If x402 is disabled and no other auth, reject
+                from agent_market.x402 import _is_enabled as _x402_enabled
+                if _x402_enabled():
+                    authenticated = True  # x402 payment was validated
+                else:
+                    return JSONResponse(status_code=401, content={
+                        "error": "Authentication required",
+                        "message": "Include an API key (X-API-Key header), a funded job_id, or enable x402 payment.",
+                        "register": "POST /register to get an API key with 20 free credits",
+                    })
 
-    if _validator is not None:
-        task_id = _validator.add_task(
+    if _manager is not None:
+        job_id = _manager.add_task(
             code=request.code,
             intent=request.intent,
             language=request.language,
@@ -315,29 +326,20 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
 
         result = None
         for _ in range(60):
-            result = _validator.get_result(task_id)
+            result = _manager.get_result(job_id)
             if result is not None:
                 break
             await asyncio.sleep(1)
 
         if result is None:
-            from agent_market.miner.analyzer import analyze_code
-            local_result = analyze_code(
-                code=request.code,
-                intent=request.intent,
-                language=request.language,
-            )
-            response = VerifyResponse(
-                task_id=task_id,
-                passed=local_result["passed"],
-                confidence=local_result["confidence"],
-                issues=local_result["issues"],
-                suggestions=local_result["suggestions"],
-                mode="standalone_fallback",
-            )
+            return JSONResponse(status_code=503, content={
+                "error": "No workers available",
+                "job_id": job_id,
+                "message": "Task was queued but no workers responded in time. Try again or register as a worker at POST /register-worker.",
+            })
         else:
             response = VerifyResponse(
-                task_id=task_id,
+                job_id=job_id,
                 passed=result["passed"],
                 confidence=result["confidence"],
                 issues=result["issues"],
@@ -347,11 +349,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 mode="connected",
             )
 
-        results[task_id] = response
+        results[job_id] = response
         return response
 
     else:
-        task_id = str(uuid4())
+        job_id = str(uuid4())
 
         import os
         import json as _json
@@ -360,33 +362,51 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         best_agent = None
         mode = "standalone"
 
-        # Build combined miner list: in-memory + on-chain registry
-        all_miners = list(_registered_miners)
-        known_ids = {m["agent_id"] for m in all_miners}
+        # Build combined worker list: in-memory + on-chain registry
+        all_workers = list(_registered_workers)
+        known_ids = {m["agent_id"] for m in all_workers}
 
-        # Add on-chain miners from MinerRegistry
+        # Add on-chain workers from WorkerRegistry
         if _registry.enabled:
             try:
-                onchain = _registry.get_active_miners()
+                onchain = _registry.get_active_workers()
                 for m in onchain:
                     if m["agent_id"] not in known_ids:
                         strategy = m.get("strategy", "")
-                        # Skip validators — they're not miners
-                        if "validator" in strategy.lower():
+                        # Skip managers — they're not workers
+                        if "manager" in strategy.lower():
                             continue
-                        all_miners.append({
+                        all_workers.append({
                             "agent_id": m["agent_id"],
                             "endpoint": m["endpoint"],
                             "strategy": strategy,
                         })
                         known_ids.add(m["agent_id"])
             except Exception as e:
-                logger.warning(f"Failed to read on-chain miners: {e}")
+                logger.warning(f"Failed to read on-chain workers: {e}")
 
-        # Route to all known miners
-        if all_miners:
-            miner_responses = []
-            for miner in all_miners:
+        # Route to workers that support this job type
+        if all_workers:
+            # Filter workers by job type capability
+            job_type = request.job_type or "code-verification"
+            eligible_workers = []
+            for w in all_workers:
+                strategy = (w.get("strategy") or "").lower()
+                # Image workers only get image jobs, and image jobs only go to image workers
+                is_image_worker = "vision" in strategy or "image" in strategy
+                is_image_job = job_type == "image-analysis"
+                if is_image_job and not is_image_worker:
+                    continue  # Skip non-image workers for image jobs
+                if not is_image_job and is_image_worker:
+                    continue  # Skip image workers for non-image jobs
+                eligible_workers.append(w)
+
+            # Fall back to all workers if no eligible ones found
+            if not eligible_workers:
+                eligible_workers = all_workers
+
+            worker_responses = []
+            for worker in eligible_workers:
                 try:
                     data = _json.dumps({
                         "code": request.code or request.text,
@@ -394,11 +414,11 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                         "image": request.image,
                         "intent": request.intent,
                         "language": request.language,
-                        "task_type": request.task_type,
-                        "task_id": task_id,
+                        "job_type": request.job_type,
+                        "job_id": job_id,
                     }).encode("utf-8")
                     req = urllib.request.Request(
-                        f"{miner['endpoint'].rstrip('/')}/verify",
+                        f"{worker['endpoint'].rstrip('/')}/verify",
                         data=data,
                         headers={
                             "Content-Type": "application/json",
@@ -407,52 +427,61 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                         method="POST",
                     )
                     with urllib.request.urlopen(req, timeout=30) as resp:
-                        miner_result = _json.loads(resp.read().decode("utf-8"))
-                        miner_responses.append({
-                            "agent_id": miner["agent_id"],
-                            "result": miner_result,
+                        worker_result = _json.loads(resp.read().decode("utf-8"))
+                        worker_responses.append({
+                            "agent_id": worker["agent_id"],
+                            "result": worker_result,
                         })
-                        logger.info(f"Miner {miner['agent_id']} responded: {len(miner_result.get('issues', []))} issues")
+                        logger.info(f"Worker {worker['agent_id']} responded: {len(worker_result.get('issues', []))} issues")
                 except Exception as e:
-                    logger.warning(f"Miner {miner['agent_id']} failed: {e}")
+                    logger.warning(f"Worker {worker['agent_id']} failed: {e}")
 
-            # Pick the best response (highest confidence)
-            if miner_responses:
-                best = max(miner_responses, key=lambda r: r["result"].get("confidence", 0))
-                best_result = best["result"]
-                best_agent = best["agent_id"]
+            # Score all responses using the scorer (with consensus if multiple workers)
+            if worker_responses:
+                from agent_market.manager.scorer import WorkerScorer
+                _network_scorer = WorkerScorer()
+
+                # Build response objects for consensus scoring
+                all_resp_for_consensus = []
+                for wr in worker_responses:
+                    class _R:
+                        def __init__(self, issues):
+                            self.issues = issues
+                    all_resp_for_consensus.append(_R(wr["result"].get("issues", [])))
+
+                best_score = -1
+                best_result = None
+                best_agent = None
+                for wr in worker_responses:
+                    r = wr["result"]
+                    score = _network_scorer.score(
+                        response_issues=r.get("issues", []),
+                        response_passed=r.get("passed", True),
+                        response_confidence=r.get("confidence", 0),
+                        response_time=r.get("processing_time", 1.0),
+                        is_spot_check=False,
+                        known_bugs=None,
+                        all_responses=all_resp_for_consensus if len(worker_responses) > 1 else None,
+                    )
+                    if score > best_score:
+                        best_score = score
+                        best_result = r
+                        best_agent = wr["agent_id"]
+
                 mode = "network"
-                logger.info(f"Best response from {best_agent} (confidence: {best_result.get('confidence')})")
+                logger.info(f"Best response from {best_agent} (score: {best_score:.3f}, confidence: {best_result.get('confidence')})")
 
-        # Fallback to local analysis if no miners responded
+        # No workers available — return error instead of doing the work ourselves
         if best_result is None:
-            use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-            if request.task_type == "image-analysis":
-                from agent_market.miner.image_analyzer import analyze_image
-                best_result = analyze_image(
-                    image_data=request.image or request.code,
-                    intent=request.intent,
-                    use_llm=use_llm,
-                )
-            elif request.task_type == "text-review":
-                from agent_market.miner.text_analyzer import analyze_text
-                best_result = analyze_text(
-                    text=request.text or request.code,
-                    intent=request.intent,
-                    use_llm=use_llm,
-                )
-            else:
-                from agent_market.miner.analyzer import analyze_code
-                best_result = analyze_code(
-                    code=request.code,
-                    intent=request.intent,
-                    language=request.language,
-                    use_llm=use_llm,
-                )
+            return JSONResponse(status_code=503, content={
+                "error": "No workers available",
+                "job_id": job_id,
+                "message": "No workers responded. Register as a worker at POST /register-worker.",
+            })
 
         response = VerifyResponse(
-            task_id=task_id,
-            passed=best_result.get("passed", best_result.get("passed", True)),
+            job_id=job_id,
+            passed=best_result.get("passed", True),
             confidence=best_result.get("confidence", 0),
             issues=best_result.get("issues", []),
             suggestions=best_result.get("suggestions", []),
@@ -460,7 +489,7 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
             mode=mode,
         )
 
-        results[task_id] = response
+        results[job_id] = response
 
         # Log completed job to Supabase (persistent history)
         def _log_completed_job():
@@ -470,9 +499,9 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
                 import urllib.request as _urllib_req
                 log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
                 log_data = _json_log.dumps({
-                    "task_id": task_id,
+                    "job_id": job_id,
                     "agent_id": best_agent or "local",
-                    "task_type": request.task_type,
+                    "job_type": request.job_type,
                     "passed": best_result.get("passed", True),
                     "confidence": best_result.get("confidence", 0),
                     "issues_count": len(best_result.get("issues", [])),
@@ -492,35 +521,35 @@ async def verify_code(request: VerifyRequest, raw_request: Request = None):
         threading.Thread(target=_log_completed_job, daemon=True).start()
 
         # Store report on Filecoin in background (fire-and-forget)
-        asyncio.ensure_future(_store_filecoin_background(task_id, response))
+        asyncio.ensure_future(_store_filecoin_background(job_id, response))
 
         # Create on-chain job record (fire-and-forget)
-        _process_onchain_background(task_id, response)
+        _process_onchain_background(job_id, response)
 
         return response
 
 
-@app.get("/status/{task_id}", response_model=TaskStatus)
-async def get_task_status(task_id: str):
-    """Check the status of a submitted verification task."""
-    if task_id in results:
+@app.get("/status/{job_id}", response_model=TaskStatus)
+async def get_task_status(job_id: str):
+    """Check the status of a submitted verification job."""
+    if job_id in results:
         return TaskStatus(
-            task_id=task_id,
+            job_id=job_id,
             status="complete",
-            result=results[task_id],
+            result=results[job_id],
         )
 
-    if _validator is not None:
-        for task in _validator.task_queue:
-            if task["task_id"] == task_id:
-                return TaskStatus(task_id=task_id, status="queued")
+    if _manager is not None:
+        for task in _manager.task_queue:
+            if task["job_id"] == job_id:
+                return TaskStatus(job_id=job_id, status="queued")
 
     raise HTTPException(status_code=404, detail="Task not found")
 
 
 @app.get("/leaderboard")
 async def get_leaderboard():
-    """Top performing miner agents ranked by jobs completed."""
+    """Top performing worker agents ranked by jobs completed."""
     agents = []
 
     # Read from Supabase completed_jobs (persistent, real data)
@@ -532,7 +561,8 @@ async def get_leaderboard():
             from collections import Counter
             counts = Counter(r["agent_id"] for r in rows)
             for agent_id, count in counts.most_common(20):
-                if agent_id == "local":
+                # Filter out placeholder/system agent IDs
+                if agent_id in ("local", "api-submitter", "marketplace-submitter", "internal-service", "unknown"):
                     continue
                 # Get pass rate
                 agent_rows = [r for r in rows if r["agent_id"] == agent_id]
@@ -543,10 +573,10 @@ async def get_leaderboard():
     except Exception as e:
         logger.warning(f"Leaderboard Supabase read failed: {e}")
 
-    # Also include in-memory validator scores if available
-    if _validator is not None:
+    # Also include in-memory manager scores if available
+    if _manager is not None:
         known = {a["agent_id"] for a in agents}
-        for agent_id, score in _validator.scores.items():
+        for agent_id, score in _manager.scores.items():
             if agent_id not in known and score > 0:
                 agents.append({"agent_id": agent_id, "jobs_completed": 0, "score": round(float(score), 4)})
 
@@ -555,20 +585,28 @@ async def get_leaderboard():
     return {
         "agents": agents[:20],
         "total_agents": len(agents),
-        "source": "supabase + validator",
+        "source": "supabase + manager",
     }
 
 
-@app.post("/register-miner", response_model=RegisterMinerResponse)
-async def register_miner(request: RegisterMinerRequest):
+@app.post("/register-worker", response_model=RegisterWorkerResponse)
+async def register_worker(request: RegisterWorkerRequest, raw_request: Request = None):
     """
-    Register a miner agent to join the verification network.
+    Register a worker agent to join the verification network.
 
-    The miner's endpoint must expose a /health route that returns HTTP 200.
-    If a validator is attached, the miner is also registered with it for
-    task distribution. Otherwise the miner is tracked in standalone mode.
+    Requires API key authentication to prevent sybil attacks.
+    The worker's endpoint must expose a /health route that returns HTTP 200.
     """
-    # Validate that the miner endpoint is reachable
+    # Require API key to prevent sybil registration
+    if raw_request:
+        api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
+        if api_key:
+            key_info = _keys.validate_key(api_key)
+            if not key_info or not key_info.get("valid"):
+                return JSONResponse(status_code=401, content={"error": "Invalid API key. Register at POST /register first."})
+        else:
+            return JSONResponse(status_code=401, content={"error": "API key required for worker registration. Register at POST /register first."})
+    # Validate that the worker endpoint is reachable
     health_url = request.endpoint.rstrip("/") + "/health"
     try:
         req = urllib.request.Request(health_url, method="GET")
@@ -576,12 +614,12 @@ async def register_miner(request: RegisterMinerRequest):
             if resp.status != 200:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Miner health check returned status {resp.status}",
+                    detail=f"Worker health check returned status {resp.status}",
                 )
     except urllib.error.URLError as e:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot reach miner at {health_url}: {e}",
+            detail=f"Cannot reach worker at {health_url}: {e}",
         )
     except HTTPException:
         raise
@@ -591,9 +629,9 @@ async def register_miner(request: RegisterMinerRequest):
             detail=f"Health check failed for {health_url}: {e}",
         )
 
-    # Register with the validator if one is attached
-    if _validator is not None:
-        _validator.register_miner(request.agent_id, request.endpoint)
+    # Register with the manager if one is attached
+    if _manager is not None:
+        _manager.register_worker(request.agent_id, request.endpoint)
 
     # Always store in the in-memory registry (deduplicate)
     entry = {
@@ -601,14 +639,14 @@ async def register_miner(request: RegisterMinerRequest):
         "endpoint": request.endpoint,
         "strategy": request.strategy,
     }
-    _registered_miners[:] = [m for m in _registered_miners if m["agent_id"] != request.agent_id]
-    _registered_miners.append(entry)
+    _registered_workers[:] = [m for m in _registered_workers if m["agent_id"] != request.agent_id]
+    _registered_workers.append(entry)
 
-    # Persist to Supabase (survives validator restarts)
+    # Persist to Supabase (survives manager restarts)
     try:
         from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
         import urllib.request as _urllib_req
-        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_miners"
+        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_workers"
         upsert_data = json.dumps({
             "agent_id": request.agent_id,
             "endpoint": request.endpoint,
@@ -623,16 +661,16 @@ async def register_miner(request: RegisterMinerRequest):
         })
         _urllib_req.urlopen(upsert_req, timeout=5)
     except Exception as e:
-        logger.warning(f"Failed to persist miner to Supabase: {e}")
+        logger.warning(f"Failed to persist worker to Supabase: {e}")
 
     # Also register on-chain (fire-and-forget)
     import threading
     def _register_onchain():
-        result = _registry.register_miner(request.agent_id, request.endpoint, request.strategy or "")
+        result = _registry.register_worker(request.agent_id, request.endpoint, request.strategy or "")
         if result and not result.get("already_registered"):
             log_event(
-                event_type="miner_registered_onchain",
-                agent_role="miner",
+                event_type="worker_registered_onchain",
+                agent_role="worker",
                 agent_id=request.agent_id,
                 details={"tx_hash": result.get("tx_hash"), "chain": result.get("chain")},
             )
@@ -640,65 +678,99 @@ async def register_miner(request: RegisterMinerRequest):
         threading.Thread(target=_register_onchain, daemon=True).start()
 
     log_event(
-        event_type="miner_registered",
-        agent_role="miner",
+        event_type="worker_registered",
+        agent_role="worker",
         agent_id=request.agent_id,
         details={"endpoint": request.endpoint, "strategy": request.strategy},
     )
 
-    logger.info(f"Registered miner {request.agent_id} at {request.endpoint}")
+    logger.info(f"Registered worker {request.agent_id} at {request.endpoint}")
 
-    return RegisterMinerResponse(
+    return RegisterWorkerResponse(
         registered=True,
         agent_id=request.agent_id,
-        total_miners=len(_registered_miners),
+        total_workers=len(_registered_workers),
     )
 
 
-@app.post("/register-validator", response_model=RegisterValidatorResponse)
-async def register_validator(request: RegisterValidatorRequest):
+@app.post("/register-manager", response_model=RegisterManagerResponse)
+async def register_manager(request: RegisterManagerRequest, raw_request: Request = None):
     """
-    Register a validator agent in the network registry.
+    Register a manager agent in the network registry.
 
-    Validators are tracked in an in-memory list so the /network endpoint
-    can report who is participating.
+    Requires API key authentication to prevent sybil attacks.
     """
+    # Require API key to prevent sybil registration
+    if raw_request:
+        api_key = raw_request.headers.get("X-API-Key") or raw_request.headers.get("x-api-key") or ""
+        if api_key:
+            key_info = _keys.validate_key(api_key)
+            if not key_info or not key_info.get("valid"):
+                return JSONResponse(status_code=401, content={"error": "Invalid API key. Register at POST /register first."})
+        else:
+            return JSONResponse(status_code=401, content={"error": "API key required for manager registration. Register at POST /register first."})
     entry = {
-        "validator_id": request.validator_id,
+        "manager_id": request.manager_id,
         "endpoint": request.endpoint,
     }
-    _registered_validators.append(entry)
+    # Deduplicate in-memory
+    _registered_managers[:] = [m for m in _registered_managers if m["manager_id"] != request.manager_id]
+    _registered_managers.append(entry)
+
+    # Persist to Supabase (same table as workers, with role=manager)
+    try:
+        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+        import urllib.request as _ureq
+        import json as _json
+        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_miners"
+        upsert_data = _json.dumps({
+            "agent_id": request.manager_id,
+            "endpoint": request.endpoint,
+            "strategy": "manager",
+            "role": "manager",
+            "is_active": True,
+        }).encode("utf-8")
+        req = _ureq.Request(upsert_url, data=upsert_data, method="POST", headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates",
+        })
+        _ureq.urlopen(req, timeout=5)
+        logger.info(f"Manager {request.manager_id} persisted to Supabase")
+    except Exception as e:
+        logger.warning(f"Failed to persist manager to Supabase: {e}")
 
     log_event(
-        event_type="validator_registered",
-        agent_role="validator",
-        agent_id=request.validator_id,
+        event_type="manager_registered",
+        agent_role="manager",
+        agent_id=request.manager_id,
         details={"endpoint": request.endpoint},
     )
 
-    logger.info(f"Registered validator {request.validator_id} at {request.endpoint}")
+    logger.info(f"Registered manager {request.manager_id} at {request.endpoint}")
 
-    return RegisterValidatorResponse(
+    return RegisterManagerResponse(
         registered=True,
-        validator_id=request.validator_id,
+        manager_id=request.manager_id,
     )
 
 
 @app.get("/network", response_model=NetworkStatus)
 async def get_network():
     """Return the current state of the verification network."""
-    # Merge in-memory miners with on-chain registry
-    all_miners = list(_registered_miners)
-    onchain_miners = _registry.get_active_miners()
-    # Add on-chain miners not already in memory
-    known_ids = {m["agent_id"] for m in all_miners}
-    for m in onchain_miners:
+    # Merge in-memory workers with on-chain registry
+    all_workers = list(_registered_workers)
+    onchain_workers = _registry.get_active_workers()
+    # Add on-chain workers not already in memory
+    known_ids = {m["agent_id"] for m in all_workers}
+    for m in onchain_workers:
         if m["agent_id"] not in known_ids:
-            all_miners.append(m)
+            all_workers.append(m)
 
     return NetworkStatus(
-        validators=list(_registered_validators),
-        miners=all_miners,
+        managers=list(_registered_managers),
+        workers=all_workers,
         total_verifications=len(results),
         mode=get_mode(),
     )
@@ -724,24 +796,24 @@ async def get_jobs():
 
 
 class CreateJobRequest(BaseModel):
-    title: str = Field(description="Short description of the task")
+    title: str = Field(description="Short description of the job")
     description: str = Field(default="", description="Detailed description of what needs to be done")
-    task_type: str = Field(default="code-verification", description="Task type: code-verification | text-review | image-analysis")
+    job_type: str = Field(default="code-verification", description="Task type: code-verification | text-review | image-analysis")
     code: str = Field(default="", description="Code to verify (for code-verification tasks)")
     text: str = Field(default="", description="Text to review (for text-review tasks)")
     image: str = Field(default="", description="Base64-encoded image (for image-analysis tasks)")
     intent: str = Field(description="What the code/text/image should do or convey")
-    budget_avnc: float = Field(default=5.0, description="Budget in AVNC tokens")
+    budget_avnc: float = Field(default=5.0, ge=0.1, le=10.0, description="Budget in AVNC tokens (0.1–10.0)")
 
 
 @app.post("/jobs/create")
 async def create_marketplace_job(request: CreateJobRequest, raw_request: Request = None):
     """
-    Create a task on the marketplace.
+    Create a job on the marketplace.
 
     1. Job created on-chain via AgenticCommerceV2 (permanent, source of truth)
     2. Metadata stored in Supabase (title, code, intent — persistent across restarts)
-    3. Miners browse, claim on-chain via submit(), and get paid automatically
+    3. Workers browse, claim via POST /jobs/{id}/submit, and get paid 85% of budget
     """
     # Check API key
     request_key = None
@@ -757,8 +829,8 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         _keys.use_credit(request_key, "/jobs/create")
 
     import hashlib
-    task_id = str(uuid4())
-    desc_hash = hashlib.sha256(f"{request.title}:{task_id}".encode()).digest()
+    job_id = str(uuid4())
+    desc_hash = hashlib.sha256(f"{request.title}:{job_id}".encode()).digest()
 
     # 1. Create on-chain (source of truth)
     job_result = None
@@ -772,10 +844,10 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
     from agent_market.keys import _supabase_post
     _supabase_post("marketplace_jobs", {
         "on_chain_job_id": on_chain_id,
-        "task_id": task_id,
+        "job_id": job_id,
         "title": request.title,
         "description": request.description,
-        "task_type": request.task_type,
+        "job_type": request.job_type,
         "code": request.code,
         "text_content": request.text,
         "intent": request.intent,
@@ -787,22 +859,22 @@ async def create_marketplace_job(request: CreateJobRequest, raw_request: Request
         agent_role="client",
         agent_id=request_key[:12] + "..." if request_key else "anonymous",
         details={
-            "task_id": task_id,
+            "job_id": job_id,
             "title": request.title,
-            "task_type": request.task_type,
+            "job_type": request.job_type,
             "on_chain_job_id": on_chain_id,
         },
     )
 
     return {
         "success": True,
-        "task_id": task_id,
+        "job_id": job_id,
         "on_chain_job_id": on_chain_id,
         "on_chain_tx": job_result.get("tx_hash") if job_result else None,
         "title": request.title,
-        "task_type": request.task_type,
+        "job_type": request.job_type,
         "status": "open",
-        "claim_via_api": f"POST /jobs/{task_id}/claim",
+        "claim_via_api": f"POST /jobs/{job_id}/claim",
         "claim_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
         "message": "Job created on-chain and stored in Supabase. Permanent.",
     }
@@ -840,10 +912,10 @@ async def get_marketplace_jobs():
         # Only show open/funded jobs (not completed/rejected)
         if status in ("open", "funded"):
             open_jobs.append({
-                "task_id": sj["task_id"],
+                "job_id": sj["job_id"],
                 "on_chain_job_id": on_chain_id,
                 "title": sj["title"],
-                "task_type": sj["task_type"],
+                "job_type": sj["job_type"],
                 "intent": sj["intent"],
                 "budget_avnc": float(sj.get("budget_avnc", 0)),
                 "status": status,
@@ -858,19 +930,29 @@ async def get_marketplace_jobs():
     }
 
 
-@app.post("/jobs/{task_id}/claim")
-async def claim_marketplace_job(task_id: str):
+@app.post("/jobs/{job_id}/claim")
+async def claim_marketplace_job(job_id: str, raw_request: Request = None):
     """
-    Get task details for a marketplace job. The miner receives the code/text
-    and intent, then submits their result.
+    Claim and reserve a marketplace job. The worker receives the code/text
+    and intent, then has 10 minutes to submit their result.
 
-    On-chain: the actual claim happens when you call submit() on the contract.
-    This endpoint just gives you the task details to work on.
+    The claim reserves the job — other workers will get 409 Conflict.
+    Stale claims (>10 min without submit) are automatically released.
     """
-    from agent_market.keys import _supabase_get
+    import time as _time
+    from agent_market.keys import _supabase_get, _supabase_patch
+
+    # Get worker identity from API key
+    claimer_id = "anonymous"
+    if raw_request:
+        raw_key = raw_request.headers.get("x-api-key", raw_request.headers.get("X-API-Key", ""))
+        if raw_key:
+            key_info = _keys.validate_key(raw_key)
+            if key_info and key_info.get("valid"):
+                claimer_id = key_info.get("agent_name", "anonymous")
 
     # Read from Supabase
-    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
+    jobs = _supabase_get(f"marketplace_jobs?job_id=eq.{_sanitize_param(job_id)}&select=*") or []
     if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
@@ -890,28 +972,55 @@ async def claim_marketplace_job(task_id: str):
     if status in ("submitted", "completed", "rejected"):
         return JSONResponse(status_code=400, content={"error": f"Job is already {status}"})
 
+    # Atomic claim — prevents race condition where two workers claim simultaneously
+    try:
+        import urllib.request as _ureq
+        import json as _json
+        rpc_url = f"{SUPABASE_URL}/rest/v1/rpc/claim_job"
+        rpc_data = _json.dumps({"p_job_id": job_id, "p_claimer": claimer_id}).encode("utf-8")
+        from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
+        req = _ureq.Request(rpc_url, data=rpc_data, method="POST", headers={
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+        })
+        resp = _ureq.urlopen(req, timeout=5)
+        claimed = _json.loads(resp.read().decode("utf-8"))
+        if not claimed:
+            return JSONResponse(status_code=409, content={
+                "error": "Job already claimed",
+                "message": "This job is reserved by another worker. Try a different job or wait for the claim to expire (10 min).",
+            })
+    except Exception as e:
+        logger.error(f"Atomic claim failed: {e}")
+        return JSONResponse(status_code=503, content={
+            "error": "Claim service temporarily unavailable. Try again.",
+        })
+
     return {
         "success": True,
-        "task_id": task_id,
+        "job_id": job_id,
         "on_chain_job_id": on_chain_id,
+        "claimed_by": claimer_id,
+        "claim_expires_in": "10 minutes",
         "title": job["title"],
-        "task_type": job["task_type"],
+        "job_type": job["job_type"],
         "intent": job["intent"],
         "code": job.get("code", ""),
         "text": job.get("text_content", ""),
         "budget_avnc": float(job.get("budget_avnc", 0)),
         "status": status,
-        "submit_via_api": f"POST /jobs/{task_id}/submit",
+        "submit_via_api": f"POST /jobs/{job_id}/submit",
         "submit_on_chain": f"AgenticCommerceV2.submit({on_chain_id}, deliverableHash)" if on_chain_id else None,
     }
 
 
-@app.post("/jobs/{task_id}/submit")
-async def submit_marketplace_job(task_id: str, raw_request: Request = None):
+@app.post("/jobs/{job_id}/submit")
+async def submit_marketplace_job(job_id: str, raw_request: Request = None):
     """
-    Submit result for a marketplace job. The validator runs the analysis
-    (or accepts a pre-computed result) and records the score on-chain.
-    Credits the miner's earnings balance in Supabase.
+    Submit result for a marketplace job. The worker provides their analysis
+    (passed, issues, confidence). Credits the worker's earnings balance in Supabase.
+    Each job can only be completed once.
     """
     from agent_market.keys import _supabase_get, _supabase_patch
 
@@ -928,39 +1037,66 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
                 submitter_name = name_rows[0].get("agent_name")
 
     # Read from Supabase
-    jobs = _supabase_get(f"marketplace_jobs?task_id=eq.{task_id}&select=*") or []
+    jobs = _supabase_get(f"marketplace_jobs?job_id=eq.{_sanitize_param(job_id)}&select=*") or []
     if not jobs:
         return JSONResponse(status_code=404, content={"error": "Job not found"})
 
     job = jobs[0]
+
+    # Prevent double-submit — check if already completed
+    existing = _supabase_get(f"completed_jobs?job_id=eq.{_sanitize_param(job_id)}&select=job_id") or []
+    if existing:
+        return JSONResponse(status_code=400, content={
+            "error": "Job already completed",
+            "job_id": job_id,
+            "message": "This job has already been submitted. Each job can only be completed once.",
+        })
+
+    # Also check on-chain status if available
+    on_chain_id = job.get("on_chain_job_id")
+    if on_chain_id is not None and _commerce.enabled:
+        try:
+            job_data = _commerce.contract.functions.getJob(on_chain_id).call()
+            states = ["Open", "Funded", "Submitted", "Completed", "Rejected", "Expired"]
+            state = states[job_data[6]].lower() if job_data[6] < len(states) else "unknown"
+            if state in ("completed", "submitted", "rejected"):
+                return JSONResponse(status_code=400, content={
+                    "error": f"Job is already {state} on-chain",
+                    "job_id": job_id,
+                })
+        except Exception:
+            pass
 
     try:
         body = await raw_request.json() if raw_request else {}
     except Exception:
         body = {}
 
-    # Run analysis if no result provided
+    # Accept worker's submitted result — check both nested "result" and top-level fields
     result = body.get("result")
+    if not result and any(k in body for k in ("passed", "issues", "confidence")):
+        result = {
+            "passed": body.get("passed"),
+            "confidence": body.get("confidence", 0),
+            "issues": body.get("issues", []),
+            "suggestions": body.get("suggestions", []),
+        }
+
+    # Worker must submit their own work — manager never does analysis
     if not result:
-        use_llm = os.environ.get("USE_LLM", "").lower() in ("true", "1", "yes")
-        if job["task_type"] == "image-analysis":
-            from agent_market.miner.image_analyzer import analyze_image
-            result = analyze_image(image_data=job.get("image", "") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
-        elif job["task_type"] == "text-review":
-            from agent_market.miner.text_analyzer import analyze_text
-            result = analyze_text(text=job.get("text_content") or job.get("code", ""), intent=job["intent"], use_llm=use_llm)
-        else:
-            from agent_market.miner.analyzer import analyze_code
-            result = analyze_code(code=job.get("code", ""), intent=job["intent"], use_llm=use_llm)
+        return JSONResponse(status_code=400, content={
+            "error": "No analysis provided",
+            "message": "Submit your analysis as {passed, issues, confidence} or nested under 'result'. The manager does not perform analysis.",
+        })
 
     log_event(
         event_type="marketplace_job_completed",
-        agent_role="miner",
-        agent_id="api-submitter",
+        agent_role="worker",
+        agent_id=submitter_name or body.get("agent_id") or "api-submitter",
         details={
-            "task_id": task_id,
+            "job_id": job_id,
             "on_chain_job_id": job.get("on_chain_job_id"),
-            "task_type": job["task_type"],
+            "job_type": job["job_type"],
             "issues_found": len(result.get("issues", [])),
             "confidence": result.get("confidence", 0),
         },
@@ -975,9 +1111,9 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
             import urllib.request as _ureq
             log_url = f"{SUPABASE_URL}/rest/v1/completed_jobs"
             log_data = _jlog.dumps({
-                "task_id": task_id,
-                "agent_id": submitter_name or "marketplace-submitter",
-                "task_type": job.get("task_type", "code-verification"),
+                "job_id": job_id,
+                "agent_id": submitter_name or body.get("agent_id") or "marketplace-submitter",
+                "job_type": job.get("job_type", "code-verification"),
                 "passed": result.get("passed", True),
                 "confidence": result.get("confidence", 0),
                 "issues_count": len(result.get("issues", [])),
@@ -1006,33 +1142,56 @@ async def submit_marketplace_job(task_id: str, raw_request: Request = None):
         except Exception as e:
             logger.warning(f"On-chain completion failed for job #{on_chain_id}: {e}")
 
-    # Credit miner earnings (85% of budget)
+    # Gate + Base + Bonus payment model
+    # Manager takes 15% off top. Remaining 85% split:
+    #   30% base pay pool (all workers who pass quality gate)
+    #   55% winner bonus (best worker)
+    #   15% reserve
+    # For marketplace jobs (single worker), worker gets full 85%.
     earnings_credited = 0
+    payment_details = {}
     if submitter_key:
         try:
             import hashlib
             key_hash = hashlib.sha256(submitter_key.encode()).hexdigest()
             budget = float(job.get("budget_avnc", 0))
-            miner_share = budget * 0.85
-            if miner_share > 0:
-                # Read current earnings
-                rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=earnings")
+
+            if budget > 0:
+                manager_fee = budget * 0.15
+                worker_pool = budget * 0.85
+
+                # For marketplace (single worker claims), worker gets the full 85%
+                # Gate + Base + Bonus only applies in competitive mode (multiple workers)
+                worker_share = worker_pool
+
+                # Read current earnings and jobs_completed
+                rows = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&select=earnings,jobs_completed")
                 if rows:
-                    current = float(rows[0].get("earnings", 0) or 0)
+                    current_earnings = float(rows[0].get("earnings", 0) or 0)
+                    current_jobs = int(rows[0].get("jobs_completed", 0) or 0)
                     _supabase_patch(f"api_keys?key_hash=eq.{key_hash}", {
-                        "earnings": current + miner_share,
+                        "earnings": current_earnings + worker_share,
+                        "jobs_completed": current_jobs + 1,
                     })
-                    earnings_credited = miner_share
+                    earnings_credited = worker_share
+
+                payment_details = {
+                    "budget": budget,
+                    "manager_fee": round(manager_fee, 4),
+                    "worker_earned": round(worker_share, 4),
+                    "model": "marketplace_single_worker",
+                }
         except Exception as e:
             logger.warning(f"Failed to credit earnings: {e}")
 
     return {
         "success": True,
-        "task_id": task_id,
+        "job_id": job_id,
         "on_chain_job_id": on_chain_id,
         "on_chain_tx": on_chain_tx,
         "status": "completed",
         "earnings_credited": earnings_credited,
+        "payment": payment_details,
         "result": result,
     }
 
@@ -1086,10 +1245,10 @@ async def list_jobs():
 @app.get("/stats")
 async def get_stats():
     """On-chain stats from all contracts — the real numbers."""
-    # Count miners vs validators from on-chain registry
-    onchain = _registry.get_active_miners() if _registry.enabled else []
-    miners_count = len([a for a in onchain if "validator" not in a.get("strategy", "").lower()])
-    validators_count = len([a for a in onchain if "validator" in a.get("strategy", "").lower()])
+    # Count workers vs managers from on-chain registry
+    onchain = _registry.get_active_workers() if _registry.enabled else []
+    workers_count = len([a for a in onchain if "manager" not in a.get("strategy", "").lower()])
+    managers_count = len([a for a in onchain if "manager" in a.get("strategy", "").lower()])
 
     # Read payment stats from CommerceV2
     total_paid = 0
@@ -1102,8 +1261,8 @@ async def get_stats():
             pass
 
     return {
-        "miners_onchain": miners_count,
-        "validators": validators_count,
+        "workers_onchain": workers_count,
+        "managers": managers_count,
         "jobs_onchain": _commerce.get_job_count() if _commerce.enabled else 0,
         "verifications": len(results),
         "total_paid_wei": total_paid,
@@ -1121,10 +1280,10 @@ async def get_activity():
     activity = []
 
     # Recent verifications
-    for task_id, result in list(results.items())[-10:]:
+    for job_id, result in list(results.items())[-10:]:
         activity.append({
             "type": "verification",
-            "task_id": task_id,
+            "job_id": job_id,
             "passed": result.passed,
             "confidence": result.confidence,
             "issues": len(result.issues),
@@ -1132,19 +1291,19 @@ async def get_activity():
             "mode": result.mode,
         })
 
-    # Registered miners
-    for miner in _registered_miners[-5:]:
+    # Registered workers
+    for worker in _registered_workers[-5:]:
         activity.append({
-            "type": "miner_registered",
-            "agent_id": miner["agent_id"],
-            "strategy": miner.get("strategy"),
+            "type": "worker_registered",
+            "agent_id": worker["agent_id"],
+            "strategy": worker.get("strategy"),
         })
 
-    # On-chain miners from registry
-    onchain_miners = _registry.get_active_miners() if _registry.enabled else []
-    for m in onchain_miners[-5:]:
+    # On-chain workers from registry
+    onchain_workers = _registry.get_active_workers() if _registry.enabled else []
+    for m in onchain_workers[-5:]:
         activity.append({
-            "type": "miner_onchain",
+            "type": "worker_onchain",
             "agent_id": m["agent_id"],
             "strategy": m.get("strategy", ""),
         })
@@ -1152,38 +1311,38 @@ async def get_activity():
     return {
         "activity": activity,
         "total_verifications": len(results),
-        "total_miners": len(_registered_miners) + len(onchain_miners),
+        "total_workers": len(_registered_workers) + len(onchain_workers),
     }
 
 
 @app.get("/agents")
 async def list_agents():
-    """All registered agents with on-chain data — miners from registry, their endpoints, strategies."""
+    """All registered agents with on-chain data — workers from registry, their endpoints, strategies."""
     agents = []
 
-    # On-chain agents from MinerRegistry (miners + validators)
-    onchain_agents = _registry.get_active_miners() if _registry.enabled else []
+    # On-chain agents from WorkerRegistry (workers + managers)
+    onchain_agents = _registry.get_active_workers() if _registry.enabled else []
     for m in onchain_agents:
         strategy = m.get("strategy", "")
-        is_validator = "validator" in strategy.lower()
+        is_manager = "manager" in strategy.lower()
         agents.append({
             "agent_id": m["agent_id"],
-            "role": "validator" if is_validator else "miner",
+            "role": "manager" if is_manager else "worker",
             "endpoint": m["endpoint"],
             "strategy": strategy,
             "owner": m.get("owner", ""),
             "registered_at": m.get("registered_at", 0),
             "tee": "Intel TDX" if "tee" in strategy.lower() else None,
-            "source": "on-chain (MinerRegistry)",
+            "source": "on-chain (WorkerRegistry)",
         })
 
-    # In-memory miners not on-chain
+    # In-memory workers not on-chain
     known_ids = {a["agent_id"] for a in agents}
-    for m in _registered_miners:
+    for m in _registered_workers:
         if m["agent_id"] not in known_ids:
             agents.append({
                 "agent_id": m["agent_id"],
-                "role": "miner",
+                "role": "worker",
                 "endpoint": m["endpoint"],
                 "strategy": m.get("strategy", ""),
                 "source": "in-memory",
@@ -1246,7 +1405,7 @@ async def register_client(request: Request):
                 **result,
                 "usage": "Include your key as: -H 'X-API-Key: your-key-here'",
                 "endpoints": {
-                    "/verify": "Submit code for verification (costs 1 credit per call)",
+                    "/jobs/submit": "Submit a job for verification (costs 1 credit per call)",
                     "/token": "AVNC token info",
                     "/faucet": "Claim free AVNC tokens (requires wallet address)",
                     "/pricing": "Payment options when credits run out",
@@ -1260,7 +1419,7 @@ async def register_client(request: Request):
 
 @app.get("/keys/stats")
 async def key_stats():
-    """API key usage statistics for this validator."""
+    """API key usage statistics for this manager."""
     return _keys.get_stats()
 
 
@@ -1321,8 +1480,8 @@ async def protocol_info():
 
     contract_files = {
         "AgenticCommerceV2": ("commerce_v2_deployed.json", "Job marketplace (ERC-8183) — escrow + 85/15 fee split. This is the active version."),
-        "MinerRegistry": ("registry_deployed.json", "On-chain agent discovery — miners and validators register permanently."),
-        "AgentScorer": ("deployed.json", "On-chain miner quality scores per task."),
+        "WorkerRegistry": ("registry_deployed.json", "On-chain agent discovery — workers and managers register permanently."),
+        "AgentScorer": ("deployed.json", "On-chain worker quality scores per job."),
         "ProtocolCredits": ("token_deployed.json", "AVNC token (ERC-20) — protocol credits with faucet. Agents use AVNC to pay for tasks."),
         "AgenticCommerce": ("commerce_deployed.json", "Job marketplace V1 (legacy, no fee split)."),
     }
@@ -1359,9 +1518,9 @@ async def agent_health(agent_id: str):
     import urllib.request
     import json as _json
 
-    # Find agent endpoint from registered miners or on-chain registry
+    # Find agent endpoint from registered workers or on-chain registry
     endpoint = None
-    for m in _registered_miners:
+    for m in _registered_workers:
         if m.get("agent_id") == agent_id:
             endpoint = m.get("endpoint")
             break
@@ -1380,13 +1539,13 @@ async def agent_health(agent_id: str):
     if not endpoint:
         return {"status": "unknown", "error": "Agent not found"}
 
-    # If the endpoint is this validator itself, return local health directly
+    # If the endpoint is this manager itself, return local health directly
     # (avoids self-referential HTTP call that would timeout)
     own_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
     if own_url and own_url in endpoint:
         return await health_check()
-    validator_url = "https://agent-verification-network-production.up.railway.app"
-    if endpoint.rstrip("/") == validator_url:
+    manager_url = "https://agent-verification-network-production.up.railway.app"
+    if endpoint.rstrip("/") == manager_url:
         return await health_check()
 
     try:
@@ -1407,7 +1566,7 @@ async def agent_jobs(agent_id: str, limit: int = 20):
     try:
         from agent_market.keys import _supabase_get
         rows = _supabase_get(
-            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=task_id,task_type,passed,confidence,issues_count,processing_time,mode,created_at"
+            f"completed_jobs?agent_id=eq.{agent_id}&order=created_at.desc&limit={limit}&select=job_id,job_type,passed,confidence,issues_count,processing_time,mode,created_at"
         )
         return {"agent_id": agent_id, "jobs": rows or [], "source": "supabase"}
     except Exception as e:
@@ -1467,7 +1626,7 @@ async def withdraw_earnings(raw_request: Request):
     if balance <= 0:
         return JSONResponse(status_code=400, content={"error": "No earnings to withdraw", "balance": 0})
 
-    # Send AVNC tokens from validator wallet to miner wallet
+    # Send AVNC tokens from manager wallet to worker wallet
     tx_hash = None
     try:
         if _token.enabled:
@@ -1480,13 +1639,13 @@ async def withdraw_earnings(raw_request: Request):
     except Exception as e:
         logger.warning(f"Withdraw transfer failed: {e}")
         return JSONResponse(status_code=500, content={
-            "error": "Transfer failed — try again or contact validator",
+            "error": "Transfer failed — try again or contact manager",
             "balance": balance,
         })
 
     if not tx_hash:
         return JSONResponse(status_code=500, content={
-            "error": "Token transfer not available — validator may not have AVNC or transfer function",
+            "error": "Token transfer not available — manager may not have AVNC or transfer function",
             "balance": balance,
         })
 
@@ -1515,8 +1674,8 @@ async def health_check():
         "version": "1.0.0",
         "mode": get_mode(),
         "commerce_enabled": _commerce.enabled,
-        "task_types": ["code-verification", "text-review", "image-analysis"],
-        "tasks_completed": len(results),
+        "job_types": ["code-verification", "text-review", "image-analysis"],
+        "jobs_completed": len(results),
     }
 
 
@@ -1531,17 +1690,17 @@ async def skill_file():
     # Fallback: return a minimal skill file
     return PlainTextResponse(
         "# Agent Labor Market\n\n"
-        "A general-purpose task economy for AI agents on Base.\n\n"
+        "A general-purpose job economy for AI agents on Base.\n\n"
         "## Three Task Types\n"
         "- `code-verification` — submit code + intent, get bug report\n"
         "- `text-review` — submit text + intent, get quality report\n"
         "- `image-analysis` — submit base64 image + intent, get validation (Venice vision AI)\n\n"
-        "## Join as a Miner\n"
-        "POST /register-miner with {agent_id, endpoint}\n"
-        "Your endpoint needs: GET /health (return 200) + POST /verify (accept tasks, return results)\n\n"
+        "## Join as a Worker\n"
+        "POST /register-worker with {agent_id, endpoint}\n"
+        "Your endpoint needs: GET /health (return 200) + POST /jobs/submit (accept tasks, return results)\n\n"
         "## Verify a Task\n"
-        'POST /verify with {"code": "...", "intent": "...", "task_type": "code-verification"}\n'
-        'POST /verify with {"image": "<base64>", "intent": "...", "task_type": "image-analysis"}\n\n'
+        'POST /jobs/submit with {"code": "...", "intent": "...", "job_type": "code-verification"}\n'
+        'POST /jobs/submit with {"image": "<base64>", "intent": "...", "job_type": "image-analysis"}\n\n'
         "## Register as Client\n"
         "POST /register with {agent_name} — get API key with 20 free credits\n\n"
         f"Base URL: https://agent-verification-network-production.up.railway.app\n"
@@ -1554,15 +1713,15 @@ async def skill_file():
 async def root():
     return {
         "name": "Agent Labor Market",
-        "description": "A general-purpose agent task economy on Base. Code, image, and text verification live.",
+        "description": "A general-purpose agent job economy on Base. Code, image, and text verification live.",
         "mode": get_mode(),
         "skill_file": "/skill.md",
         "endpoints": {
-            "/verify": "POST — Submit code for verification",
-            "/status/{task_id}": "GET — Check task status",
+            "/jobs/submit": "POST — Submit a job",
+            "/status/{job_id}": "GET — Check task status",
             "/leaderboard": "GET — Top performing agents",
-            "/register-miner": "POST — Register a miner agent",
-            "/register-validator": "POST — Register a validator agent",
+            "/register-worker": "POST — Register a worker agent",
+            "/register-manager": "POST — Register a manager agent",
             "/network": "GET — View network state",
             "/jobs": "GET — On-chain job status from AgenticCommerce",
             "/protocol": "GET — Contract addresses and ABIs for direct interaction",

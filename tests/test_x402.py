@@ -56,15 +56,15 @@ def _make_valid_proof(recipient=RECIPIENT) -> str:
 # ── Disabled by Default ──────────────────────────────────────────
 
 class TestX402Disabled:
-    def test_verify_works_without_payment(self):
-        """When X402_ENABLED is not set, /verify should work normally."""
+    def test_verify_requires_auth_when_x402_disabled(self):
+        """When X402_ENABLED is not set, /verify requires an API key (no free access)."""
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("X402_ENABLED", None)
             resp = client.post("/verify", json=VERIFY_PAYLOAD)
-            assert resp.status_code == 200
+            assert resp.status_code == 401
             data = resp.json()
-            assert "task_id" in data
-            assert "passed" in data
+            assert "error" in data
+            assert "Authentication required" in data["error"]
 
     def test_pricing_shows_disabled(self):
         with patch.dict(os.environ, {}, clear=False):
@@ -126,7 +126,7 @@ class TestX402ValidPayment:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "task_id" in data
+        assert "job_id" in data
 
     @patch.dict(os.environ, {"X402_ENABLED": "true", "PAYMENT_ADDRESS": RECIPIENT, "VERIFY_API_KEY": "test-key"})
     def test_wrong_api_key_rejected(self):

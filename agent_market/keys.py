@@ -1,8 +1,8 @@
 """
 API Key Manager — issue and validate client API keys via Supabase.
 
-Each validator manages their own keys. This is NOT part of the protocol —
-it's a validator-level convenience layer. The protocol only knows about
+Each manager manages their own keys. This is NOT part of the protocol —
+it's a manager-level convenience layer. The protocol only knows about
 wallets, jobs, and on-chain payments. API keys are for clients who want
 to use the network without touching the blockchain.
 
@@ -24,15 +24,25 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://zdxisjihyfybnzwurjto.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkeGlzamloeWZ5Ym56d3VyanRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMjA3NDEsImV4cCI6MjA4OTY5Njc0MX0.xdTOG6ILZ6bReo8Kj8XQn3xwSK2rt1s8UggJCYl1o54")
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 FREE_CREDITS = 20
+
+
+def _sanitize_param(value: str) -> str:
+    """Sanitize a value for use in Supabase PostgREST query params."""
+    import urllib.parse
+    # URL-encode to prevent injection via query parameters
+    return urllib.parse.quote(str(value), safe="")
 
 
 def _supabase_request(method: str, path: str, data: dict = None) -> Optional[dict]:
     """Make a request to Supabase REST API."""
     import urllib.request
     import urllib.error
+
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return None
 
     url = f"{SUPABASE_URL}/rest/v1/{path}"
     headers = {
@@ -152,7 +162,7 @@ class KeyManager:
             "total_used": row["total_used"],
         }
 
-    def use_credit(self, raw_key: str, endpoint: str = "/verify", task_id: str = None) -> bool:
+    def use_credit(self, raw_key: str, endpoint: str = "/verify", job_id: str = None) -> bool:
         """
         Use one credit from an API key. Returns True if credit was available.
         """
@@ -166,23 +176,31 @@ class KeyManager:
 
         key_hash = self._hash_key(raw_key)
 
-        # Check credits
-        result = _supabase_get(f"api_keys?key_hash=eq.{key_hash}&is_active=eq.true&select=credits_remaining")
-        if not result or len(result) == 0 or result[0]["credits_remaining"] <= 0:
+        # Atomic credit deduction — prevents TOCTOU race condition
+        # Uses Supabase RPC function that does UPDATE WHERE credits_remaining > 0
+        try:
+            import urllib.request as _ureq
+            import json as _json
+            rpc_url = f"{SUPABASE_URL}/rest/v1/rpc/use_credit"
+            rpc_data = _json.dumps({"p_key_hash": key_hash}).encode("utf-8")
+            req = _ureq.Request(rpc_url, data=rpc_data, method="POST", headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json",
+            })
+            resp = _ureq.urlopen(req, timeout=5)
+            result = _json.loads(resp.read().decode("utf-8"))
+            if result is not True and result != True:
+                return False
+        except Exception as e:
+            logger.warning(f"Atomic credit deduction failed: {e}")
             return False
-
-        # Decrement credit
-        _supabase_patch(f"api_keys?key_hash=eq.{key_hash}", {
-            "credits_remaining": result[0]["credits_remaining"] - 1,
-            "total_used": result[0].get("total_used", 0) + 1 if "total_used" in result[0] else 1,
-            "last_used_at": "now()",
-        })
 
         # Log usage
         _supabase_post("usage_log", {
             "key_hash": key_hash,
             "endpoint": endpoint,
-            "task_id": task_id,
+            "job_id": job_id,
         })
 
         return True
@@ -192,7 +210,7 @@ class KeyManager:
         if not self.enabled:
             return False
 
-        result = _supabase_get(f"api_keys?agent_name=eq.{agent_name}&is_active=eq.true&select=id")
+        result = _supabase_get(f"api_keys?agent_name=eq.{_sanitize_param(agent_name)}&is_active=eq.true&select=id")
         return result is not None and len(result) > 0
 
     def get_stats(self) -> dict:

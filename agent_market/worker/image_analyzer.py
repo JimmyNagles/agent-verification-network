@@ -106,7 +106,7 @@ def analyze_image(image_data: str, intent: str, use_llm: bool = False) -> dict:
         "confidence": float,
         "passed": bool,
         "suggestions": [...],
-        "task_type": "image-analysis"
+        "job_type": "image-analysis"
     }
     """
     all_issues = []
@@ -191,7 +191,7 @@ def _build_response(issues: List[Dict], llm_used: bool = False) -> dict:
         "confidence": confidence,
         "passed": passed,
         "suggestions": suggestions,
-        "task_type": "image-analysis",
+        "job_type": "image-analysis",
     }
 
 
@@ -440,7 +440,7 @@ def check_intent_match(data: bytes, intent: str) -> List[Dict]:
 def llm_image_analysis(image_b64: str, intent: str, mime_type: str = "image/jpeg") -> Optional[List[Dict]]:
     """Use Venice AI vision model for semantic image analysis."""
     try:
-        from agent_market.miner.analyzer import LLMClient
+        from agent_market.worker.analyzer import LLMClient
         client = LLMClient()
 
         system_prompt = """You are an image verification agent for the Agent Verification Network.

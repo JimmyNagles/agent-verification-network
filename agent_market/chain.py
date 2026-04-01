@@ -63,7 +63,7 @@ class ChainScorer:
     def record_score(
         self,
         agent_id: str,
-        task_id: str,
+        job_id: str,
         score: float,
         round_num: int,
     ) -> Optional[dict]:
@@ -76,7 +76,7 @@ class ChainScorer:
             score_uint = int(score * 10000)
 
             tx = self.contract.functions.recordScore(
-                agent_id, task_id, score_uint, round_num
+                agent_id, job_id, score_uint, round_num
             ).build_transaction({
                 "from": self.account.address,
                 "nonce": self.w3.eth.get_transaction_count(self.account.address),

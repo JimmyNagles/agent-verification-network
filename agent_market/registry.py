@@ -1,8 +1,8 @@
 """
-On-chain miner registry — reads and writes to MinerRegistry.sol.
+On-chain agent registry — reads and writes to MinerRegistry.sol.
 
-Miners register on-chain once. The registry persists across server restarts.
-Anyone can read it to discover miners. No centralized state required.
+Workers register on-chain once. The registry persists across server restarts.
+Anyone can read it to discover workers. No centralized state required.
 """
 
 import json
@@ -17,7 +17,7 @@ DEPLOYED_PATH = Path(__file__).parent.parent / "contracts" / "registry_deployed.
 
 
 class RegistryClient:
-    """Interact with MinerRegistry.sol on Base."""
+    """Interact with MinerRegistry (deployed contract).sol on Base."""
 
     def __init__(self):
         self.enabled = False
@@ -58,8 +58,8 @@ class RegistryClient:
         except Exception as e:
             logger.warning(f"Failed to initialize registry client: {e}")
 
-    def register_miner(self, agent_id: str, endpoint: str, strategy: str = "") -> Optional[dict]:
-        """Register a miner on-chain. Returns tx info or None."""
+    def register_worker(self, agent_id: str, endpoint: str, strategy: str = "") -> Optional[dict]:
+        """Register a worker on-chain. Returns tx info or None."""
         if not self.enabled or not self.account:
             return None
 
@@ -67,7 +67,7 @@ class RegistryClient:
             # Check if already registered
             idx = self.contract.functions.agentIndex(agent_id).call()
             if idx > 0:
-                logger.info(f"Miner {agent_id} already registered on-chain")
+                logger.info(f"Worker {agent_id} already registered on-chain")
                 return {"already_registered": True, "agent_id": agent_id}
 
             tx = self.contract.functions.register(
@@ -89,35 +89,35 @@ class RegistryClient:
                 "block_number": receipt.blockNumber,
                 "chain": "base-mainnet" if self.chain_id == 8453 else "base-sepolia",
             }
-            logger.info(f"Miner registered on-chain: {agent_id}, tx={tx_hash.hex()}")
+            logger.info(f"Worker registered on-chain: {agent_id}, tx={tx_hash.hex()}")
             return result
 
         except Exception as e:
-            logger.error(f"On-chain miner registration failed: {e}")
+            logger.error(f"On-chain worker registration failed: {e}")
             return None
 
-    _cached_miners: List[Dict] = []
+    _cached_workers: List[Dict] = []
     _cache_time: float = 0
 
-    def get_active_miners(self) -> List[Dict]:
-        """Read all active miners from the on-chain registry. Cached for 60s."""
+    def get_active_workers(self) -> List[Dict]:
+        """Read all active workers from the on-chain registry. Cached for 60s."""
         import time
 
         # Return cache if fresh (within 60 seconds)
-        if time.time() - self._cache_time < 60 and self._cached_miners:
-            return self._cached_miners
+        if time.time() - self._cache_time < 60 and self._cached_workers:
+            return self._cached_workers
 
         if not self.enabled:
-            return self._cached_miners  # Return last known state
+            return self._cached_workers  # Return last known state
 
         try:
             count = self.contract.functions.getMinerCount().call()
-            miners = []
+            workers = []
             for i in range(count):
                 agent_id, endpoint, strategy, owner, registered_at, active = \
                     self.contract.functions.getMiner(i).call()
                 if active:
-                    miners.append({
+                    workers.append({
                         "agent_id": agent_id,
                         "endpoint": endpoint,
                         "strategy": strategy,
@@ -125,18 +125,22 @@ class RegistryClient:
                         "registered_at": registered_at,
                     })
             # Update cache on success
-            self._cached_miners = miners
+            self._cached_workers = workers
             self._cache_time = time.time()
-            return miners
+            return workers
 
         except Exception as e:
             logger.error(f"Failed to read on-chain registry: {e}")
-            return self._cached_miners  # Return last known state, not empty
+            return self._cached_workers  # Return last known state, not empty
 
     _cached_count: int = 0
 
-    def get_miner_count(self) -> int:
-        """Get total registered miners from chain. Returns cached value on failure."""
+    # Backward-compatible aliases (deployed contract uses miner terminology)
+    get_active_miners = get_active_workers
+    register_miner = register_worker
+
+    def get_worker_count(self) -> int:
+        """Get total registered workers from chain. Returns cached value on failure."""
         if not self.enabled:
             return self._cached_count
         try:

@@ -77,7 +77,7 @@ class TokenClient:
     def claim_faucet(self, recipient: str) -> Optional[dict]:
         """
         Claim faucet credits for an address.
-        The validator calls this on behalf of the agent.
+        The manager calls this on behalf of the agent.
         """
         if not self.enabled or not self.account:
             return None

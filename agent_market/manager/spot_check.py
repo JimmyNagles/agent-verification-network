@@ -1,23 +1,26 @@
 """
-Honeypot Generator — Creates synthetic buggy code for testing miners.
+Spot Check Generator — Creates synthetic buggy code for testing workers.
 
-Validators use this to generate code with KNOWN bugs, then test whether
-miners correctly identify them. This is the ground truth for scoring.
+Managers use this to generate code with KNOWN bugs, then test whether
+workers correctly identify them. This is the ground truth for scoring.
 """
 
 import random
 from typing import Tuple, List, Dict
 
 
-class HoneypotGenerator:
-    """Generate code snippets with known injected bugs for miner testing."""
+class SpotCheckGenerator:
+    """Generate code snippets with known injected bugs for worker testing."""
 
     def __init__(self):
         self.templates = self._build_templates()
 
     def generate(self) -> Tuple[str, str, List[Dict]]:
         """
-        Generate a honeypot: buggy code + intent + known bugs.
+        Generate a spot check: buggy code + intent + known bugs.
+
+        Uses dynamic randomization to prevent workers from memorizing templates.
+        Variable names, function names, and numeric values are randomized each time.
 
         Returns:
             (buggy_code, intent, known_bugs)
@@ -26,10 +29,60 @@ class HoneypotGenerator:
         template = random.choice(self.templates)
         variant = random.choice(template["variants"])
 
-        return variant["code"], template["intent"], variant["bugs"]
+        code = variant["code"]
+        intent = template["intent"]
+        bugs = [dict(b) for b in variant["bugs"]]  # Copy so we don't mutate templates
+
+        # Dynamic randomization — prevent memorization
+        code, intent, bugs = self._randomize(code, intent, bugs)
+
+        return code, intent, bugs
+
+    def _randomize(self, code: str, intent: str, bugs: List[Dict]) -> Tuple[str, str, List[Dict]]:
+        """Randomize variable names, function names, and values in spot check code."""
+        # Random function names
+        func_names = ["calculate", "compute", "process", "evaluate", "transform",
+                      "analyze", "convert", "handle", "validate", "execute",
+                      "run", "apply", "perform", "check", "determine"]
+        # Random variable names
+        var_pairs = [("a", "b"), ("x", "y"), ("val1", "val2"), ("num1", "num2"),
+                     ("first", "second"), ("left", "right"), ("p", "q"), ("m", "n")]
+        # Random list names
+        list_names = ["items", "values", "data", "numbers", "elements", "entries", "records"]
+
+        # Pick random replacements
+        new_func = random.choice(func_names)
+        new_vars = random.choice(var_pairs)
+        new_list = random.choice(list_names)
+
+        # Apply substitutions to code (only if the template uses common names)
+        if "def add(" in code or "def sum_list(" in code or "def find_max(" in code:
+            # Simple function rename
+            for old_name in ["add", "sum_list", "find_max", "subtract", "multiply"]:
+                if f"def {old_name}(" in code:
+                    code = code.replace(f"def {old_name}(", f"def {new_func}(")
+                    intent = intent.replace(old_name, new_func)
+                    for bug in bugs:
+                        if old_name in bug.get("description", ""):
+                            bug["description"] = bug["description"].replace(old_name, new_func)
+                    break
+
+        # Randomize numeric constants where safe
+        if "range(" in code:
+            old_n = None
+            for n in ["10", "100", "5", "20"]:
+                if f"range({n})" in code or f"range(1, {n})" in code:
+                    old_n = n
+                    break
+            if old_n:
+                new_n = str(random.choice([7, 12, 15, 25, 50, 8, 30]))
+                code = code.replace(f"range({old_n})", f"range({new_n})")
+                code = code.replace(f"range(1, {old_n})", f"range(1, {new_n})")
+
+        return code, intent, bugs
 
     def _build_templates(self) -> list:
-        """Build the bank of honeypot templates."""
+        """Build the bank of spot check templates."""
         return [
             # ── Template 1: Off-by-one error ──────────────────────
             {
@@ -256,7 +309,7 @@ class HoneypotGenerator:
             },
 
             # ── Template 11: Clean code (no bugs) ─────────────────
-            # Important: some honeypots should have NO bugs to test false positive rate
+            # Important: some spot checks should have NO bugs to test false positive rate
             {
                 "intent": "Return the factorial of a non-negative integer",
                 "variants": [
@@ -276,3 +329,7 @@ class HoneypotGenerator:
                 ],
             },
         ]
+
+
+# Backward-compatible alias
+HoneypotGenerator = SpotCheckGenerator
