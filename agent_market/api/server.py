@@ -722,7 +722,7 @@ async def register_manager(request: RegisterManagerRequest, raw_request: Request
         from agent_market.keys import SUPABASE_URL, SUPABASE_KEY
         import urllib.request as _ureq
         import json as _json
-        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_miners"
+        upsert_url = f"{SUPABASE_URL}/rest/v1/registered_workers"
         upsert_data = _json.dumps({
             "agent_id": request.manager_id,
             "endpoint": request.endpoint,
