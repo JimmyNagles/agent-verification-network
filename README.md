@@ -520,13 +520,19 @@ The contracts are the protocol. Anyone can build their own interface.
 MIT
 
 <!-- MARKEE:START:0x31af131d023b6c7ec7c103bb4658bba9bee8a593 -->
-> 🪧🪧🪧🪧🪧🪧🪧 MARKEE 🪧🪧🪧🪧🪧🪧🪧
->
-> gm🪧
->
->
->
-> 🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧🪧
->
-> *Change this message for 0.018 ETH on the [Markee App](https://markee.xyz/ecosystem/platforms/github/0x31af131d023b6c7ec7c103bb4658bba9bee8a593).*
+```
+  ╔══════════════════════════════════════════════════════╗
+  ║                  ⡷⢾ ⣎⣱ ⣏⡱ ⣇⠜ ⣏⡉ ⣏⡉                 ║
+  ║                  ⠇⠸ ⠇⠸ ⠇⠱ ⠇⠱ ⠧⠤ ⠧⠤                 ║
+  ╠══════════════════════════════════════════════════════╣
+  ║                                                      ║
+  ║   gm🪧                                                ║
+  ║                                                      ║
+  ╠══════════════════════════════════════════════════════╣
+  ║                 0.018 ETH to change                  ║
+  ╚══════════════════════════════════════════════════════╝
+                 ││                      ││
+   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+```
+*Show the world you support this repo! ^ [Change this message at markee.xyz](https://markee.xyz/ecosystem/platforms/github/0x31af131d023b6c7ec7c103bb4658bba9bee8a593)*
 <!-- MARKEE:END:0x31af131d023b6c7ec7c103bb4658bba9bee8a593 -->
